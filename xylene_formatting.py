@@ -27,12 +27,13 @@ def align_protonated_xylene_according_to_methyl(rdkitmol):
 		mol.UpdatePropertyCache(strict=False)
 		pattpos = Chem.MolFromSmarts('[CH3][CH]')
 		pos = mol.GetSubstructMatches(pattpos)[0][-1]
+		print pos
 		mol.GetAtomWithIdx(pos).SetFormalCharge(1)
-
-		pattalign = Chem.MolFromSmarts('[CH3]~[CH0]~[C;!+]~[C]')
-		print mol.GetSubstructMatches(pattalign)
 		for at in mol.GetAtoms():
+			at.SetNoImplicit(True)
 			print at.GetExplicitValence(), at.GetImplicitValence(), at.GetFormalCharge(), at.GetIsAromatic(), at.GetIdx(), at.GetHybridization()
+		pattalign = Chem.MolFromSmarts('[CH3]~[CH0]~[C;!+]~[C;!+]')
+		print mol.GetSubstructMatches(pattalign)
 		return []
 	get_atom_coords_for_projection(rdkitmol)
 	mol = None
