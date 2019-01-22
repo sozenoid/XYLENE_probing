@@ -12,36 +12,48 @@ def format_mol_for_vasp(atm_list, atm_coords, flags_T_F, name):
 		return x_width, y_width, z_width
 
 
-def align_protonated_xylene_according_to_methyl(rdkitmol):
+def align_xylenes(mol1, mol2, mol3, core='[CH3]~[CH0]~[C;!+]~[C;!+]~[C]~[CH]~[CH]'):
 	"""
-	:param rdkitmol: Aligns the protonated xylenes according to the two methyl groups in the molecule, the protonated hydrogen is placed in negative x domain
-	:return: a rdkit mol with adapted geometries
+	:param mol1: o xylene
+	:param mol2: m xylene
+	:param mol3: p xylene
+	:param core: the common fragment upon which align
+	:return: None but will write the aligned versions to mol files
 	"""
-	def get_atom_coords_for_projection(rdkitmol):
-		"""
-		:param rdkitmol: the very same rdkit mol
-		:return: the atom coords that one would use for the projection are returned, that is the methyl carbon not involved in the reaction and the other sp2 carbons
-		"""
-		mol = rdkitmol
-		Chem.SanitizeMol(mol)
-		mol.UpdatePropertyCache(strict=False)
+	for m in [mol1, mol2, mol3]:
+		Chem.SanitizeMol(m)
+		m.UpdatePropertyCache(strict=False)
 		pattpos = Chem.MolFromSmarts('[CH3][CH]')
-		pos = mol.GetSubstructMatches(pattpos)[0][-1]
-		print pos
-		mol.GetAtomWithIdx(pos).SetFormalCharge(1)
-		for at in mol.GetAtoms():
+		pos = m.GetSubstructMatches(pattpos)[0][-1]
+		m.GetAtomWithIdx(pos).SetFormalCharge(1)
+		for at in m.GetAtoms():
 			at.SetNoImplicit(True)
-			print at.GetExplicitValence(), at.GetImplicitValence(), at.GetFormalCharge(), at.GetIsAromatic(), at.GetIdx(), at.GetHybridization()
-		pattalign = Chem.MolFromSmarts('[CH3]~[CH0]~[C;!+]~[C;!+]')
-		print mol.GetSubstructMatches(pattalign)
-		return []
-	get_atom_coords_for_projection(rdkitmol)
-	mol = None
-	return rdkitmol
+	core = Chem.MolFromSmarts(core, True)
+	match1 = mol1.GetSubstructMatch(core)
+	match2 = mol2.GetSubstructMatch(core)
+	match3 = mol3.GetSubstructMatch(core)
+
+	print match1, match2, match3
+
+	AllChem.AlignMol(mol2, mol1,atomMap=zip(match2, match1), maxIters=1000, reflect=True)  # <- m2 is aligned to m1, return value is the RMSD for the alignment
+	AllChem.AlignMol(mol3, mol1,atomMap=zip(match3, match1), maxIters=1000, reflect=False)  # <- m3 is aligned to m1, return value is the RMSD for the alignment
+
+	Chem.MolToMolFile(mol1, '/home/macenrola/Desktop/m1.sdf')
+	Chem.MolToMolFile(mol2, '/home/macenrola/Desktop/m2.sdf')
+	Chem.MolToMolFile(mol3, '/home/macenrola/Desktop/m3.sdf')
+
+	return
+
 
 if __name__ == "__main__":
 	import rdkit
 	from rdkit import Chem
 	from rdkit.Chem import AllChem
-	mol = Chem.MolFromMolFile('/home/macenrola/Documents/vasp/xylene/alignments/oXyleneProtonated_wB97XD_631Gd_small_complexes.com_OUT.mol', removeHs=False)
-	Chem.MolToMolFile(align_protonated_xylene_according_to_methyl(mol), '/home/macenrola/Desktop/lowl.sdf')
+	import numpy as np
+
+	oxylene = Chem.MolFromMolFile('/home/macenrola/Documents/vasp/xylene/alignments/oXyleneProtonated_wB97XD_631Gd_small_complexes.com_OUT.mol', removeHs=False)
+	mxylene = Chem.MolFromMolFile('/home/macenrola/Documents/vasp/xylene/alignments/mXyleneProtonated_wB97XD_631Gd_small_complexes.com_OUT.mol',removeHs=False)
+	pxylene = Chem.MolFromMolFile('/home/macenrola/Documents/vasp/xylene/alignments/pXyleneProtonated_wB97XD_631Gd_small_complexes.com_OUT.mol',	removeHs=False)
+
+	align_xylenes(oxylene, mxylene, pxylene)
+# Chem.MolToMolFile(align_protonated_xylene_according_to_methyl(mol), '/home/macenrola/Desktop/pxylene.sdf')
