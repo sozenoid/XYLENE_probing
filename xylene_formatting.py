@@ -3,6 +3,47 @@ def format_mol_for_vasp(rdkitmol, name):
 	:param rdkitmol: Takes a rdkitmol
 	:return: prints a POSCAR file for use in VASP operations, box size will be 3 Angstrom larger than the max in each directions
 	"""
+	def remap_molecules(rdkitmol, isomertype):
+		"""
+		:param carbon_list: a list of carbon coordinates
+		:param hydrogen_list: a list of carbon coordinates
+		:param isomertype: p is the reference or 0, m is 1, o is 2
+		:return: the same rdkitmol but with the atom indexing that is matched with the para protonated version of xylene
+		"""
+		table_pmo_carbon = [ # atom indexes for PARA, META, ORTHO
+			[1, 7, 1], # CARBON
+			[2, 4, 4], # CARBON
+			[3, 5, 5], # CARBON
+			[4, 6, 6], # CARBON
+			[5, 2, 7], # CARBON
+			[6, 3, 2], # CARBON
+			[7, 13, 3],# CARBON
+			[8, 1, 8], # CARBON
+			[9, 16, 9],   # HYDROGEN
+			[10, 17, 10], # HYDROGEN
+			[11, 18, 11], # HYDROGEN
+			[12, 11, 14], # HYDROGEN
+			[13, 12, 15], # HYDROGEN
+			[14, 14, 19], # HYDROGEN
+			[15, 19, 12], # HYDROGEN
+			[16, 8, 18],  # HYDROGEN
+			[17, 9, 17],  # HYDROGEN
+			[18, 10, 16], # HYDROGEN
+			[19, 15, 13]  # HYDROGEN
+		]
+
+		ordered_carbon = []
+		ordered_hydrogen = []
+		conf = rdkitmol.GetConformer(-1)
+		for i, c in enumerate([x[isomertype] for x in table_pmo_carbon]):
+			pos = list(conf.GetAtomPosition(c-1))
+			if i<8:
+				ordered_carbon.append(pos)
+			else:
+				ordered_hydrogen.append(pos)
+
+		return ordered_carbon, ordered_hydrogen
+
 	def get_box_size(atom_pos_dic):
 		"""
 		:param atm_coords: take in the cartesian coordinates of atoms and
@@ -32,6 +73,7 @@ def format_mol_for_vasp(rdkitmol, name):
 			else:
 				atom_pos_dic[symbol].append(pos)
 		return atom_pos_dic
+
 	pad = 3
 	name_ = "{0!s}\n"
 	lattice_constant = "{0:.5f}\n"
@@ -43,8 +85,15 @@ def format_mol_for_vasp(rdkitmol, name):
 	atm_dic = make_dic_coords(rdkitmol)
 	x_width, y_width, z_width = get_box_size(atm_dic)
 
-	atm_types = sorted(atm_dic.keys())
-	atm_numbers = [len(atm_dic[x]) for x in sorted(atm_dic.keys())]
+	if name[0]=='p':
+		carbon_list, hydrogen_list = remap_molecules(rdkitmol, 0)
+	elif name[0]=='m':
+		carbon_list, hydrogen_list = remap_molecules(rdkitmol, 1)
+	elif name[0]=='o':
+		carbon_list, hydrogen_list = remap_molecules(rdkitmol, 2)
+
+	atm_types = ['C', 'H']
+	atm_numbers = [len(carbon_list), len(hydrogen_list)]
 
 	final_string= [name_.format(name),
 					lattice_constant.format(2),
@@ -56,10 +105,12 @@ def format_mol_for_vasp(rdkitmol, name):
 
 	final_string.append(typeprocess.format('\ncart'))
 
-	for species in atm_types:
-		for pos in atm_dic[species]:
-			final_string.append(positionline.format(pos[0], pos[1], pos[2], 'T', 'T', 'T'))
+	for pos in carbon_list:
+		final_string.append(positionline.format(pos[0], pos[1], pos[2], 'T', 'T', 'T'))
+	for pos in hydrogen_list:
+		final_string.append(positionline.format(pos[0], pos[1], pos[2], 'T', 'T', 'T'))
 
+	print ''.join(final_string)
 
 	with open('/home/macenrola/Desktop/{}'.format(name), 'wb') as w:
 		w.write(''.join(final_string))
@@ -197,7 +248,9 @@ if __name__ == "__main__":
 
 	mxylene = Chem.MolFromMolFile('/home/macenrola/Desktop/mXylene.sdf', removeHs=False, sanitize=False)
 	pxylene = Chem.MolFromMolFile('/home/macenrola/Desktop/pXylene.sdf', removeHs=False, sanitize=False)
+	oxylene = Chem.MolFromMolFile('/home/macenrola/Desktop/oXylene.sdf', removeHs=False, sanitize=False)
 
 	format_mol_for_vasp(mxylene, 'mXylene-Protonated')
 	format_mol_for_vasp(pxylene, 'pXylene-Protonated')
+	format_mol_for_vasp(oxylene, 'oXylene-Protonated')
 	# Chem.MolToMolFile(align_protonated_xylene_according_to_methyl(mol), '/home/macenrola/Desktop/pxylene.sdf')
