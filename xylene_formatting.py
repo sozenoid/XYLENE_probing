@@ -190,10 +190,14 @@ if __name__ == "__main__":
 
 	# oxylene = Chem.MolFromMolFile('/home/macenrola/Documents/vasp/xylene/alignments/pXyleneProtonated_wB97XD_631Gd_small_complexes.com_OUT.mol', removeHs=False)
 	# format_mol_for_vasp(oxylene, 'pXylene_protonated')
-	oxylene = Chem.MolFromMolFile('/home/macenrola/Documents/vasp/xylene/alignments/oXyleneProtonated_wB97XD_631Gd_small_complexes.com_OUT.mol', removeHs=False)
-	mxylene = Chem.MolFromMolFile('/home/macenrola/Documents/vasp/xylene/alignments/mXyleneProtonated_wB97XD_631Gd_small_complexes.com_OUT.mol',removeHs=False)
-	pxylene = Chem.MolFromMolFile('/home/macenrola/Documents/vasp/xylene/alignments/pXyleneProtonated_wB97XD_631Gd_small_complexes.com_OUT.mol',	removeHs=False)
-	align_xylenes(oxylene, mxylene, pxylene)
+	# oxylene = Chem.MolFromMolFile('/home/macenrola/Documents/vasp/xylene/alignments/oXyleneProtonated_wB97XD_631Gd_small_complexes.com_OUT.mol', removeHs=False)
+	# mxylene = Chem.MolFromMolFile('/home/macenrola/Documents/vasp/xylene/alignments/mXyleneProtonated_wB97XD_631Gd_small_complexes.com_OUT.mol',removeHs=False)
+	# pxylene = Chem.MolFromMolFile('/home/macenrola/Documents/vasp/xylene/alignments/pXyleneProtonated_wB97XD_631Gd_small_complexes.com_OUT.mol',	removeHs=False)
+	# align_xylenes(oxylene, mxylene, pxylene)
 
+	mxylene = Chem.MolFromMolFile('/home/macenrola/Desktop/mXylene.sdf', removeHs=False, sanitize=False)
+	pxylene = Chem.MolFromMolFile('/home/macenrola/Desktop/pXylene.sdf', removeHs=False, sanitize=False)
 
+	format_mol_for_vasp(mxylene, 'mXylene-Protonated')
+	format_mol_for_vasp(pxylene, 'pXylene-Protonated')
 	# Chem.MolToMolFile(align_protonated_xylene_according_to_methyl(mol), '/home/macenrola/Desktop/pxylene.sdf')
