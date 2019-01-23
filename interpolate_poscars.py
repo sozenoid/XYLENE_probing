@@ -5,7 +5,7 @@ def interpolate_poscars_keep_selective_flags(poscar1, poscar2, nimages, path=Non
 										The same cell parameters
 										The same number, type and atom orderning
 										The same keywords cart selective
-										Consistent flags T T T of F F F or T F T for respective atoms, only the flags from poscar1 will be used though
+										Consistent flags T T T of F F F or T F T for respective atoms, only the flags, vectors and keywords from poscar1 will be used though (overwriting poscar2 in the last file even)
 	:nimages: The number of images, poscar1 and poscar2 are not included
 	:return: a POSCAR file in each of the files; for example for 3 images; there will be 00 01 02 03 04 files with poscar1 in 00 and poscar2 in 04; the files 01 02 03 containt the POSCARs of the images
 	"""
@@ -28,6 +28,7 @@ def interpolate_poscars_keep_selective_flags(poscar1, poscar2, nimages, path=Non
 		posdic['keywords'] = lines[6]
 		for i, line in enumerate(lines[7:]):
 			posdic[i] = [float(x) for x in line[:3]] + line[3:]
+		recenter_dic_coords(posdic)
 		return posdic
 
 	def build_poscar_from_dic_repr(dic):
@@ -54,6 +55,29 @@ def interpolate_poscars_keep_selective_flags(poscar1, poscar2, nimages, path=Non
 		for i in range(len(dic.keys())-7):
 			postring = postring + positionline.format(*tuple(dic[i]))
 		return postring
+
+	def recenter_dic_coords(dic):
+		"""
+		:param dic: Takes in a dic as provided by the function  build_poscar_dic_representation
+		:return: will modify its cartesian coordinates so that its center appears at the middle of the cell (otherwise visualization becomes very confusing)
+		"""
+		x_center_ref, y_center_ref, z_center_ref = dic['v1'][0]*dic['scale']/2., dic['v2'][1]*dic['scale']/2., dic['v3'][2]*dic['scale']/2.
+		x_center, y_center, z_center = [],[],[]
+		for i in range(len(dic.keys())-7):
+			cx,cy,cz = dic[i][:3]
+			x_center.append(cx)
+			y_center.append(cy)
+			z_center.append(cz)
+
+		xc = sum(x_center)*1.0/len(x_center)
+		yc = sum(y_center) * 1.0 / len(y_center)
+		zc = sum(z_center) * 1.0 / len(z_center)
+
+		print xc, yc, zc
+
+		for i in range(len(dic.keys())-7):
+			tc = dic[i][:3]
+			dic[i][:3] = [x[0]+x[1]-x[2] for x in zip(tc, [x_center_ref, y_center_ref, z_center_ref],[xc, yc, zc])]
 
 	def build_interpolated_dics(posdic1, posdic2, nimages):
 		"""
@@ -111,9 +135,25 @@ def interpolate_poscars_keep_selective_flags(poscar1, poscar2, nimages, path=Non
 			w.write(s)
 
 
+def recenter_direct_poscar(poscar):
+	"""
+	:param poscar: Takes in a direct poscar and recenters it
+	:return: another file named poscar_recentered that will contain the recentered data
+	"""
+	with open(poscar, 'rb') as r:
+		with open(poscar+'_recentered', 'wb') as w:
+			for i, line in enumerate(r):
+				if i<8 or line==' \n':
+					w.write(line)
+				else:
+					coords = [float(x) for x in line.strip().split()]
+					coords_center = [x if abs(x)<0.5 else x-1.0 for x in coords]
+					w.write('  {0: .16f}  {1: .16f}  {2: .16f}\n'.format(*coords_center))
+
 
 if __name__ == "__main__":
 	import sys
 	# interpolate_poscars_keep_selective_flags(sys.argv[1], sys.argv[2], sys.argv[3])
-	interpolate_poscars_keep_selective_flags('/home/macenrola/Documents/vasp/NEB_mpXylene/mXylene-Protonated', '/home/macenrola/Documents/vasp/NEB_mpXylene/oXylene-Protonated',
-											 8, '/home/macenrola/Documents/vasp/NEB_mpXylene/')
+	# interpolate_poscars_keep_selective_flags('/home/macenrola/Documents/vasp/NEB_mpXylene/mXylene-Protonated', '/home/macenrola/Documents/vasp/NEB_mpXylene/pXylene-Protonated',
+	# 										 8, '/home/macenrola/Documents/vasp/NEB_mpXylene/')
+	recenter_direct_poscar('/home/macenrola/Documents/vasp/xylene/contcar')
