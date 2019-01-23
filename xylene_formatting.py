@@ -97,9 +97,14 @@ def format_mol_for_vasp(rdkitmol, name):
 
 	final_string= [name_.format(name),
 					lattice_constant.format(2),
-					vector.format((x_width+pad*2)/2.0,0,0),
-					vector.format(0,(y_width+2*pad)/2.0,0),
-					vector.format(0,0,(z_width+2*pad)/2.0)]
+					# vector.format((x_width+pad*2)/2.0,0,0),
+					# vector.format(0,(y_width+2*pad)/2.0,0),
+					# vector.format(0,0,(z_width+2*pad)/2.0)
+				   vector.format(13/2., 0, 0),
+				   vector.format(0, 12. / 2.0, 0),
+				   vector.format(0, 0, 10 / 2.0)
+
+				   ]
 	for els in atm_numbers:
 		final_string.append(number_of_atoms.format(els))
 
