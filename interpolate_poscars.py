@@ -151,9 +151,47 @@ def recenter_direct_poscar(poscar):
 					w.write('  {0: .16f}  {1: .16f}  {2: .16f}\n'.format(*coords_center))
 
 
+
+def plot_interp_neb_traj(fin='/home/macenrola/Documents/nwchem/NEB_MP/final_E_MP_ISOLATED'):
+	"""
+	:param fin: takes in a final neb path with only the energies
+	:return: will plot an image, its interpolation and the value of the extremas
+	"""
+	from matplotlib import pyplot as plt
+	from scipy import interpolate
+	import numpy as np
+	coords = []
+	Es = []
+	with open(fin, 'rb') as r:
+		for line in r:
+			if line[0] == '#':
+				continue
+			else:
+				cur_coords, cur_Es = line.strip().split()
+				coords.append(float(cur_coords))
+				Es.append(float(cur_Es))
+	print coords
+	print Es
+	min_E = min(Es)
+	print min_E
+	Es = [(x-min_E)*27.2116*23.06 for x in Es]
+	print Es
+	left = Es[0]
+	right = Es[-1]
+	f = interpolate.interp1d(coords, Es, 'cubic')
+	x_new = np.linspace(0, 1, 200)
+	y_new = f(x_new)
+	max_E = max(y_new)
+	plt.plot(coords, Es, 'o', x_new, y_new, '-')
+	plt.xlabel("Reaction Coordinate")
+	plt.ylabel("Energy (kcal/mol)")
+	plt.title('M->O: left={0:.4f} kcal/mol; right={1:.4f} kcal/mol; right-left:{2:.4f}kcal/mol; max-left:{3:.4f} kcal/mol'.format(left, right, right-left, max_E-left))
+	plt.show()
+
 if __name__ == "__main__":
 	import sys
 	# interpolate_poscars_keep_selective_flags(sys.argv[1], sys.argv[2], sys.argv[3])
-	# interpolate_poscars_keep_selective_flags('/home/macenrola/Documents/vasp/NEB_mpXylene/mXylene-Protonated', '/home/macenrola/Documents/vasp/NEB_mpXylene/pXylene-Protonated',
-	# 										 8, '/home/macenrola/Documents/vasp/NEB_mpXylene/')
-	recenter_direct_poscar('/home/macenrola/Documents/vasp/xylene/contcar')
+	# interpolate_poscars_keep_selective_flags('/home/macenrola/Documents/vasp/mXylene-Protonated', '/home/macenrola/Documents/vasp/oXylene-Protonated',
+	# 										 8, '/home/macenrola/Documents/vasp/NEB_moXylene/')
+	# recenter_direct_poscar('/home/macenrola/Documents/vasp/mXylene-Protonated')
+	plot_interp_neb_traj('/home/macenrola/Documents/nwchem/NEB_MO/final_E_MO_ISOLATED')

@@ -130,7 +130,8 @@ def align_xylenes(mol1, mol2, mol3, core='[CH3]~[CH0]~[C;!+]~[C;!+]~[C]~[CH]~[CH
 	:param core: the common fragment upon which align
 	:return: None but will write the aligned versions to mol files
 	"""
-	for m in [mol1, mol2, mol3]:
+	for i,m in enumerate([mol1, mol2, mol3]):
+		print i
 		Chem.SanitizeMol(m)
 		m.UpdatePropertyCache(strict=False)
 		pattpos = Chem.MolFromSmarts('[CH3][CH]')
@@ -148,9 +149,9 @@ def align_xylenes(mol1, mol2, mol3, core='[CH3]~[CH0]~[C;!+]~[C;!+]~[C]~[CH]~[CH
 	AllChem.AlignMol(mol2, mol1,atomMap=zip(match2, match1), maxIters=1000, reflect=True)  # <- m2 is aligned to m1, return value is the RMSD for the alignment
 	AllChem.AlignMol(mol3, mol1,atomMap=zip(match3, match1), maxIters=1000, reflect=False)  # <- m3 is aligned to m1, return value is the RMSD for the alignment
 
-	Chem.MolToMolFile(mol1, '/home/macenrola/Desktop/oXylene.sdf')
-	Chem.MolToMolFile(mol2, '/home/macenrola/Desktop/mXylene.sdf')
-	Chem.MolToMolFile(mol3, '/home/macenrola/Desktop/pXylene.sdf')
+	Chem.MolToMolFile(mol1, '/home/macenrola/Desktop/oXylene_align.sdf')
+	Chem.MolToMolFile(mol2, '/home/macenrola/Desktop/mXylene_align.sdf')
+	Chem.MolToMolFile(mol3, '/home/macenrola/Desktop/pXylene_align.sdf')
 	return
 # def align_protonated_xylene_according_to_methyl(rdkitmol):
 # 	"""
@@ -238,11 +239,199 @@ def align_xylenes(mol1, mol2, mol3, core='[CH3]~[CH0]~[C;!+]~[C;!+]~[C]~[CH]~[CH
 # 	mol = Chem.MolFromMolBlock(molblock, removeHs=False)
 # 	return mol
 
+def get_CB_guest_atomxyz(rdkitmol):
+	"""
+	:param rdkitmol: takes in a rdkit_mol
+	:return: returns the atomic coordinates for the cb and the guest
+	"""
+	try:
+		complex, guest = Chem.GetMolFrags(rdkitmol, asMols=True)
+		if complex.GetNumAtoms()<guest.GetNumAtoms():
+			complex, guest = guest, complex
+
+		#### Get poits for the the hull convex
+		hull_points = []
+		complexc = complex.GetConformer(-1)
+		for i in range(complexc.GetNumAtoms()):
+			cc = [complex.GetAtomWithIdx(i).GetSymbol()]
+			cc.extend(list(complexc.GetAtomPosition(i)))
+			hull_points.append(cc)
+			# print cc
+	except:
+		hull_points = []
+		guest = rdkitmol
+	#### Guest the guest points
+	guest_points = []
+	guestc = guest.GetConformer(-1)
+	for i in range(guestc.GetNumAtoms()):
+		cc = [guest.GetAtomWithIdx(i).GetSymbol()]
+		cc.extend(list(guestc.GetAtomPosition(i)))
+		guest_points.append(cc)
+		# print cc
+
+	return hull_points, guest_points
+
+
+def make_nw_paramfile(inpdbfile):
+	"""
+	:param inpdbfile: Takes in a PDB file and will print the corresponding nwchem file for minimization
+	:return:
+	"""
+	mol = Chem.MolFromPDBFile(inpdbfile, removeHs=False)
+	cb_points, guest_points = get_CB_guest_atomxyz(mol)
+	print cb_points, guest_points
+
+	start_script = """
+echo
+start {0}
+charge 1
+geometry units angstrom nocenter noautosym noautoz\n"""
+	positionline = " {0} {1: .6f}  {2: .6f}  {3: .6f}\n"
+	end_script = """
+basis
+ C library 6-31g*
+ H library 6-31g*
+end
+dft
+ xc pbe0
+ disp vdw 3
+ iterations 300
+end
+driver
+ maxiter 300 
+end
+task dft optimize
+"""
+	fname = inpdbfile[:-4]+'.nw'
+	name = inpdbfile.strip().split('/')[-1][:-4]+'_nw'
+	script = start_script.format(name)
+	for p in cb_points+guest_points:
+		script += positionline.format(*p)
+	script += end_script
+	with open(fname, 'wb') as w:
+		w.write(script)
+	script_launch = """
+#!/bin/bash -l
+
+# Batch script to run an MPI NWChem job on Legion with the upgraded 
+# software stack under SGE. Oct 2015
+
+# 1. Force bash as the executing shell.
+#$ -S /bin/bash
+
+# 2. Request thirty minutes of wallclock time (format hours:minutes:seconds).
+#$ -l h_rt=12:00:0
+
+# 3. Request 1 gigabyte of RAM.
+#$ -l mem=1G
+
+# 4. Set the name of the job.
+#$ -N {0}
+
+# 5. Select the MPI parallel environment and 8 processors.
+#$ -pe mpi 64
+
+# 7. Set the working directory to somewhere in your scratch space.  This is
+# a necessary step with the upgraded software stack as compute nodes cannot
+# write to your $HOME.
+#
+# NOTE: this directory must exist.
+#
+# Replace "<your_UCL_id>" with your UCL user ID :)
+#$ -cwd
+
+# 8. Now we need to set up and run our job. 
+
+module load python/2.7.12
+module load nwchem/6.8-47-gdf6c956/intel-2017
+
+module list
+
+# $NSLOTS will get the number of processes you asked for with -pe mpi.
+mpirun -np $NSLOTS -machinefile $TMPDIR/machines nwchem {1}
+	"""
+	print script_launch.format(name, fname.strip().split('/')[-1])
+	with open(fname[:-3]+'.sh', 'wb') as w:
+		w.write(script_launch.format(name, fname.strip().split('/')[-1]))
+
+
+def make_gaussian_input_files_for_molgroup(list_of_pdbs):
+	"""
+	:param list_of_pdbs: take in a list of pdb files located into the very same directory
+	:return: produce a com file for each of the pdb files, a paramfile and a sh file to launch gaussian
+	"""
+	path = '/'.join(list_of_pdbs[0].split('/')[:-1]) + '/'
+	genname = 'GUEST'
+	paramfile = path + '{}paramfile'.format(genname)
+	nproc = 12
+	memperproc = 2
+	shfile = path + '{}.sh'.format(genname)
+	comstring = "\
+%Chk={0}.chk\n\
+%NProcShared={1}\n\
+%mem={2}gb\n\
+#n wB97XD/6-31G* Opt\n\
+\n\
+{0}\n\
+\n\
+0 1\n\
+"
+	shstring = "#!/bin/bash -l\n\
+#$ -S /bin/bash\n\
+#$ -cwd\n\
+#$ -l h_rt=3:0:0\n\
+#$ -l mem=%iG\n\
+#$ -l tmpfs=100G\n\
+#$ -N %s\n\
+#$ -pe smp %i\n\
+#$ -t 1-%i\n\
+number=$SGE_TASK_ID\n\
+paramfile=$(pwd)/%s\n\
+index=$(sed -n ${number}p $paramfile | awk '{print $1}')\n\
+g16infile=$(sed -n ${number}p $paramfile | awk '{print $2}')\n\
+g16outfile=$g16infile'_OUT.out'\n\
+module load gaussian/g16-a03/pgi-2016.5\n\
+source $g16root/g16/bsd/g16.profile\n\
+mkdir -p $GAUSS_SCRDIR\n\
+# echo $g16root $GAUSS_SCRDIR $GAUSS_EXEDIR $lindaConv\n\
+# echo \"GAUSS_SCRDIR = $GAUSS_SCRDIR\"\n\
+# echo \"Running: lindaConv $g16infile $JOB_ID $TMPDIR/machines\"\n\
+# echo ""\n\
+# $lindaConv $g16infile $JOB_ID $TMPDIR/machines\n\
+# echo \"Running: g16 < $g16infile > $g16outfile\"\n\
+# export GAUSS_MEMDEF=76MW\n\
+# export GAUSS_LFLAGS='-vv -opt \"Tsnet.Node.lindarsharg: ssh\"'\n\
+# time g16 < job$JOB_ID.com > $g16outfile\n\
+time g16 < $g16infile > $g16outfile\n\
+	"
+	posstring = '{0}         {1: .5f}       {2: .5f}       {3: .5f}\n'
+	print paramfile
+	with open(paramfile, 'wb') as w: pass
+	with open(paramfile, 'ab') as a:
+		for i, fname in enumerate(sorted(list_of_pdbs)):
+			comname = fname[:-4] + '.com'
+			a.write('{0:04d}\t{1}\n'.format(i+1, comname.split('/')[-1]))
+
+			cmol = Chem.MolFromMolFile(fname, removeHs=False)
+			ccomplex, cguest = get_CB_guest_atomxyz(cmol)
+			ccomstring = comstring.format(fname.split('/')[-1][:-4], nproc, nproc*memperproc)
+			for coord in ccomplex+cguest:
+				ccomstring = ccomstring+posstring.format(*coord)
+			ccomstring += '\n'
+
+			with open(comname, 'wb') as w:
+				w.write(ccomstring)
+
+	with open(shfile, 'wb') as w:
+		w.write(shstring%(memperproc, genname,nproc,i+1, paramfile.split('/')[-1]))
+
+
 if __name__ == "__main__":
 	import rdkit
 	from rdkit import Chem
 	from rdkit.Chem import AllChem
 	import numpy as np
+	import glob
 
 	# oxylene = Chem.MolFromMolFile('/home/macenrola/Documents/vasp/xylene/alignments/pXyleneProtonated_wB97XD_631Gd_small_complexes.com_OUT.mol', removeHs=False)
 	# format_mol_for_vasp(oxylene, 'pXylene_protonated')
@@ -251,11 +440,10 @@ if __name__ == "__main__":
 	# pxylene = Chem.MolFromMolFile('/home/macenrola/Documents/vasp/xylene/alignments/pXyleneProtonated_wB97XD_631Gd_small_complexes.com_OUT.mol',	removeHs=False)
 	# align_xylenes(oxylene, mxylene, pxylene)
 
-	mxylene = Chem.MolFromMolFile('/home/macenrola/Desktop/mXylene.sdf', removeHs=False, sanitize=False)
-	pxylene = Chem.MolFromMolFile('/home/macenrola/Desktop/pXylene.sdf', removeHs=False, sanitize=False)
-	oxylene = Chem.MolFromMolFile('/home/macenrola/Desktop/oXylene.sdf', removeHs=False, sanitize=False)
-
-	format_mol_for_vasp(mxylene, 'mXylene-Protonated')
-	format_mol_for_vasp(pxylene, 'pXylene-Protonated')
-	format_mol_for_vasp(oxylene, 'oXylene-Protonated')
-	# Chem.MolToMolFile(align_protonated_xylene_according_to_methyl(mol), '/home/macenrola/Desktop/pxylene.sdf')
+	# oxylene = Chem.MolFromPDBFile('/home/macenrola/Documents/nwchem/OXYLENE_OUT.pdb', removeHs=False, sanitize=False)
+	# pxylene = Chem.MolFromPDBFile('/home/macenrola/Documents/nwchem/PXYLENE_OUT.pdb', removeHs=False, sanitize=False)
+	# mxylene = Chem.MolFromPDBFile('/home/macenrola/Documents/nwchem/MXYLENE_OUT.pdb', removeHs=False, sanitize=False)
+	# print oxylene, pxylene, mxylene
+	# align_xylenes(oxylene, mxylene, pxylene)
+	flist = glob.glob('/home/macenrola/Documents/amberconvergedmols/top50/MINE/*GUEST.sdf')
+	make_gaussian_input_files_for_molgroup(flist)
