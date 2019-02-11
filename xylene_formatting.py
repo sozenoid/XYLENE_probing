@@ -272,98 +272,104 @@ def get_CB_guest_atomxyz(rdkitmol):
 	return hull_points, guest_points
 
 
-def make_nw_paramfile(inpdbfile):
+def make_nw_paramfile(list_of_pdbs):
 	"""
-	:param inpdbfile: Takes in a PDB file and will print the corresponding nwchem file for minimization
-	:return:
+	:param inpdbfile: Takes in a list of pdb files
+	:return: will write a .nw and an .sh file for all of them to be run on Stratus
 	"""
-	mol = Chem.MolFromPDBFile(inpdbfile, removeHs=False)
-	cb_points, guest_points = get_CB_guest_atomxyz(mol)
-	print cb_points, guest_points
-
-	start_script = """
-echo
-start {0}
-charge 1
-geometry units angstrom nocenter noautosym noautoz\n"""
+	path = '/'.join(list_of_pdbs[0].split('/')[:-1]) + '/'
+	genname = 'PROT_XYL'
+	start_script = "\
+echo\n\
+start {0}\n\
+charge 1\n\
+geometry units angstrom\n"
 	positionline = " {0} {1: .6f}  {2: .6f}  {3: .6f}\n"
-	end_script = """
-basis
- C library 6-31g*
- H library 6-31g*
-end
-dft
- xc pbe0
- disp vdw 3
- iterations 300
-end
-driver
- maxiter 300 
-end
-task dft optimize
-"""
-	fname = inpdbfile[:-4]+'.nw'
-	name = inpdbfile.strip().split('/')[-1][:-4]+'_nw'
-	script = start_script.format(name)
-	for p in cb_points+guest_points:
-		script += positionline.format(*p)
-	script += end_script
-	with open(fname, 'wb') as w:
-		w.write(script)
+	end_script = "\
+end\n\
+basis\n\
+ * library 6-31g*\n\
+end\n\
+dft\n\
+ xc pbe0\n\
+ disp vdw 3\n\
+ iterations 300\n\
+ direct\n\
+ grid NODISK\n\
+end\n\
+driver\n\
+ maxiter 300\n\
+end\n\
+task dft optimize\n\
+	"
 	script_launch = """
-#!/bin/bash -l
+#!/bin/bash
+## -N = Job name							##
+## select = No of nodes required, max 144 nodes				##
+## ncpus = No of cores/node required, max 64cores/node			##
+##         Request all 64 for exclusive use of the nodes for the job	##
+## mpiprocs = How many MPI processes on each node			##
+## ompthreads = How many OpenMP threads on each MPI process		##
+##              Leave this to 1 for a pure MPI job			##
+## walltime = HH:MM:SS							##
+##									##
+## Output and error file ##						##
+## -o testjob.out							##
+## -e testjob.err							##
+##									##
+## -q normal --> default queue, will route to (express,long or all)	##
+## express = max 128 core/job, walltime 60 mins                 	##
+## long = max 128 core/job, walltime 14 days                    	##
+## all = max 9216 core/job, walltime 3 days                     	##
+##									##
+##									##
+## Below example shows a (2 x 64) cores job using the Intel MPI library	##
 
-# Batch script to run an MPI NWChem job on Legion with the upgraded 
-# software stack under SGE. Oct 2015
+#PBS -N {0}
+#PBS -l select=1:ncpus=64:mpiprocs=64:ompthreads=1
+#PBS -l walltime=24:0:00
+#PBS -o {0}.out
+#PBS -e {0}.err
+#PBS -q normal
+#PBS -l software="nwchem"
 
-# 1. Force bash as the executing shell.
-#$ -S /bin/bash
+cd $PBS_O_WORKDIR
 
-# 2. Request thirty minutes of wallclock time (format hours:minutes:seconds).
-#$ -l h_rt=12:00:0
-
-# 3. Request 1 gigabyte of RAM.
-#$ -l mem=1G
-
-# 4. Set the name of the job.
-#$ -N {0}
-
-# 5. Select the MPI parallel environment and 8 processors.
-#$ -pe mpi 64
-
-# 7. Set the working directory to somewhere in your scratch space.  This is
-# a necessary step with the upgraded software stack as compute nodes cannot
-# write to your $HOME.
-#
-# NOTE: this directory must exist.
-#
-# Replace "<your_UCL_id>" with your UCL user ID :)
-#$ -cwd
-
-# 8. Now we need to set up and run our job. 
-
-module load python/2.7.12
-module load nwchem/6.8-47-gdf6c956/intel-2017
-
-module list
-
-# $NSLOTS will get the number of processes you asked for with -pe mpi.
-mpirun -np $NSLOTS -machinefile $TMPDIR/machines nwchem {1}
+module load intel/17.0.1.132
+module load impi/2017_Update_1
+module load nwchem/6.6-rev29223
+# Now run the program
+time mpirun nwchem {1} > {2}
 	"""
-	print script_launch.format(name, fname.strip().split('/')[-1])
-	with open(fname[:-3]+'.sh', 'wb') as w:
-		w.write(script_launch.format(name, fname.strip().split('/')[-1]))
+
+	for i, fname in enumerate(sorted(list_of_pdbs)):
+		nwname = fname[:-4] + '.nw'
+		shname = fname[:-4] + '.sh'
+		genname = fname.split('/')[-1][:-4]
+		cmol = Chem.MolFromPDBFile(fname, removeHs=False)
+		print cmol
+		ccomplex, cguest = get_CB_guest_atomxyz(cmol)
+		cscript = start_script.format(genname)
+		for coord in ccomplex + cguest:
+			cscript = cscript + positionline.format(*coord)
+		cscript += end_script
+
+		with open(nwname, 'wb') as w:
+			w.write(cscript)
+		with open(shname, 'wb') as w:
+			w.write(script_launch.format(genname, genname+'.nw',genname+'_LOGOUT'))
+
 
 
 def make_gaussian_input_files_for_molgroup(list_of_pdbs):
 	"""
-	:param list_of_pdbs: take in a list of pdb files located into the very same directory
+	:param list_of_pdbs: take in a list of sdf files located into the very same directory
 	:return: produce a com file for each of the pdb files, a paramfile and a sh file to launch gaussian
 	"""
 	path = '/'.join(list_of_pdbs[0].split('/')[:-1]) + '/'
-	genname = 'GUEST'
+	genname = 'COMPLEX'
 	paramfile = path + '{}paramfile'.format(genname)
-	nproc = 12
+	nproc = 16
 	memperproc = 2
 	shfile = path + '{}.sh'.format(genname)
 	comstring = "\
@@ -379,7 +385,7 @@ def make_gaussian_input_files_for_molgroup(list_of_pdbs):
 	shstring = "#!/bin/bash -l\n\
 #$ -S /bin/bash\n\
 #$ -cwd\n\
-#$ -l h_rt=3:0:0\n\
+#$ -l h_rt=47:0:0\n\
 #$ -l mem=%iG\n\
 #$ -l tmpfs=100G\n\
 #$ -N %s\n\
@@ -393,15 +399,6 @@ g16outfile=$g16infile'_OUT.out'\n\
 module load gaussian/g16-a03/pgi-2016.5\n\
 source $g16root/g16/bsd/g16.profile\n\
 mkdir -p $GAUSS_SCRDIR\n\
-# echo $g16root $GAUSS_SCRDIR $GAUSS_EXEDIR $lindaConv\n\
-# echo \"GAUSS_SCRDIR = $GAUSS_SCRDIR\"\n\
-# echo \"Running: lindaConv $g16infile $JOB_ID $TMPDIR/machines\"\n\
-# echo ""\n\
-# $lindaConv $g16infile $JOB_ID $TMPDIR/machines\n\
-# echo \"Running: g16 < $g16infile > $g16outfile\"\n\
-# export GAUSS_MEMDEF=76MW\n\
-# export GAUSS_LFLAGS='-vv -opt \"Tsnet.Node.lindarsharg: ssh\"'\n\
-# time g16 < job$JOB_ID.com > $g16outfile\n\
 time g16 < $g16infile > $g16outfile\n\
 	"
 	posstring = '{0}         {1: .5f}       {2: .5f}       {3: .5f}\n'
@@ -445,5 +442,7 @@ if __name__ == "__main__":
 	# mxylene = Chem.MolFromPDBFile('/home/macenrola/Documents/nwchem/MXYLENE_OUT.pdb', removeHs=False, sanitize=False)
 	# print oxylene, pxylene, mxylene
 	# align_xylenes(oxylene, mxylene, pxylene)
-	flist = glob.glob('/home/macenrola/Documents/amberconvergedmols/top50/MINE/*GUEST.sdf')
+	flist = sorted(glob.glob('/home/macenrola/Documents/amberconvergedmols/top50/MINE/1stnround_legion/*sdf'))
 	make_gaussian_input_files_for_molgroup(flist)
+	# make_nw_paramfile(flist)
+	print flist

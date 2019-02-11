@@ -188,6 +188,14 @@ def plot_interp_neb_traj(fin='/home/macenrola/Documents/nwchem/NEB_MP/final_E_MP
 	plt.title('M->O: left={0:.4f} kcal/mol; right={1:.4f} kcal/mol; right-left:{2:.4f}kcal/mol; max-left:{3:.4f} kcal/mol'.format(left, right, right-left, max_E-left))
 	plt.show()
 
+
+def pop_xylenes_out_of_CB(rdkitcomplex):
+	"""
+	:param rdkitcomplex: given a complex of cb + a molecule
+	:return: two additional molecules, one where the guest is popped upward and another where the guest is popped downward
+	"""
+
+
 if __name__ == "__main__":
 	import sys
 	# interpolate_poscars_keep_selective_flags(sys.argv[1], sys.argv[2], sys.argv[3])
