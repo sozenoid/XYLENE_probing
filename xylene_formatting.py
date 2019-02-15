@@ -244,6 +244,9 @@ def get_CB_guest_atomxyz(rdkitmol):
 	:param rdkitmol: takes in a rdkit_mol
 	:return: returns the atomic coordinates for the cb and the guest
 	"""
+	import rdkit
+	from rdkit import Chem
+	from rdkit.Chem import AllChem
 	try:
 		complex, guest = Chem.GetMolFrags(rdkitmol, asMols=True)
 		if complex.GetNumAtoms()<guest.GetNumAtoms():
@@ -260,6 +263,7 @@ def get_CB_guest_atomxyz(rdkitmol):
 	except:
 		hull_points = []
 		guest = rdkitmol
+		print 'ayayay, this is not a complex'
 	#### Guest the guest points
 	guest_points = []
 	guestc = guest.GetConformer(-1)
@@ -360,6 +364,113 @@ time mpirun nwchem {1} > {2}
 			w.write(script_launch.format(genname, genname+'.nw',genname+'_LOGOUT'))
 
 
+def make_neb_input_for_nwchem(pdb1, pdb2):
+	"""
+	:param pdb1: first pdb file for the initial configuration usually the fully docked version
+	:param pdb2: second pdb file for the final configuration
+	:note: try adding cgmin to the dft route if convergence sucks, for neutral molecules it seems to kind of okay though
+	:return: a nwchem file and its launching scrip for a neb computation
+	"""
+	# path = '/'.join(pdb2.split('/')[:-1]) + '/'
+	# genname = 'step_in'
+	start_script = "\
+echo\n\
+start {0}\n\
+charge 0\n\
+geometry units angstrom nocenter noautosym noautoz\n"
+	positionline = " {0} {1: .6f}  {2: .6f}  {3: .6f}\n"
+	endgeom = "end\n\
+geometry endgeom nocenter noautosym noautoz\n"
+	end_script = "\
+end\n\
+basis\n\
+ * library 3-21g\n\
+end\n\
+basis\n\
+ * library 3-21g\n\
+end\n\
+dft\n\
+ xc pbe0\n\
+ disp\n\
+ iterations 300\n\
+ direct\n\
+ grid NODISK\n\
+ grid fine\n\
+ cgmin\n\
+end\n\
+driver\n\
+ maxiter 300\n\
+end\n\
+neb\n\
+  nbeads 20\n\
+  kbeads 1.0\n\
+  maxiter 100\n\
+  stepsize 0.10\n\
+  print_shift 1\n\
+end\n\
+task dft neb ignore\n\
+	"
+	script_launch = """
+#!/bin/bash
+## -N = Job name							##
+## select = No of nodes required, max 144 nodes				##
+## ncpus = No of cores/node required, max 64cores/node			##
+##         Request all 64 for exclusive use of the nodes for the job	##
+## mpiprocs = How many MPI processes on each node			##
+## ompthreads = How many OpenMP threads on each MPI process		##
+##              Leave this to 1 for a pure MPI job			##
+## walltime = HH:MM:SS							##
+##									##
+## Output and error file ##						##
+## -o testjob.out							##
+## -e testjob.err							##
+##									##
+## -q normal --> default queue, will route to (express,long or all)	##
+## express = max 128 core/job, walltime 60 mins                 	##
+## long = max 128 core/job, walltime 14 days                    	##
+## all = max 9216 core/job, walltime 3 days                     	##
+##									##
+##									##
+## Below example shows a (2 x 64) cores job using the Intel MPI library	##
+
+#PBS -N {0}
+#PBS -l select=5:ncpus=64:mpiprocs=64:ompthreads=1
+#PBS -l walltime=24:0:00
+#PBS -o {0}.out
+#PBS -e {0}.err
+#PBS -q normal
+#PBS -l software="nwchem"
+
+cd $PBS_O_WORKDIR
+
+module load intel/17.0.1.132
+module load impi/2017_Update_1
+module load nwchem/6.6-rev29223
+# Now run the program
+time mpirun nwchem {1} > {2}
+	"""
+
+	nwname = pdb2[:-4] + '.nw'
+	shname = pdb2[:-4] + '.sh'
+	genname = pdb2.split('/')[-1][:-4]
+	cmol = Chem.MolFromPDBFile(pdb1, removeHs=False)
+	cmol_final = Chem.MolFromPDBFile(pdb2, removeHs=False)
+	print cmol
+	ccomplex, cguest = get_CB_guest_atomxyz(cmol)
+	fincomplex, finguest = get_CB_guest_atomxyz(cmol_final)
+	cscript = start_script.format(genname)
+	for coord in ccomplex + cguest:
+		cscript+= positionline.format(*coord)
+	cscript+=endgeom
+	for coord in fincomplex+finguest:
+		cscript+= positionline.format(*coord)
+	cscript += end_script.format(genname)
+
+	with open(nwname, 'wb') as w:
+		w.write(cscript)
+	with open(shname, 'wb') as w:
+		w.write(script_launch.format(genname, genname+'.nw',genname+'_LOGOUT'))
+
 
 def make_gaussian_input_files_for_molgroup(list_of_pdbs):
 	"""
@@ -376,16 +487,16 @@ def make_gaussian_input_files_for_molgroup(list_of_pdbs):
 %Chk={0}.chk\n\
 %NProcShared={1}\n\
 %mem={2}gb\n\
-#n wB97XD/6-31G* Opt\n\
+#n wB97XD/3-21G Opt\n\
 \n\
 {0}\n\
 \n\
-0 1\n\
+1 1\n\
 "
 	shstring = "#!/bin/bash -l\n\
 #$ -S /bin/bash\n\
 #$ -cwd\n\
-#$ -l h_rt=47:0:0\n\
+#$ -l h_rt=12:0:0\n\
 #$ -l mem=%iG\n\
 #$ -l tmpfs=100G\n\
 #$ -N %s\n\
@@ -409,7 +520,7 @@ time g16 < $g16infile > $g16outfile\n\
 			comname = fname[:-4] + '.com'
 			a.write('{0:04d}\t{1}\n'.format(i+1, comname.split('/')[-1]))
 
-			cmol = Chem.MolFromMolFile(fname, removeHs=False)
+			cmol = Chem.MolFromPDBFile(fname, removeHs=False)
 			ccomplex, cguest = get_CB_guest_atomxyz(cmol)
 			ccomstring = comstring.format(fname.split('/')[-1][:-4], nproc, nproc*memperproc)
 			for coord in ccomplex+cguest:
@@ -417,11 +528,126 @@ time g16 < $g16infile > $g16outfile\n\
 			ccomstring += '\n'
 
 			with open(comname, 'wb') as w:
+				print comname
 				w.write(ccomstring)
 
 	with open(shfile, 'wb') as w:
 		w.write(shstring%(memperproc, genname,nproc,i+1, paramfile.split('/')[-1]))
 
+
+def get_xyz_list_from_xyz(fxyz):
+	"""
+	:param fxyz: takes in an xyz file
+	:return: a list of list containing the atom types and the atomic positions for that xyz
+	"""
+	with open(fxyz, 'rb') as r:
+		xyzlist = [[y[0], float(y[1]), float(y[2]), float(y[3])] for y in [x.strip().split() for x in r.readlines()[2:]]]
+		print xyzlist
+	return xyzlist, []
+
+def make_gaussian_input_files_for_xyzgroup(list_of_xyz):
+	"""
+	:param list_of_pdbs: take in a list of sdf files located into the very same directory
+	:return: produce a com file for each of the pdb files, a paramfile and a sh file to launch gaussian
+	"""
+	path = '/'.join(list_of_xyz[0].split('/')[:-1]) + '/'
+	genname = 'PROT-CB6XYL'
+	paramfile = path + '{}paramfile'.format(genname)
+	nproc = 12
+	memperproc = 4
+	shfile = path + '{}.sh'.format(genname)
+	# n wB97XD/3-21G opt=(calcall,tight,ts,cartesian,noeigentest)\n\
+	comstring = "\
+%Chk={0}.chk\n\
+%NProcShared={1}\n\
+%mem={2}gb\n\
+#n wB97XD/3-21G opt\n\
+\n\
+{0}\n\
+\n\
+1 1\n\
+"
+	shstring = "#!/bin/bash -l\n\
+#$ -S /bin/bash\n\
+#$ -cwd\n\
+#$ -l h_rt=12:10:0\n\
+#$ -l mem=%iG\n\
+#$ -l tmpfs=100G\n\
+#$ -N %s\n\
+#$ -pe smp %i\n\
+#$ -t 1-%i\n\
+number=$SGE_TASK_ID\n\
+paramfile=$(pwd)/%s\n\
+index=$(sed -n ${number}p $paramfile | awk '{print $1}')\n\
+g16infile=$(sed -n ${number}p $paramfile | awk '{print $2}')\n\
+g16outfile=$g16infile'_OUT.out'\n\
+module load gaussian/g16-a03/pgi-2016.5\n\
+source $g16root/g16/bsd/g16.profile\n\
+mkdir -p $GAUSS_SCRDIR\n\
+time g16 < $g16infile > $g16outfile\n\
+	"
+	posstring = '{0}         {1: .5f}       {2: .5f}       {3: .5f}\n'
+	print paramfile
+	with open(paramfile, 'wb') as w: pass
+	with open(paramfile, 'ab') as a:
+		for i, fname in enumerate(sorted(list_of_xyz)):
+			comname = fname[:-4] + '.com'
+			a.write('{0:04d}\t{1}\n'.format(i+1, comname.split('/')[-1]))
+
+			ccomplex, cguest = get_xyz_list_from_xyz(fname)
+			ccomstring = comstring.format(fname.split('/')[-1][:-4], nproc, nproc*memperproc)
+			for coord in ccomplex+cguest:
+				ccomstring = ccomstring+posstring.format(*coord)
+			ccomstring += '\n\n'
+
+			with open(comname, 'wb') as w:
+				w.write(ccomstring)
+
+	with open(shfile, 'wb') as w:
+		w.write(shstring%(memperproc, genname,nproc,i+1, paramfile.split('/')[-1]))
+
+
+
+def doc_pdb_in_cb6(cb6fline, listofmols):
+	"""
+	:param cb6fline: file name showing the pdb file for cb6
+	:param listofmols: list of pdb file names for merging with cb6
+	:return: the merged version of these loose complexes with added hydrogens
+	"""
+	cb6mol = Chem.MolFromPDBFile(cb6fline, removeHs=False)
+	benzene = Chem.MolFromSmiles('c1ccccc1')
+	mxylene = Chem.MolFromMolFile('/home/macenrola/Desktop/0.sdf', sanitize=False, removeHs=False)
+	oxylene = Chem.MolFromMolFile('/home/macenrola/Desktop/1.sdf', sanitize=False, removeHs=False)
+	pxylene = Chem.MolFromMolFile('/home/macenrola/Desktop/2.sdf', sanitize=False, removeHs=False)
+	kind = {'7237':oxylene, '7809': pxylene, '7929':mxylene}
+	# mxylene = Chem.MolFromSmiles('Cc1cc(C)ccc1')
+	# oxylene = Chem.MolFromSmiles('Cc1c(C)cccc1')
+	# pxylene = Chem.MolFromSmiles('Cc1ccc(C)cc1')
+	# for i, m in enumerate([mxylene, oxylene, pxylene]):
+	# 	m=Chem.AddHs(m)
+	# 	AllChem.EmbedMolecule(m)
+	# 	Chem.MolToMolFile(m, '/home/macenrola/Desktop/{}.sdf'.format(i))
+	sp2 = benzene.GetAtoms()[0].GetHybridization()
+	for f in listofmols:
+		tmpmol = Chem.MolFromPDBFile(f, sanitize=False)
+		num = f.split("/")[-1][:4]
+		if num[0]=='C':
+			continue
+		pattern = kind[num]
+		Chem.rdMolAlign.AlignMol(pattern, tmpmol, atomMap=zip(range(pattern.GetNumAtoms()),range(tmpmol.GetNumAtoms())))
+		# for i in tmpmol.GetAtoms():
+		# 	if i.IsInRing():
+		# 		i.SetIsAromatic(True)
+		# 		i.SetHybridization(sp2)
+		# 		i.SetNumExplicitHs(1)
+				# i.SetNoImplicit(True)
+		# tmpmol.UpdatePropertyCache()
+		# Chem.SanitizeMol(tmpmol)
+		# print Chem.MolToSmiles(tmpmol)
+		# tmpmol = Chem.AddHs(tmpmol, addCoords=True)
+
+		cmol = Chem.CombineMols(pattern, cb6mol)
+		Chem.MolToPDBFile(cmol, f[:-4]+'-complex.pdb')
 
 if __name__ == "__main__":
 	import rdkit
@@ -433,7 +659,7 @@ if __name__ == "__main__":
 	# oxylene = Chem.MolFromMolFile('/home/macenrola/Documents/vasp/xylene/alignments/pXyleneProtonated_wB97XD_631Gd_small_complexes.com_OUT.mol', removeHs=False)
 	# format_mol_for_vasp(oxylene, 'pXylene_protonated')
 	# oxylene = Chem.MolFromMolFile('/home/macenrola/Documents/vasp/xylene/alignments/oXyleneProtonated_wB97XD_631Gd_small_complexes.com_OUT.mol', removeHs=False)
-	# mxylene = Chem.MolFromMolFile('/home/macenrola/Documents/vasp/xylene/alignments/mXyleneProtonated_wB97XD_631Gd_small_complexes.com_OUT.mol',removeHs=False)
+	# mxylene = Chem.MolFromMolFile('/home/macenrola/Documents/vasp/xylene/alignments/mXyleneProtonated_wB97XD_631Gd_small_complexes.com_OUT.mol', removeHs=False)
 	# pxylene = Chem.MolFromMolFile('/home/macenrola/Documents/vasp/xylene/alignments/pXyleneProtonated_wB97XD_631Gd_small_complexes.com_OUT.mol',	removeHs=False)
 	# align_xylenes(oxylene, mxylene, pxylene)
 
@@ -442,7 +668,20 @@ if __name__ == "__main__":
 	# mxylene = Chem.MolFromPDBFile('/home/macenrola/Documents/nwchem/MXYLENE_OUT.pdb', removeHs=False, sanitize=False)
 	# print oxylene, pxylene, mxylene
 	# align_xylenes(oxylene, mxylene, pxylene)
-	flist = sorted(glob.glob('/home/macenrola/Documents/amberconvergedmols/top50/MINE/1stnround_legion/*sdf'))
-	make_gaussian_input_files_for_molgroup(flist)
-	# make_nw_paramfile(flist)
-	print flist
+
+
+	#
+	# flist = sorted(glob.glob('/home/macenrola/Documents/XYLENE/neutral_cb6/gaussian_files/*.xyz'))
+	# make_gaussian_input_files_for_xyzgroup(flist)
+	# print flist
+
+
+
+	# flist =glob.glob('/home/macenrola/Documents/XYLENE/docking_w_cb6_7/*ex.pdb')
+	# for f in flist:
+	# 	make_neb_input_for_nwchem(f, f[:-4]+'_down.pdb')
+	# 	make_neb_input_for_nwchem(f, f[:-4] + '_up.pdb')
+
+
+	doc_pdb_in_cb6('/home/macenrola/Documents/XYLENE/neutral_cb6/CB6.pdb', glob.glob('/home/macenrola/Documents/XYLENE/neutral_cb6/*.pdbqt.pdb'))
+

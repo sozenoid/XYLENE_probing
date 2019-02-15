@@ -189,17 +189,69 @@ def plot_interp_neb_traj(fin='/home/macenrola/Documents/nwchem/NEB_MP/final_E_MP
 	plt.show()
 
 
-def pop_xylenes_out_of_CB(rdkitcomplex):
+def pop_xylenes_out_of_CB(rdkitcomplex, lengthA=10):
 	"""
-	:param rdkitcomplex: given a complex of cb + a molecule
-	:return: two additional molecules, one where the guest is popped upward and another where the guest is popped downward
+	:param rdkitcomplex: given a complex of cb + a molecule, lengthA is the distance in Angstrom that is to be applied to the guest during offsetting
+	:return: two additional molecules, one where the guest is popped upward and another where the guest is popped downward, the direction of popping is according to the least principal
+			axis of the CB
 	"""
+	import numpy as np
+	from sklearn.decomposition import PCA
+	cb_pt, guest_pt = get_CB_guest_atomxyz(rdkitcomplex)
+
+	pca = PCA(n_components=3)
+	pca.fit([x[1:] for x in cb_pt])
+
+	complex, guest = Chem.GetMolFrags(rdkitcomplex, asMols=True)
+	if complex.GetNumAtoms() < guest.GetNumAtoms():
+		complex, guest = guest, complex
+
+	offptup = rdkit.Geometry.rdGeometry.Point3D()
+	offptdown = rdkit.Geometry.rdGeometry.Point3D()
+	offvectup = pca.components_[2]*lengthA
+	offvectdown = -pca.components_[2]*lengthA
+	offptup.x, offptup.y, offptup.z = offvectdown
+	offptdown.x, offptdown.y, offptdown.z = offvectup
+
+	offptmidup = rdkit.Geometry.rdGeometry.Point3D()
+	offptmiddown = rdkit.Geometry.rdGeometry.Point3D()
+	offvectmidup = pca.components_[2]*4
+	offvectmiddown = -pca.components_[2]*4
+	offptmidup.x, offptmidup.y, offptmidup.z = offvectmiddown
+	offptmiddown.x, offptmiddown.y, offptmiddown.z = offvectmidup
+
+
+	molup = Chem.CombineMols( guest,complex, offset = offptmidup)
+	moldown = Chem.CombineMols( guest,complex, offset = offptmiddown)
+
+	molmidup = Chem.CombineMols(guest, complex, offset=offptmidup)
+	molmiddown = Chem.CombineMols(guest, complex, offset=offptmiddown)
+
+	return molup, moldown, molmidup, molmiddown
+
+
+
+
 
 
 if __name__ == "__main__":
+	from xylene_formatting import get_CB_guest_atomxyz
 	import sys
+	import rdkit
+	from rdkit import Chem
+	import glob
+	from rdkit.Chem import AllChem
 	# interpolate_poscars_keep_selective_flags(sys.argv[1], sys.argv[2], sys.argv[3])
 	# interpolate_poscars_keep_selective_flags('/home/macenrola/Documents/vasp/mXylene-Protonated', '/home/macenrola/Documents/vasp/oXylene-Protonated',
 	# 										 8, '/home/macenrola/Documents/vasp/NEB_moXylene/')
 	# recenter_direct_poscar('/home/macenrola/Documents/vasp/mXylene-Protonated')
-	plot_interp_neb_traj('/home/macenrola/Documents/nwchem/NEB_MO/final_E_MO_ISOLATED')
+	# plot_interp_neb_traj('/home/macenrola/Documents/nwchem/NEB_MO/final_E_MO_ISOLATED')
+	flist = glob.glob('/home/macenrola/Documents/XYLENE/docking_w_cb6_7/*ex.pdb')
+	for f in flist:
+		mol = Chem.MolFromPDBFile(f, removeHs=False)
+		up, down, midup, middown = pop_xylenes_out_of_CB(mol)
+
+		Chem.MolToPDBFile(up, f[:-4]+'_up.pdb')
+		Chem.MolToPDBFile(down, f[:-4]+'_down.pdb')
+		Chem.MolToPDBFile(midup, f[:-4]+'_midup.pdb')
+		Chem.MolToPDBFile(middown, f[:-4]+'_middown.pdb')
