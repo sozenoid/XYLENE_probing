@@ -551,9 +551,9 @@ def make_gaussian_input_files_for_xyzgroup(list_of_xyz):
 	:return: produce a com file for each of the pdb files, a paramfile and a sh file to launch gaussian
 	"""
 	path = '/'.join(list_of_xyz[0].split('/')[:-1]) + '/'
-	genname = 'PROT-CB6XYL'
+	genname = 'CB7-freq'
 	paramfile = path + '{}paramfile'.format(genname)
-	nproc = 12
+	nproc = 16
 	memperproc = 4
 	shfile = path + '{}.sh'.format(genname)
 	# n wB97XD/3-21G opt=(calcall,tight,ts,cartesian,noeigentest)\n\
@@ -561,7 +561,7 @@ def make_gaussian_input_files_for_xyzgroup(list_of_xyz):
 %Chk={0}.chk\n\
 %NProcShared={1}\n\
 %mem={2}gb\n\
-#n wB97XD/3-21G opt\n\
+#n wB97XD/6-31G* Opt=(ts, tight, calcall, noeigentest)\n\
 \n\
 {0}\n\
 \n\
@@ -570,7 +570,7 @@ def make_gaussian_input_files_for_xyzgroup(list_of_xyz):
 	shstring = "#!/bin/bash -l\n\
 #$ -S /bin/bash\n\
 #$ -cwd\n\
-#$ -l h_rt=12:10:0\n\
+#$ -l h_rt=2:10:0\n\
 #$ -l mem=%iG\n\
 #$ -l tmpfs=100G\n\
 #$ -N %s\n\
@@ -590,7 +590,7 @@ time g16 < $g16infile > $g16outfile\n\
 	print paramfile
 	with open(paramfile, 'wb') as w: pass
 	with open(paramfile, 'ab') as a:
-		for i, fname in enumerate(sorted(list_of_xyz)):
+		for i, fname in enumerate(sorted(list_of_xyz)[::-1]):
 			comname = fname[:-4] + '.com'
 			a.write('{0:04d}\t{1}\n'.format(i+1, comname.split('/')[-1]))
 
@@ -671,17 +671,17 @@ if __name__ == "__main__":
 
 
 	#
-	# flist = sorted(glob.glob('/home/macenrola/Documents/XYLENE/neutral_cb6/gaussian_files/*.xyz'))
+	# flist = sorted(glob.glob('/home/macenrola/Documents/XYLENE/TS/complex-ts/631gd/close_john/*.xyz'))
 	# make_gaussian_input_files_for_xyzgroup(flist)
 	# print flist
 
 
 
-	# flist =glob.glob('/home/macenrola/Documents/XYLENE/docking_w_cb6_7/*ex.pdb')
-	# for f in flist:
-	# 	make_neb_input_for_nwchem(f, f[:-4]+'_down.pdb')
+	flist =glob.glob('/home/macenrola/Documents/XYLENE/popping_guests/nwchem_hf/*0.pdb')
+	for f in flist:
+		make_neb_input_for_nwchem(f, f[:-5]+'9.pdb')
 	# 	make_neb_input_for_nwchem(f, f[:-4] + '_up.pdb')
 
 
-	doc_pdb_in_cb6('/home/macenrola/Documents/XYLENE/neutral_cb6/CB6.pdb', glob.glob('/home/macenrola/Documents/XYLENE/neutral_cb6/*.pdbqt.pdb'))
+	# doc_pdb_in_cb6('/home/macenrola/Documents/XYLENE/neutral_cb6/CB6.pdb', glob.glob('/home/macenrola/Documents/XYLENE/neutral_cb6/*.pdbqt.pdb'))
 

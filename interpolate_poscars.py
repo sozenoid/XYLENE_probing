@@ -189,9 +189,10 @@ def plot_interp_neb_traj(fin='/home/macenrola/Documents/nwchem/NEB_MP/final_E_MP
 	plt.show()
 
 
-def pop_xylenes_out_of_CB(rdkitcomplex, lengthA=10):
+def pop_xylenes_out_of_CB(rdkitcomplex, lengthA=10, nimages=10):
 	"""
 	:param rdkitcomplex: given a complex of cb + a molecule, lengthA is the distance in Angstrom that is to be applied to the guest during offsetting
+	:nimages: is the number of intermeediate steps, minimum 2
 	:return: two additional molecules, one where the guest is popped upward and another where the guest is popped downward, the direction of popping is according to the least principal
 			axis of the CB
 	"""
@@ -206,28 +207,46 @@ def pop_xylenes_out_of_CB(rdkitcomplex, lengthA=10):
 	if complex.GetNumAtoms() < guest.GetNumAtoms():
 		complex, guest = guest, complex
 
-	offptup = rdkit.Geometry.rdGeometry.Point3D()
-	offptdown = rdkit.Geometry.rdGeometry.Point3D()
-	offvectup = pca.components_[2]*lengthA
-	offvectdown = -pca.components_[2]*lengthA
-	offptup.x, offptup.y, offptup.z = offvectdown
-	offptdown.x, offptdown.y, offptdown.z = offvectup
+	# dummy_atom = Chem.MolFromSmarts('[#2]')
+	# AllChem.EmbedMolecule(dummy_atom)
+	# print Chem.MolToMolBlock(dummy_atom)
 
-	offptmidup = rdkit.Geometry.rdGeometry.Point3D()
-	offptmiddown = rdkit.Geometry.rdGeometry.Point3D()
-	offvectmidup = pca.components_[2]*4
-	offvectmiddown = -pca.components_[2]*4
-	offptmidup.x, offptmidup.y, offptmidup.z = offvectmiddown
-	offptmiddown.x, offptmiddown.y, offptmiddown.z = offvectmidup
+	imgs = []
+	for k in range(0, nimages):
+		offpt = rdkit.Geometry.rdGeometry.Point3D()
+		offvect = pca.components_[2]*lengthA*float(k)/nimages
+		offpt.x, offpt.y, offpt.z = offvect
 
+		offdummypt = rdkit.Geometry.rdGeometry.Point3D()
+		offdummyvect = -pca.components_[2]*lengthA*2
+		offdummypt.x, offdummypt.y, offdummypt.z = offdummyvect
 
-	molup = Chem.CombineMols( guest,complex, offset = offptmidup)
-	moldown = Chem.CombineMols( guest,complex, offset = offptmiddown)
+		tmp_comp = Chem.CombineMols(guest, complex, offset=offpt)
+		# tmp_comp_and_dummy = Chem.CombineMols( tmp_comp,dummy_atom, offset=offdummypt) # uncomment to activate dummy atom
+		# imgs.append(tmp_comp_and_dummy)
+		imgs.append(tmp_comp)
+	# offptup = rdkit.Geometry.rdGeometry.Point3D()
+	# offptdown = rdkit.Geometry.rdGeometry.Point3D()
+	# offvectup = pca.components_[2]*lengthA
+	# offvectdown = -pca.components_[2]*lengthA
+	# offptup.x, offptup.y, offptup.z = offvectdown
+	# offptdown.x, offptdown.y, offptdown.z = offvectup
+	#
+	# offptmidup = rdkit.Geometry.rdGeometry.Point3D()
+	# offptmiddown = rdkit.Geometry.rdGeometry.Point3D()
+	# offvectmidup = pca.components_[2]*4
+	# offvectmiddown = -pca.components_[2]*4
+	# offptmidup.x, offptmidup.y, offptmidup.z = offvectmiddown
+	# offptmiddown.x, offptmiddown.y, offptmiddown.z = offvectmidup
 
-	molmidup = Chem.CombineMols(guest, complex, offset=offptmidup)
-	molmiddown = Chem.CombineMols(guest, complex, offset=offptmiddown)
+	#
+	# molup = Chem.CombineMols( guest,complex, offset = offptmidup)
+	# moldown = Chem.CombineMols( guest,complex, offset = offptmiddown)
+	#
+	# molmidup = Chem.CombineMols(guest, complex, offset=offptmidup)
+	# molmiddown = Chem.CombineMols(guest, complex, offset=offptmiddown)
 
-	return molup, moldown, molmidup, molmiddown
+	return imgs
 
 
 
@@ -249,9 +268,10 @@ if __name__ == "__main__":
 	flist = glob.glob('/home/macenrola/Documents/XYLENE/docking_w_cb6_7/*ex.pdb')
 	for f in flist:
 		mol = Chem.MolFromPDBFile(f, removeHs=False)
-		up, down, midup, middown = pop_xylenes_out_of_CB(mol)
-
-		Chem.MolToPDBFile(up, f[:-4]+'_up.pdb')
-		Chem.MolToPDBFile(down, f[:-4]+'_down.pdb')
-		Chem.MolToPDBFile(midup, f[:-4]+'_midup.pdb')
-		Chem.MolToPDBFile(middown, f[:-4]+'_middown.pdb')
+		imgs = pop_xylenes_out_of_CB(mol)
+		for i, k in enumerate(imgs):
+			Chem.MolToPDBFile(k, f[:-4]+'_{}.pdb'.format(i))
+		# Chem.MolToPDBFile(up, f[:-4]+'_up.pdb')
+		# Chem.MolToPDBFile(down, f[:-4]+'_down.pdb')
+		# Chem.MolToPDBFile(midup, f[:-4]+'_midup.pdb')
+		# Chem.MolToPDBFile(middown, f[:-4]+'_middown.pdb')
