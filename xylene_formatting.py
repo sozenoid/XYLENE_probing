@@ -871,7 +871,7 @@ module load quip/18c5440/gnu-4.9.2
 module load cp2k/4.1/ompi/gnu-4.9.2
 
 # Gerun is our mpirun wrapper which sets number of cores and machinefile for you
-gerun cp2k.popt -in {1}
+time gerun cp2k.popt -in {1}
 	"""
 
 	for f in xyzlist:
