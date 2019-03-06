@@ -189,7 +189,7 @@ def plot_interp_neb_traj(fin='/home/macenrola/Documents/nwchem/NEB_MP/final_E_MP
 	plt.show()
 
 
-def pop_xylenes_out_of_CB(rdkitcomplex, lengthA=10, nimages=10):
+def pop_xylenes_out_of_CB(rdkitcomplex, lengthA=10, nimages=2):
 	"""
 	:param rdkitcomplex: given a complex of cb + a molecule, lengthA is the distance in Angstrom that is to be applied to the guest during offsetting
 	:nimages: is the number of intermeediate steps, minimum 2
@@ -214,7 +214,7 @@ def pop_xylenes_out_of_CB(rdkitcomplex, lengthA=10, nimages=10):
 	imgs = []
 	for k in range(0, nimages):
 		offpt = rdkit.Geometry.rdGeometry.Point3D()
-		offvect = pca.components_[2]*lengthA*float(k)/nimages
+		offvect = pca.components_[2]*lengthA*float(k)/(nimages-1)
 		offpt.x, offpt.y, offpt.z = offvect
 
 		offdummypt = rdkit.Geometry.rdGeometry.Point3D()
@@ -265,7 +265,7 @@ if __name__ == "__main__":
 	# 										 8, '/home/macenrola/Documents/vasp/NEB_moXylene/')
 	# recenter_direct_poscar('/home/macenrola/Documents/vasp/mXylene-Protonated')
 	# plot_interp_neb_traj('/home/macenrola/Documents/nwchem/NEB_MO/final_E_MO_ISOLATED')
-	flist = glob.glob('/home/macenrola/Documents/XYLENE/docking_w_cb6_7/*ex.pdb')
+	flist = glob.glob('/home/macenrola/Documents/XYLENE/charged_cb7/converged/h-on-cb/*.pdb')
 	for f in flist:
 		mol = Chem.MolFromPDBFile(f, removeHs=False)
 		imgs = pop_xylenes_out_of_CB(mol)

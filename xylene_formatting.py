@@ -276,12 +276,12 @@ def get_CB_guest_atomxyz(rdkitmol):
 	return hull_points, guest_points
 
 
-def make_nw_paramfile(list_of_pdbs):
+def make_nw_paramfile(list_of_sdfs):
 	"""
-	:param inpdbfile: Takes in a list of pdb files
+	:param inpdbfile: Takes in a list of SDF files
 	:return: will write a .nw and an .sh file for all of them to be run on Stratus
 	"""
-	path = '/'.join(list_of_pdbs[0].split('/')[:-1]) + '/'
+	path = '/'.join(list_of_sdfs[0].split('/')[:-1]) + '/'
 	start_script = "\
 echo\n\
 start {0}\n\
@@ -361,7 +361,7 @@ module load nwchem/6.8-47-gdf6c956/intel-2017\n\
 module list\n\
 mpirun -np $NSLOTS -machinefile $TMPDIR/machines nwchem {}\n\
 	"
-	for i, fname in enumerate(sorted(list_of_pdbs)):
+	for i, fname in enumerate(sorted(list_of_sdfs)):
 		nwname = fname[:-4] + '.nw'
 		shname = fname[:-4] + '.sh'
 		genname = fname.split('/')[-1][:-4]
@@ -711,6 +711,181 @@ def reformat_avogadro_file_for_reaxff(fname):
 					pasatoms = True
 
 
+def make_min_script_cp2k_for_xyzlist(xyzlist):
+	"""
+	:param xyzlist: Takes in a list of xyz files
+	:return: returns a list of cp2k inputs to run the desired minimization, the charge by default will be zero, modify by hand if needed
+	"""
+	script = """
+ &GLOBAL
+   PRINT_LEVEL  LOW
+   PROJECT_NAME {0}
+   RUN_TYPE  GEO_OPT
+ &END GLOBAL
+ &MOTION
+   &GEO_OPT
+     TYPE  MINIMIZATION
+     OPTIMIZER  BFGS
+     MAX_ITER  2000
+     MAX_DR     1.0000000000000000E-03
+     MAX_FORCE     1.0000000000000000E-03
+     RMS_DR     1.0000000000000000E-03
+     RMS_FORCE     1.0000000000000000E-03
+     STEP_START_VAL  170
+   &END GEO_OPT
+ &END MOTION
+ &FORCE_EVAL
+   METHOD  QS
+   &DFT
+     CHARGE 0
+     BASIS_SET_FILE_NAME ./basis-set-popple-3-21gd
+     &SCF
+       MAX_SCF  200
+       EPS_SCF     1.0000000000000001E-05
+       SCF_GUESS  ATOMIC
+       &DIAGONALIZATION  T
+         ALGORITHM  STANDARD
+       &END DIAGONALIZATION
+       &MIXING  T
+         METHOD  PULAY_MIXING
+         ALPHA     5.0000000000000000E-01
+         NBUFFER  5
+       &END MIXING
+       &PRINT
+         &RESTART  OFF
+         &END RESTART
+       &END PRINT
+     &END SCF
+     &QS
+       EPS_DEFAULT     9.9999999999999995E-08
+       METHOD  GAPW
+     &END QS
+     &MGRID
+       NGRIDS  4
+       CUTOFF     2.0000000000000000E+02
+       REL_CUTOFF     3.0000000000000000E+01
+     &END MGRID
+     &XC
+       DENSITY_CUTOFF     1.0000000000000000E-10
+       GRADIENT_CUTOFF     1.0000000000000000E-10
+       TAU_CUTOFF     1.0000000000000000E-10
+       &XC_GRID
+         XC_SMOOTH_RHO  NN50
+         XC_DERIV  NN50_SMOOTH
+       &END XC_GRID
+       &XC_FUNCTIONAL  NO_SHORTCUT
+         &PBE  T
+         &END PBE
+       &END XC_FUNCTIONAL
+       &VDW_POTENTIAL
+         POTENTIAL_TYPE  PAIR_POTENTIAL
+         &PAIR_POTENTIAL
+           R_CUTOFF     1.6000000000000000E+01
+           TYPE  DFTD3
+           PARAMETER_FILE_NAME dftd3.dat
+           REFERENCE_FUNCTIONAL PBE
+         &END PAIR_POTENTIAL
+       &END VDW_POTENTIAL
+     &END XC
+     &POISSON
+       POISSON_SOLVER  WAVELET
+       PERIODIC  NONE
+     &END POISSON
+   &END DFT
+   &SUBSYS
+     &CELL
+       A     2.5000000000000014E+01    0.0000000000000000E+00    0.0000000000000000E+00
+       B     0.0000000000000000E+00    2.5000000000000014E+01    0.0000000000000000E+00
+       C     0.0000000000000000E+00    0.0000000000000000E+00    2.5000000000000014E+01
+       PERIODIC  NONE
+       MULTIPLE_UNIT_CELL  1 1 1
+     &END CELL
+     &COORD
+{1}
+     &END COORD
+     &KIND H
+       BASIS_SET 3-21Gx
+       POTENTIAL ALL
+       &POTENTIAL
+1 0 0
+0.2000000000000000E+00
+       &END POTENTIAL
+     &END KIND
+     &KIND O
+       BASIS_SET 3-21Gx
+       POTENTIAL ALL
+       &POTENTIAL
+4 4 0
+0.2476208600000000E+00
+       &END POTENTIAL
+     &END KIND
+     &KIND N
+       BASIS_SET 3-21Gx
+       POTENTIAL ALL
+       &POTENTIAL
+4 3 0
+0.2891792300000000E+00
+       &END POTENTIAL
+     &END KIND
+     &KIND C
+       BASIS_SET 3-21Gx
+       POTENTIAL ALL
+       &POTENTIAL
+4 2 0
+0.3488304500000000E+00
+       &END POTENTIAL
+     &END KIND
+     &TOPOLOGY
+       NUMBER_OF_ATOMS  172
+       MULTIPLE_UNIT_CELL  1 1 1
+       &CENTER_COORDINATES  T
+       &END CENTER_COORDINATES
+     &END TOPOLOGY
+   &END SUBSYS
+ &END FORCE_EVAL"""
+
+	shscript = """
+#!/bin/bash -l
+
+#$ -S /bin/bash
+
+#$ -l h_rt=2:10:00
+
+#$ -l mem=3G
+
+#$ -N {0}
+
+#$ -pe mpi 36
+
+#$ -cwd 
+
+# 8. Load required module alongside default module
+module unload compilers mpi
+module load compilers/gnu/4.9.2
+module load mpi/openmpi/1.8.4/gnu-4.9.2
+module load openblas/0.2.14/gnu-4.9.2
+module load fftw/3.3.4/gnu-4.9.2
+module load libxc/2.2.2/gnu-4.9.2
+module load libint/1.1.4/gnu-4.9.2
+module load quip/18c5440/gnu-4.9.2
+module load cp2k/4.1/ompi/gnu-4.9.2
+
+# Gerun is our mpirun wrapper which sets number of cores and machinefile for you
+gerun cp2k.popt -in {1}
+	"""
+
+	for f in xyzlist:
+		outf = f[:-4] + '.inp'
+		outsh = f[:-4] + '.sh'
+		with open(f, 'rb') as r:
+			with open(outf, 'wb') as w:
+				lines = r.readlines()
+				print lines
+				w.write(script.format(f.split('/')[-1][:-4], '           '+'           '.join(lines[2:])))
+				with open(outsh, 'wb') as wsh:
+					wsh.write(shscript.format(f.split('/')[-1][:-4], f.split('/')[-1][:-4]+'.inp'))
+
+
 if __name__ == "__main__":
 	import rdkit
 	from rdkit import Chem
@@ -733,10 +908,13 @@ if __name__ == "__main__":
 
 
 	#
-	# flist = sorted(glob.glob('/home/macenrola/Documents/XYLENE/protonated_single_H/631g/*.xyz'))
+	# flist = sorted(glob.glob('/home/macenrola/Desktop/intermediate/try-stepper-popping-ts/oxylene-cb6-neutral.xyz'))
 	# make_gaussian_input_files_for_xyzgroup(flist)
 	# print flist
 
+
+	flist = sorted(glob.glob('/home/macenrola/Desktop/prepareinputs/cp2kneb/raw-G16-Outputs/xyz-oxylene/*.xyz'))
+	make_min_script_cp2k_for_xyzlist(flist)
 
 
 	# flist =glob.glob('/home/macenrola/Documents/XYLENE/popping_guests/nwchem_hf/*0.pdb')
@@ -744,11 +922,13 @@ if __name__ == "__main__":
 	# 	make_neb_input_for_nwchem(f, f[:-5]+'9.pdb')
 	# 	make_neb_input_for_nwchem(f, f[:-4] + '_up.pdb')
 
-	# flist = glob.glob('/home/macenrola/Documents/nwchem/for_nwchem/*COMPLEX.sdf')
+	# flist = glob.glob('/home/macenrola/Documents/XYLENE/popping_guests/popping-neutral-xyl/stepper-ts/oxylene-cb6-neutral.sdf')
 	# make_nw_paramfile(flist)
 
 
-	reformat_avogadro_file_for_reaxff('/home/macenrola/Documents/XYLENE/reaxff-md/prot-xylene-bulk/mxylene/prot-mXylene.lmpdat')
+	# reformat_avogadro_file_for_reaxff('/home/macenrola/Documents/XYLENE/reaxff-md/prot-xylene-bulk/mxylene/prot-mXylene.lmpdat')
+
+
 
 	# doc_pdb_in_cb6('/home/macenrola/Documents/XYLENE/neutral_cb6/CB6.pdb', glob.glob('/home/macenrola/Documents/XYLENE/neutral_cb6/*.pdbqt.pdb'))
 
