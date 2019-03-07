@@ -250,6 +250,53 @@ def pop_xylenes_out_of_CB(rdkitcomplex, lengthA=10, nimages=2):
 
 
 
+def invert_xz_xyz(xyzfile):
+	"""
+	:param xyzfile: takes in an xyz file
+	:return: will return the same xyz file with inversion of the x and z components
+	IDEALLY SHOULD OPTIMIZE A SPLIT COMPLEX WITH CONSTRAINTS BECAUSE RVDW=12A
+	"""
+	with open(xyzfile, 'rb') as r:
+		lines = r.readlines()
+		for line in lines[2:]:
+			line = line.strip().split()
+			s = '{}        {}        {}        {}'.format(line[0], line[2], line[3], 10+float(line[1]))
+			print s
+
+def print_just_xyz(xyzfile):
+	"""
+	:param xyzfile: takes in a xyz file
+	:return:  will print out only the xyz coordinates
+	"""
+	with open(xyzfile, 'rb') as r:
+		lines = r.readlines()
+		for f in lines[2:]:
+			print '{}     {}      {}'.format(*f.strip().split()[1:])
+
+def align_molecules(molA, molB):
+	"""
+	:param mola: molecule a as sdf
+	:param molb: molecule b as sdf
+	:return: will attempt to align them and return a third molecule aligned
+	"""
+	core = '[#7]1[#6][#7][#6][#7][#6][#7][#6]1'
+	core = Chem.MolFromSmarts(core, True)
+
+
+	mola = Chem.MolFromMolFile(molA, removeHs=False)
+	molb = Chem.MolFromMolFile(molB, removeHs=False)
+	cb = Chem.GetMolFrags(mola, asMols=True)[0]
+	print Chem.MolToSmiles(cb)
+
+	print Chem.MolToMolBlock(mola)
+	print Chem.MolToMolBlock(molb)
+	match1 = mola.GetSubstructMatch(core)
+	match2 = molb.GetSubstructMatch(core)
+
+	print match2, match1
+	AllChem.AlignMol(mola, molb, atomMap=zip(match2, match1), maxIters=1000, reflect=False)  # <- m2 is aligned to m1, return value is the RMSD for the alignment
+
+	Chem.MolToMolFile(mola, molA+'-aligned.sdf')
 
 
 
@@ -265,12 +312,24 @@ if __name__ == "__main__":
 	# 										 8, '/home/macenrola/Documents/vasp/NEB_moXylene/')
 	# recenter_direct_poscar('/home/macenrola/Documents/vasp/mXylene-Protonated')
 	# plot_interp_neb_traj('/home/macenrola/Documents/nwchem/NEB_MO/final_E_MO_ISOLATED')
-	flist = glob.glob('/home/macenrola/Documents/XYLENE/charged_cb7/converged/h-on-cb/*.pdb')
-	for f in flist:
-		mol = Chem.MolFromPDBFile(f, removeHs=False)
-		imgs = pop_xylenes_out_of_CB(mol)
-		for i, k in enumerate(imgs):
-			Chem.MolToPDBFile(k, f[:-4]+'_{}.pdb'.format(i))
+	# flist = glob.glob('/home/macenrola/Documents/XYLENE/charged_cb7/converged/h-on-cb/*.pdb')
+	# for f in flist:
+	# 	mol = Chem.MolFromPDBFile(f, removeHs=False)
+	# 	imgs = pop_xylenes_out_of_CB(mol)
+	# 	for i, k in enumerate(imgs):
+	# 		Chem.MolToPDBFile(k, f[:-4]+'_{}.pdb'.format(i))
+
+	# invert_xz_xyz('/home/macenrola/Desktop/prepareinputs/cp2kneb/raw-G16-Outputs/oxylene-transitions/neutral-o-out-neutral-cb/neutral-oxylene.xyz')
+
+
+	# align_molecules('/home/macenrola/Desktop/prepareinputs/cp2kneb/raw-G16-Outputs/oxylene-transitions/proton-exchange-cb-oxylene/prot-oxylene-cb7.xyz.sdf',
+	# 				'/home/macenrola/Desktop/prepareinputs/cp2kneb/raw-G16-Outputs/oxylene-transitions/proton-exchange-cb-oxylene/h-single-oxylene-cb7.xyz.sdf')
+
+
+	# align_molecules('/home/macenrola/Desktop/prepareinputs/cp2kneb/raw-G16-Outputs/oxylene-transitions/proton-exchange-cb-oxylene/prot-oxylene-cb6.xyz.sdf',
+	# 				'/home/macenrola/Desktop/prepareinputs/cp2kneb/raw-G16-Outputs/oxylene-transitions/proton-exchange-cb-oxylene/h-single-oxylene-cb6.xyz.sdf')
+
+	print_just_xyz('/home/macenrola/Desktop/prepareinputs/cp2kneb/raw-G16-Outputs/oxylene-transitions/proton-exchange-cb-oxylene/prot-oxylene-cb6-aligned.xyz')
 		# Chem.MolToPDBFile(up, f[:-4]+'_up.pdb')
 		# Chem.MolToPDBFile(down, f[:-4]+'_down.pdb')
 		# Chem.MolToPDBFile(midup, f[:-4]+'_midup.pdb')

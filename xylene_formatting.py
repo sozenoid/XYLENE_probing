@@ -717,6 +717,7 @@ def make_min_script_cp2k_for_xyzlist(xyzlist):
 	:return: returns a list of cp2k inputs to run the desired minimization, the charge by default will be zero, modify by hand if needed
 	"""
 	script = """
+
  &GLOBAL
    PRINT_LEVEL  LOW
    PROJECT_NAME {0}
@@ -731,18 +732,25 @@ def make_min_script_cp2k_for_xyzlist(xyzlist):
      MAX_FORCE     1.0000000000000000E-03
      RMS_DR     1.0000000000000000E-03
      RMS_FORCE     1.0000000000000000E-03
-     STEP_START_VAL  170
+     STEP_START_VAL  1
    &END GEO_OPT
  &END MOTION
  &FORCE_EVAL
    METHOD  QS
    &DFT
-     CHARGE 0
-     BASIS_SET_FILE_NAME ./basis-set-popple-3-21gd
+     CHARGE 1
+     BASIS_SET_FILE_NAME  BASIS_MOLOPT
+     POTENTIAL_FILE_NAME  GTH_POTENTIALS
+#     BASIS_SET_FILE_NAME ./BASIS_ADMM
+     WFN_RESTART_FILE_NAME {0}-RESTART.wfn
      &SCF
        MAX_SCF  200
        EPS_SCF     1.0000000000000001E-05
        SCF_GUESS  ATOMIC
+#       &OT ON
+#         MINIMIZER DIIS
+#         PRECONDITIONER FULL_ALL
+#       &END OT
        &DIAGONALIZATION  T
          ALGORITHM  STANDARD
        &END DIAGONALIZATION
@@ -756,12 +764,16 @@ def make_min_script_cp2k_for_xyzlist(xyzlist):
          &END RESTART
        &END PRINT
      &END SCF
+#     &AUXILIARY_DENSITY_MATRIX_METHOD
+#       METHOD BASIS_PROJECTION
+#       ADMM_PURIFICATION_METHOD MO_DIAG
+#     &END AUXILIARY_DENSITY_MATRIX_METHOD
      &QS
        EPS_DEFAULT     9.9999999999999995E-08
        METHOD  GAPW
      &END QS
      &MGRID
-       NGRIDS  4
+       NGRIDS  5
        CUTOFF     2.0000000000000000E+02
        REL_CUTOFF     3.0000000000000000E+01
      &END MGRID
@@ -804,40 +816,26 @@ def make_min_script_cp2k_for_xyzlist(xyzlist):
 {1}
      &END COORD
      &KIND H
-       BASIS_SET 3-21Gx
-       POTENTIAL ALL
-       &POTENTIAL
-1 0 0
-0.2000000000000000E+00
-       &END POTENTIAL
+       BASIS_SET TZVP-MOLOPT-GTH
+       POTENTIAL GTH-PBE
+#       AUX_FIT_BASIS_SET cFIT3
      &END KIND
      &KIND O
-       BASIS_SET 3-21Gx
-       POTENTIAL ALL
-       &POTENTIAL
-4 4 0
-0.2476208600000000E+00
-       &END POTENTIAL
+       BASIS_SET TZVP-MOLOPT-GTH
+       POTENTIAL GTH-PBE
+#       AUX_FIT_BASIS_SET cFIT3
      &END KIND
      &KIND N
-       BASIS_SET 3-21Gx
-       POTENTIAL ALL
-       &POTENTIAL
-4 3 0
-0.2891792300000000E+00
-       &END POTENTIAL
+       BASIS_SET TZVP-MOLOPT-GTH
+       POTENTIAL GTH-PBE
+#       AUX_FIT_BASIS_SET cFIT3
      &END KIND
      &KIND C
-       BASIS_SET 3-21Gx
-       POTENTIAL ALL
-       &POTENTIAL
-4 2 0
-0.3488304500000000E+00
-       &END POTENTIAL
+       BASIS_SET TZVP-MOLOPT-GTH
+       POTENTIAL GTH-PBE
+#       AUX_FIT_BASIS_SET cFIT3
      &END KIND
      &TOPOLOGY
-       NUMBER_OF_ATOMS  172
-       MULTIPLE_UNIT_CELL  1 1 1
        &CENTER_COORDINATES  T
        &END CENTER_COORDINATES
      &END TOPOLOGY
@@ -846,19 +844,12 @@ def make_min_script_cp2k_for_xyzlist(xyzlist):
 
 	shscript = """
 #!/bin/bash -l
-
 #$ -S /bin/bash
-
 #$ -l h_rt=2:10:00
-
 #$ -l mem=3G
-
 #$ -N {0}
-
-#$ -pe mpi 36
-
+#$ -pe mpi 32
 #$ -cwd 
-
 # 8. Load required module alongside default module
 module unload compilers mpi
 module load compilers/gnu/4.9.2
@@ -913,7 +904,7 @@ if __name__ == "__main__":
 	# print flist
 
 
-	flist = sorted(glob.glob('/home/macenrola/Desktop/prepareinputs/cp2kneb/raw-G16-Outputs/xyz-oxylene/*.xyz'))
+	flist = sorted(glob.glob('/home/macenrola/Desktop/prepareinputs/cp2kneb/raw-G16-Outputs/all-mins/*.xyz'))
 	make_min_script_cp2k_for_xyzlist(flist)
 
 
