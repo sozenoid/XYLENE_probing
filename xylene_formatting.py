@@ -877,6 +877,19 @@ time gerun cp2k.popt -in {1}
 					wsh.write(shscript.format(f.split('/')[-1][:-4], f.split('/')[-1][:-4]+'.inp'))
 
 
+def print_centroid_distance(list_of_sdf_complex):
+	"""
+	:param list_of_sdf_complex: takes in a list of sdf complexes
+	:return: the distance between the cb and the guest as taken by centroid
+	"""
+	for f in list_of_sdf_complex:
+		cmol = Chem.MolFromMolFile(f, removeHs=False)
+		frags = Chem.GetMolFrags(cmol, asMols=True)
+		f1 = list(Chem.rdMolTransforms.ComputeCentroid(frags[0].GetConformer()))
+		f2 = list(Chem.rdMolTransforms.ComputeCentroid(frags[1].GetConformer()))
+		dist2 = sum([(x[0] - x[1]) ** 2 for x in zip(f1, f2)])
+		print f, dist2**(.5)
+
 if __name__ == "__main__":
 	import rdkit
 	from rdkit import Chem
@@ -903,9 +916,11 @@ if __name__ == "__main__":
 	# make_gaussian_input_files_for_xyzgroup(flist)
 	# print flist
 
+	flist = glob.glob('/home/macenrola/Documents/amberconvergedmols/top50/results/*_COMPLEX.com_OUT.out.sdf')
+	print_centroid_distance(sorted(flist))
 
-	flist = sorted(glob.glob('/home/macenrola/Desktop/prepareinputs/cp2kneb/raw-G16-Outputs/all-mins/*.xyz'))
-	make_min_script_cp2k_for_xyzlist(flist)
+	# flist = sorted(glob.glob('/home/macenrola/Desktop/prepareinputs/cp2kneb/raw-G16-Outputs/all-mins/m*.xyz'))
+	# make_min_script_cp2k_for_xyzlist(flist)
 
 
 	# flist =glob.glob('/home/macenrola/Documents/XYLENE/popping_guests/nwchem_hf/*0.pdb')
