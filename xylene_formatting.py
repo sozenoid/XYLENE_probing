@@ -1,3 +1,5 @@
+
+print "haha"
 def format_mol_for_vasp(rdkitmol, name):
 	"""
 	:param rdkitmol: Takes a rdkitmol
