@@ -70,7 +70,7 @@ def plot_colormap(x,y,z,name):
 	plt.close()
 
 
-def compute_time(fname, thres=[0.2,0.8], T=300):
+def compute_time(fname, thres=[0.8,0.2], T=300):
 	"""
 	PRE: Takes in the COLVAR output file of a metadynamic simulation 
 	POST: Will compute the accelerated time it took for the system's colvar
@@ -91,7 +91,7 @@ def compute_time(fname, thres=[0.2,0.8], T=300):
 	current_time = 0
 	for var in vars:
 		current_time=var[0]
-		crit=[var[1]<=thres[0], var[2]>=thres[1]]
+		crit=[var[1]>=thres[0], var[2]<=thres[1]]
 		accelerated_time+=np.exp(beta*Ha2kcal*var[7])
 		if all(crit):
 			print "in the zone: MTD_time: {}; Real_equilvalent: {}".format(var[0], accelerated_time)
@@ -126,10 +126,11 @@ of a 2 colvar output file from a metadynamic run ending in 'Log'
 	else:
 		flist=sys.argv[1:]
 	MP=False
-	dumpfile='/home/macenrola/Documents/XYLENE/pm6-mtd/double-coords-vdw/prod/300k-logs/MOCB7-DUMP'
+	dumpfile='/home/uccahcl/Scratch/CP2K/metadynamics-pm6/double-coords-vdw/VAC/MTD_SUMMARY_VAC'
         with open(dumpfile, 'wb'): pass
 	timedist =[]
-	for f in sorted(flist):
+	for z, f in enumerate(sorted(flist)):
+		#if z==10: break
 		name = '-'.join(f.split('/')[-2:])
 		if name[-4:]==".txt":
 			X =get_xyz(f)
@@ -145,11 +146,16 @@ of a 2 colvar output file from a metadynamic run ending in 'Log'
 				plot_colormap(x,y, [k*627.5 for k in z],name)
 
 		if name[-3:]=='Log':
-			print name
+			print name, f, "T={}".format(f.split('/')[0])
 			with open(dumpfile,'ab') as a:
-				ctime,atime=compute_time(f)
+				try:
+					T=f.split('/')[0]
+					ctime,atime=compute_time(f,T=float(T))
+				except:
+					print "error here"
+					continue
 				if atime<=1E35:
-					a.write("{}\t{}\t{}\n".format(name,ctime, atime))
+					a.write("{}\t{}\t{}\t{}\n".format(T,name,ctime, atime))
 					timedist.append(atime)
 				else:
 					print "accelerated time is over 1E35 ({})".format(atime)
