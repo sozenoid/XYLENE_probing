@@ -70,9 +70,9 @@ def plot_colormap(x,y,z,name):
 	plt.close()
 
 
-def compute_time(fname, thres=[0.8,0.2], T=300):
+def compute_time(fname, thres=[0.2,0.8], T=300):
 	"""
-	PRE: Takes in the COLVAR output file of a metadynamic simulation 
+	PRE: Takes in the COLVAR output file of a metadynamic simulation
 	POST: Will compute the accelerated time it took for the system's colvar
 	      to pass the thres point
 	      it is assumed that the number of thres elements fits the number of colvars, actually here 2 colvars are hardcoded
@@ -91,19 +91,40 @@ def compute_time(fname, thres=[0.8,0.2], T=300):
 	current_time = 0
 	for var in vars:
 		current_time=var[0]
-		crit=[var[1]>=thres[0], var[2]<=thres[1]]
+		crit=[var[1]<=thres[0], var[2]>=thres[1]]
 		accelerated_time+=np.exp(beta*Ha2kcal*var[7])
 		if all(crit):
 			print "in the zone: MTD_time: {}; Real_equilvalent: {}".format(var[0], accelerated_time)
 			break
 	return current_time, accelerated_time
 
-def KS_test(timedist,Exp_constant):
+def compute_avg_time_from_fit(timedist):
+	"""
+	PRE: Takes in a range of times assumed to belong to an exponential distribution
+	POST: fits the experimental cdf of the timedist to 1-exp(-t/tau) to find tau
+	"""
+	sortedist = sorted(timedist)
+	p = 1. * np.arange(len(sortedist)) / (len(sortedist) - 1)
+	#
+	def f_to_fit(x, scale):
+		return 1-np.exp(-x/scale)
+	#
+	xn = np.linspace(sortedist[0], sortedist[-1], 200)
+	p0 = np.median(sortedist)
+	popt, pcov = optimize.curve_fit(f_to_fit, sortedist, p, p0=p0)
+	#
+	plt.plot(sortedist, p, 'or')
+	plt.plot(xn, f_to_fit(xn, *popt))
+	plt.show()
+
+	return popt
+
+def KS_test(timedist, scale):
 	"""
 	PRE: a sequence of escape times from the botton energy well (computed from the MTD time and the bias potential)
 	POST: Returns wether this time distribution follows a Poisson distribution AKA the law of rare events
 	"""
-	pass
+	print stats.kstest(rvs=timedist, cdf='expon', args=(0,scale), N=1000)
 
 if __name__ == "__main__":
 	import glob
@@ -113,7 +134,7 @@ if __name__ == "__main__":
 	from matplotlib.colors import BoundaryNorm
 	from matplotlib.ticker import MaxNLocator
 	import sys
-
+	from scipy import stats, optimize
 	import numpy as np
 	if len(sys.argv)==1:
 		print """
@@ -126,12 +147,12 @@ of a 2 colvar output file from a metadynamic run ending in 'Log'
 	else:
 		flist=sys.argv[1:]
 	MP=False
-	dumpfile='/home/uccahcl/Scratch/CP2K/metadynamics-pm6/double-coords-vdw/VAC/MTD_SUMMARY_VAC'
+	dumpfile='/home/macenrola/Documents/XYLENE/pm6-mtd/double-coords-vdw/prod/300k-logs/MOCB7-DUMP'
         with open(dumpfile, 'wb'): pass
 	timedist =[]
-	for z, f in enumerate(sorted(flist)):
-		#if z==10: break
+	for f in sorted(flist):
 		name = '-'.join(f.split('/')[-2:])
+		print name
 		if name[-4:]==".txt":
 			X =get_xyz(f)
 			if 'MP' in name and not MP:
@@ -146,18 +167,18 @@ of a 2 colvar output file from a metadynamic run ending in 'Log'
 				plot_colormap(x,y, [k*627.5 for k in z],name)
 
 		if name[-3:]=='Log':
-			print name, f, "T={}".format(f.split('/')[0])
+			print name
 			with open(dumpfile,'ab') as a:
-				try:
-					T=f.split('/')[0]
-					ctime,atime=compute_time(f,T=float(T))
-				except:
-					print "error here"
-					continue
+				ctime,atime=compute_time(f)
 				if atime<=1E35:
-					a.write("{}\t{}\t{}\t{}\n".format(T,name,ctime, atime))
+					a.write("{}\t{}\t{}\n".format(name,ctime, atime))
 					timedist.append(atime)
 				else:
 					print "accelerated time is over 1E35 ({})".format(atime)
-
-	print KS_test(timedist)
+		if name[-2:]=="KS":
+			with open(f, 'rb') as r: lines=[float(x.strip()) for x in r.readlines()]
+			#scale=float(name.split('-')[-2])
+			fit_scale=compute_avg_time_from_fit(lines)
+			print "fit scale is:{}".format(fit_scale)
+			scale=np.median(lines)/np.log(2)
+			KS_test(lines, fit_scale)
