@@ -98,7 +98,7 @@ def compute_time(fname, thres=[0.8,0.2], T=300):
 			break
 	return current_time, accelerated_time
 
-def KS_test(timedist):
+def KS_test(timedist,Exp_constant):
 	"""
 	PRE: a sequence of escape times from the botton energy well (computed from the MTD time and the bias potential)
 	POST: Returns wether this time distribution follows a Poisson distribution AKA the law of rare events
