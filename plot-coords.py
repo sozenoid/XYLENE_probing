@@ -70,7 +70,7 @@ def plot_colormap(x,y,z,name):
 	plt.close()
 
 
-def compute_time(fname, thres=[0.2,0.8], T=300):
+def compute_time(fname, thres=[0.7,0.3], T=300):
 	"""
 	PRE: Takes in the COLVAR output file of a metadynamic simulation
 	POST: Will compute the accelerated time it took for the system's colvar
@@ -91,7 +91,7 @@ def compute_time(fname, thres=[0.2,0.8], T=300):
 	current_time = 0
 	for var in vars:
 		current_time=var[0]
-		crit=[var[1]<=thres[0], var[2]>=thres[1]]
+		crit=[var[1]>=thres[0], var[2]<=thres[1]]
 		accelerated_time+=np.exp(beta*Ha2kcal*var[7])
 		if all(crit):
 			print "in the zone: MTD_time: {}; Real_equilvalent: {}".format(var[0], accelerated_time)
@@ -126,6 +126,32 @@ def KS_test(timedist, scale):
 	"""
 	print stats.kstest(rvs=timedist, cdf='expon', args=(0,scale), N=1000)
 
+def reformat_all_dump(time_dist_dump_file):
+	"""
+	PRE:  A file formatted as follows 1000.0  28-prot-mxylene-MO-TS.inp-COLVAR.metadynLog     20840.0 13071211.9322
+	      where the first colum is the temperature, the second a file name containing an indication of the system here MO
+	      the third column is the MTD time and the last the real time
+	POST: will produce  different files named after the temperature and system and containing only the real time
+	"""
+	system_markers=['MO', 'MP']
+	systems = dict()
+	with open(time_dist_dump_file, 'rb') as r: lines = [x.strip().split() for x in r.readlines()]
+	#
+	for els in lines:
+		for mkr in system_markers:
+			if mkr in els[1]:
+				label = "{}-{}".format(mkr, str(els[0]))
+				if label not in systems:
+					systems[label] = [els]
+				else:
+					systems[label].append(els)
+
+	print systems.keys()
+
+	for k in systems.keys():
+		with open(time_dist_dump_file+"-{}-KS".format(k), "wb") as w:
+			w.writelines([x[-1]+"\n" for x in systems[k]])
+
 if __name__ == "__main__":
 	import glob
 	from matplotlib import cm
@@ -147,7 +173,7 @@ of a 2 colvar output file from a metadynamic run ending in 'Log'
 	else:
 		flist=sys.argv[1:]
 	MP=False
-	dumpfile='/home/macenrola/Documents/XYLENE/pm6-mtd/double-coords-vdw/prod/300k-logs/MOCB7-DUMP'
+	dumpfile='/home/macenrola/Documents/XYLENE/pm6-mtd/double-coords-vdw/prod/VAC-logs/0703dump-vac'
         with open(dumpfile, 'wb'): pass
 	timedist =[]
 	for f in sorted(flist):
@@ -167,14 +193,14 @@ of a 2 colvar output file from a metadynamic run ending in 'Log'
 				plot_colormap(x,y, [k*627.5 for k in z],name)
 
 		if name[-3:]=='Log':
-			print name
+			T=float(f.split('/')[0])
 			with open(dumpfile,'ab') as a:
-				ctime,atime=compute_time(f)
-				if atime<=1E35:
-					a.write("{}\t{}\t{}\n".format(name,ctime, atime))
+				ctime,atime=compute_time(f,T=T)
+				if ctime<=35000 and ctime > 5000:
+					a.write("{}\t{}\t{}\t{}\n".format(T,name,ctime, atime))
 					timedist.append(atime)
 				else:
-					print "accelerated time is over 1E35 ({})".format(atime)
+					print "accelerated time out of bounds ({})".format(ctime)
 		if name[-2:]=="KS":
 			with open(f, 'rb') as r: lines=[float(x.strip()) for x in r.readlines()]
 			#scale=float(name.split('-')[-2])
@@ -182,3 +208,6 @@ of a 2 colvar output file from a metadynamic run ending in 'Log'
 			print "fit scale is:{}".format(fit_scale)
 			scale=np.median(lines)/np.log(2)
 			KS_test(lines, fit_scale)
+
+		if name[-4:]=="dump":
+			reformat_all_dump(f)
