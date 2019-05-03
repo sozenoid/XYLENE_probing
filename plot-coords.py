@@ -21,12 +21,12 @@ def plot_xy(x,y, name,f):
 	"""
 	plt.close()
 	plt.plot(x,y)
-	plt.xlabel("Angle (degree)")
+	plt.xlabel("COLVAR 1 (au)")
 	plt.ylabel("energy (kcal/mol)")
 	plt.title(name)
 	plt.savefig(f+'.png')
 	print '{} is done'.format(name)
-	# plt.show()
+	plt.show()
 
 def plot_xyz(x,y,z, name):
 	"""
@@ -70,7 +70,7 @@ def plot_colormap(x,y,z,name):
 	plt.close()
 
 
-def compute_time(fname, thres=[0.7,0.3], T=300):
+def compute_time(fname, thres=[0.3,0.7], T=300):
 	"""
 	PRE: Takes in the COLVAR output file of a metadynamic simulation
 	POST: Will compute the accelerated time it took for the system's colvar
@@ -91,12 +91,16 @@ def compute_time(fname, thres=[0.7,0.3], T=300):
 	current_time = 0
 	for var in vars:
 		current_time=var[0]
-		crit=[var[1]>=thres[0], var[2]<=thres[1]]
+		crit=[var[1]<=thres[0], var[2]>=thres[1]]
+		badcrit=[var[1]<=thres[0], var[2]<=thres[0]] # if both carbons have very low coordinations
+							     # it is a bad sign ghh
 		accelerated_time+=np.exp(beta*Ha2kcal*var[7])
+		if all(badcrit): break
 		if all(crit):
 			print "in the zone: MTD_time: {}; Real_equilvalent: {}".format(var[0], accelerated_time)
-			break
-	return current_time, accelerated_time
+			return current_time, accelerated_time
+	return 0.0,0.0
+
 
 def compute_avg_time_from_fit(timedist):
 	"""
@@ -133,7 +137,7 @@ def reformat_all_dump(time_dist_dump_file):
 	      the third column is the MTD time and the last the real time
 	POST: will produce  different files named after the temperature and system and containing only the real time
 	"""
-	system_markers=['MO', 'MP']
+	system_markers=['cb6-MO', 'cb7-MO', 'cb6-MP', 'cb7-MP', 'MO', 'MP']
 	systems = dict()
 	with open(time_dist_dump_file, 'rb') as r: lines = [x.strip().split() for x in r.readlines()]
 	#
@@ -145,7 +149,7 @@ def reformat_all_dump(time_dist_dump_file):
 					systems[label] = [els]
 				else:
 					systems[label].append(els)
-
+				break
 	print systems.keys()
 
 	for k in systems.keys():
@@ -173,12 +177,12 @@ of a 2 colvar output file from a metadynamic run ending in 'Log'
 	else:
 		flist=sys.argv[1:]
 	MP=False
-	dumpfile='/home/macenrola/Documents/XYLENE/pm6-mtd/double-coords-vdw/prod/VAC-logs/0703dump-vac'
+	dumpfile='/home/macenrola/Documents/XYLENE/pm6-mtd/double-coords-vdw/prod/MTD-logs/DUMP_MTS'
         with open(dumpfile, 'wb'): pass
 	timedist =[]
 	for f in sorted(flist):
 		name = '-'.join(f.split('/')[-2:])
-		print name
+		# print name
 		if name[-4:]==".txt":
 			X =get_xyz(f)
 			if 'MP' in name and not MP:
@@ -186,17 +190,18 @@ of a 2 colvar output file from a metadynamic run ending in 'Log'
 				MP=True
 			if len(X) ==2:
 				x,y=X
-				plot_xy([i*180/3.1316 for i in x], [k*627.5 for k in y], name,f)
+				plot_xy([i for i in x], [k*627.5 for k in y], name,f)
 			else:
 				x,y,z=X
 				# print f
 				plot_colormap(x,y, [k*627.5 for k in z],name)
 
 		if name[-3:]=='Log':
+			print name
 			T=float(f.split('/')[0])
 			with open(dumpfile,'ab') as a:
 				ctime,atime=compute_time(f,T=T)
-				if ctime<=35000 and ctime > 5000:
+				if ctime > 3000:
 					a.write("{}\t{}\t{}\t{}\n".format(T,name,ctime, atime))
 					timedist.append(atime)
 				else:
@@ -204,10 +209,14 @@ of a 2 colvar output file from a metadynamic run ending in 'Log'
 		if name[-2:]=="KS":
 			with open(f, 'rb') as r: lines=[float(x.strip()) for x in r.readlines()]
 			#scale=float(name.split('-')[-2])
-			fit_scale=compute_avg_time_from_fit(lines)
-			print "fit scale is:{}".format(fit_scale)
-			scale=np.median(lines)/np.log(2)
-			KS_test(lines, fit_scale)
+			try:
+				fit_scale=compute_avg_time_from_fit(lines)
+                	        print "{}-{}".format(name, fit_scale[0])
+        	                #print lines
+			except : print "impossible to fit and or plot for {}; lines are {}".format(name, lines)
+
+			#scale=np.median(lines)/np.log(2)
+			# KS_test(lines, fit_scale)
 
 		if name[-4:]=="dump":
 			reformat_all_dump(f)
