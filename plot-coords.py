@@ -84,17 +84,27 @@ def compute_time(fname, thres=[0.3,0.7], T=300):
 	R=1.987E-3
 	beta=(R*T)**-1
 	with open(f, 'rb') as r:
-		vars = [[float(y) for y in x.strip().split()] for x in r.readlines()]
+		lines = [x.strip().split() for x in r.readlines()[:-1]]
 #	for i in vars:
 #		print i
 	accelerated_time = 0
 	current_time = 0
-	for var in vars:
+	for var in lines:
+		try:
+			var = [float(x) for x in var]
+		except:
+			print "file {} probably corrupted".format(f)
+			break
 		current_time=var[0]
-		crit=[var[1]<=thres[0], var[2]>=thres[1]]
-		badcrit=[var[1]<=thres[0], var[2]<=thres[0]] # if both carbons have very low coordinations
-							     # it is a bad sign ghh
-		accelerated_time+=np.exp(beta*Ha2kcal*var[7])
+		
+		if len(thres)==2:
+			crit=[var[1]<=thres[0], var[2]>=thres[1]]
+			badcrit=[var[1]<=thres[0], var[2]<=thres[0]] # if both carbons have very low coordinations
+			accelerated_time+=np.exp(beta*Ha2kcal*var[7])
+		elif len(thres)==1:
+			crit=[var[1]>=4]
+			badcrit=[False]				     # it is a bad sign ghh
+			accelerated_time+=np.exp(beta*Ha2kcal*var[4])
 		if all(badcrit): break
 		if all(crit):
 			print "in the zone: MTD_time: {}; Real_equilvalent: {}".format(var[0], accelerated_time)
@@ -137,7 +147,9 @@ def reformat_all_dump(time_dist_dump_file):
 	      the third column is the MTD time and the last the real time
 	POST: will produce  different files named after the temperature and system and containing only the real time
 	"""
-	system_markers=['cb6-MO', 'cb7-MO', 'cb6-MP', 'cb7-MP', 'MO', 'MP']
+	system_markers=['cb6-MO', 'cb7-MO', 'cb6-MP', 'cb7-MP', 'MO', 'MP',
+	'oxylene-cb6', 'pxylene-cb6', 'mxylene-cb6', 'oxylene-cb7', 'pxylene-cb7', 'mxylene-cb7', 
+	'adamantanol_cb7']
 	systems = dict()
 	with open(time_dist_dump_file, 'rb') as r: lines = [x.strip().split() for x in r.readlines()]
 	#
@@ -166,19 +178,22 @@ if __name__ == "__main__":
 	import sys
 	from scipy import stats, optimize
 	import numpy as np
+	import os
+	cwd = os.getcwd()
 	if len(sys.argv)==1:
 		print """
 ==========NO ARGUMENT===========
 Please use 1D or 2D fes data produced by graph.popt and ending in '.txt'
 of a 2 colvar output file from a metadynamic run ending in 'Log'
-"""
+pwd = {}""".format(cwd)
 	elif len(sys.argv)==2:
 		flist=[sys.argv[1]]
 	else:
 		flist=sys.argv[1:]
 	MP=False
-	dumpfile='/home/macenrola/Documents/XYLENE/pm6-mtd/double-coords-vdw/prod/MTD-logs/DUMP_MTS'
-        with open(dumpfile, 'wb'): pass
+	dumpfile='{}/DUMP_MTS'.format(cwd)
+        with open(dumpfile, 'wb'): 
+		print("writing to {}".format(dumpfile))
 	timedist =[]
 	for f in sorted(flist):
 		name = '-'.join(f.split('/')[-2:])
@@ -200,8 +215,8 @@ of a 2 colvar output file from a metadynamic run ending in 'Log'
 			print name
 			T=float(f.split('/')[0])
 			with open(dumpfile,'ab') as a:
-				ctime,atime=compute_time(f,T=T)
-				if ctime > 3000:
+				ctime,atime=compute_time(f,thres=[6], T=T)
+				if ctime > 300:
 					a.write("{}\t{}\t{}\t{}\n".format(T,name,ctime, atime))
 					timedist.append(atime)
 				else:
@@ -216,7 +231,7 @@ of a 2 colvar output file from a metadynamic run ending in 'Log'
 			except : print "impossible to fit and or plot for {}; lines are {}".format(name, lines)
 
 			#scale=np.median(lines)/np.log(2)
-			# KS_test(lines, fit_scale)
+			KS_test(lines, fit_scale)
 
 		if name[-4:]=="dump":
 			reformat_all_dump(f)
