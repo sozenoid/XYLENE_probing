@@ -96,7 +96,7 @@ def compute_time(fname, thres=[0.3,0.7], T=300):
 			print "file {} probably corrupted".format(f)
 			break
 		current_time=var[0]
-		
+
 		if len(thres)==2:
 			crit=[var[1]<=thres[0], var[2]>=thres[1]]
 			badcrit=[var[1]<=thres[0], var[2]<=thres[0]] # if both carbons have very low coordinations
@@ -131,14 +131,14 @@ def compute_avg_time_from_fit(timedist):
 	plt.plot(xn, f_to_fit(xn, *popt))
 	plt.show()
 
-	return popt
+	return popt, sortedist, p
 
 def KS_test(timedist, scale):
 	"""
 	PRE: a sequence of escape times from the botton energy well (computed from the MTD time and the bias potential)
 	POST: Returns wether this time distribution follows a Poisson distribution AKA the law of rare events
 	"""
-	print stats.kstest(rvs=timedist, cdf='expon', args=(0,scale), N=1000)
+	print stats.kstest(rvs=timedist, cdf='expon', args=(0,scale), N=len(timedist))
 
 def reformat_all_dump(time_dist_dump_file):
 	"""
@@ -167,6 +167,20 @@ def reformat_all_dump(time_dist_dump_file):
 	for k in systems.keys():
 		with open(time_dist_dump_file+"-{}-KS".format(k), "wb") as w:
 			w.writelines([x[-1]+"\n" for x in systems[k]])
+
+def print_average_energy_for_xyz_file(xyzfile):
+	"""
+	PRE  : Takes in a xyz trajectory
+	POST : Computes the average energy and prints it, along with the number of snapshot
+	"""
+	E_list=[]
+	with open(xyzfile, 'rb') as r:
+		for line in r:
+			if "E =" in line:
+				E_list.append(float(line.split()[-1]))
+
+	print "The energy is {} ({} snapshots)".format(sum(E_list)/len(E_list), len(E_list))
+
 
 if __name__ == "__main__":
 	import glob
@@ -215,23 +229,28 @@ pwd = {}""".format(cwd)
 			print name
 			T=float(f.split('/')[0])
 			with open(dumpfile,'ab') as a:
-				ctime,atime=compute_time(f,thres=[6], T=T)
+				ctime,atime=compute_time(f,thres=[0.3, 0.7], T=T)
 				if ctime > 300:
 					a.write("{}\t{}\t{}\t{}\n".format(T,name,ctime, atime))
 					timedist.append(atime)
 				else:
 					print "accelerated time out of bounds ({})".format(ctime)
 		if name[-2:]=="KS":
-			with open(f, 'rb') as r: lines=[float(x.strip()) for x in r.readlines()]
+			with open(f, 'rb') as r: lines=sorted([float(x.strip()) for x in r.readlines()])
 			#scale=float(name.split('-')[-2])
 			try:
-				fit_scale=compute_avg_time_from_fit(lines)
+				fit_scale, sortedist, p =compute_avg_time_from_fit(lines)
                 	        print "{}-{}".format(name, fit_scale[0])
+				with open(f+"_for_plot_{}".format(int(fit_scale[0])), 'wb') as w:
+					w.writelines("\n".join(["{} {}".format(x[0], x[1]) for x in zip(sortedist,p)]))
         	                #print lines
 			except : print "impossible to fit and or plot for {}; lines are {}".format(name, lines)
 
 			#scale=np.median(lines)/np.log(2)
-			KS_test(lines, fit_scale)
+			#KS_test(lines, fit_scale)
 
 		if name[-4:]=="dump":
 			reformat_all_dump(f)
+
+		if name[-4:]==".xyz":
+			print_average_energy_for_xyz_file(f)

@@ -36,7 +36,7 @@ def compute_distance_distribution_for_set_of_configurations(conf_dict):
 		if k>1001: break
 		mol1atmpos=[]
 		mol2atmpos=[]
-		print k
+		#print k
 		for pos in range(len(conf_dict[k])):
 			parts=conf_dict[k][pos].strip().split()
 			if pos in indexesMol1:
@@ -48,7 +48,7 @@ def compute_distance_distribution_for_set_of_configurations(conf_dict):
 			for xyz2 in mol2atmpos:
 				dist=sum([(float(x[0])-float(x[1]))**2 for x in zip(xyz1[1:], xyz2[1:])])**.5
 				atm_type="{}-{}".format(xyz1[0], xyz2[0])
-				print atm_type, dist
+				#print atm_type, dist
 				if atm_type in dist_dic:
 					dist_dic[atm_type].append(dist)
 				else:
@@ -79,15 +79,50 @@ def plot_dist_dic(dist_dic):
 	for k in dist_dic:
 		tempdist = dist_dic[k]
 		x=[x/float(len(tempdist)) for x in range(len(tempdist))]
-		plt.plot(sorted(tempdist),x)
+		sx = sorted(tempdist)
+		bins = np.linspace(sx[0], sx[-1], 50)
+		#bins=[1,2,3,4,5,6,7,8,9]
+		hist, hist_bins = np.histogram(sx, bins, density=True)
+		centered_hist_bins=[a+(hist_bins[1]-hist_bins[0])/2 for a in hist_bins[:-1]]
+		#sxcentered = [a+(sx[1]-sx[0]) for a in sx[:-1]]
+		#f=interpolate.interp1d(sx, x, 'cubic')
+		#sx_low=np.linspace(sx[0], sx[-1], 100)
+		#dxdd = np.diff(np.array(f(sx_low)))
+		plt.plot(centered_hist_bins, hist)
+		#plt.plot(sx,x)
 		plt.title(k)
 		plt.show()
 
+
+def merge_dics(old_dic, new_dic):
+	"""
+	PRE: Takes an old dic and a new dic
+	POST: Will copy the new keys to the old dic along with the values if the key does not exist
+	      If the key is already present in the old dic, the old value will be extended with the new value
+	      The function returns nothing and updates the old dic
+	"""
+	for nk in new_dic:
+		if nk not in old_dic:
+			old_dic[nk] = new_dic[nk]
+		else:
+			old_dic[nk].extend(new_dic[nk])
+	return
+
 if __name__ == "__main__":
 	import matplotlib.pyplot as plt
+	import numpy as np
+	from scipy import interpolate
+	import cPickle
+	import glob
 	testfile="/home/macenrola/Documents/XYLENE/pm6-mtd/double-coords-vdw/popping/sanity-check-adamantane/test/8-adamantanol_cb7.inp-pos-1.xyz"
 	print "haha"
+	flist=glob.glob("/home/macenrola/Documents/XYLENE/pm6-mtd/double-coords-vdw/popping/sanity-check-adamantane/300/*.inp-pos-1.xyz")
+	all_confs_dict={}
+	flist=['/home/macenrola/Documents/XYLENE/pm6-mtd/double-coords-vdw/popping/sanity-check-adamantane/opt_adamantanol/last_iter_adamantanol@cb7.xyz']
+	for i, f in enumerate(flist):
+		print "{}/{}".format(i, len(flist)), f, "  ".join(["key:{} ({})".format(k, len(all_confs_dict[k])) for k in all_confs_dict])
+		dict=read_conformations_from_xyz_file(testfile)
+		dist_dic=compute_distance_distribution_for_set_of_configurations(dict)
+		merge_dics(all_confs_dict, dist_dic)
 
-	dict=read_conformations_from_xyz_file(testfile)
-	dist_dic=compute_distance_distribution_for_set_of_configurations(dict)
-	plot_dist_dic(dist_dic)
+	plot_dist_dic(all_confs_dict)
