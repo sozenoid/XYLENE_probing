@@ -1,3 +1,12 @@
+
+################
+#
+# This part deals with averaging coordinates using z matrices, I don't think
+# that it works well for molecules with multiple intricated cycles like CBs
+#
+#
+################
+
 def parse_z_matrix(z_matrix):
 	"""
 	PRE: Takes in a z matrix as produced by obabel as a text block
@@ -167,6 +176,70 @@ def process_z_matrix_trajectory(zmatrix_traj_file):
 
 	return
 
+#################
+#
+# This part is averaging an rms aligned trajectory in xyz coordinates
+# It may just work better
+#
+#
+##################
+def parse_xyz_block(xyz_block):
+	"""
+	PRE: Takes in an xyz block as a list of lines
+	POST: Will return an array of array as np.array(np.array(), np.array(),...) each sub array contains [x,y,z] coord of a specific atom
+	"""
+	# let go of the atom names, the order is supposed to keep that information
+	coords = np.array([np.array([float(y) for y in x.strip().split()[1:]]) for x in xyz_block[2:]]) # skip the two first lines that hold atom number and energy info
+	return coords
+
+def process_xyz_coordinates(xyzfile):
+	"""
+	PRE: Takes in an xyz file  that contains an xyz coordinate, each snapshot must have an equal number of atoms in the same order. They need to be pre aligned RMS wise.
+	POST: Will process each snapshot and produce an average coordinate
+	"""
+	natoms = -1
+	snapshot_list=[]
+	with open(xyzfile, 'rb') as r:
+		tempxyz=[]
+		for i, line in enumerate(r):
+			# if i==10000: break
+			if i==0:
+				natoms=line.strip()
+			if line.strip()==natoms and tempxyz!=[]:
+				if i<1000:
+					atm_list=[x.strip().split()[0] for x in tempxyz[2:]]
+				xyz_array=parse_xyz_block(tempxyz)
+				snapshot_list.append(xyz_array)
+				tempxyz=[]
+				nsnaps=len(snapshot_list)
+				if nsnaps%10==0: print "{}th snapshot processed".format(nsnaps)
+			tempxyz.append(line)
+
+	snapshot_array=np.array(snapshot_list)
+	average_coord=average_xyz_coordinates(snapshot_array)
+	generate_mol_from_xyz_and_pattern(average_coord, atm_list)
+
+
+def average_xyz_coordinates(xyz_array):
+	"""
+	PRE: takes in an array (xyz of a trajectory) of arrays (xyz of a single molecule) of arrays (xyz of single atom)
+		THE SNAPSHOTS NEED TO BE ALIGNED, FIRST TEST USING OPENBABEL
+	POST: returns the average array in xyz coords
+	"""
+
+	return np.mean(xyz_array, axis=0)
+
+def generate_mol_from_xyz_and_pattern(xyz_array, atm_list, fname="average_mol.xyz"):
+	"""
+	PRE  : Takes in an array with xyz coordinates and an atom list
+	POST : Will produce a molecule using both information
+	"""
+	with open(fname, "wb") as w:
+		w.write(str(len(atm_list))+"\n")
+		w.write("AVERAGE MOLECULE COORDINATES\n")
+		for i, atm in enumerate(atm_list):
+			w.write("{}\t{}\t{}\t{}\n".format(atm, xyz_array[i][0], xyz_array[i][1], xyz_array[i][2]))
+
 if __name__ == "__main__":
 	import statistics
 	import numpy as np
@@ -176,6 +249,5 @@ if __name__ == "__main__":
 	import matplotlib.pyplot as plt
 	import pandas as pd
 
-	with open('huhhu.gzmat') as r:
-		lines=r.readlines()
-	process_z_matrix_trajectory('cb6.inp-pos-1-aligned.gzmat')
+	# process_z_matrix_trajectory('cb6.inp-pos-1-aligned.gzmat')
+	process_xyz_coordinates("/home/macenrola/XYLENE_probing/cb6.inp-pos-1-aligned.xyz")
