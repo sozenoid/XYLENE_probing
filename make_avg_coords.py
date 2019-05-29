@@ -215,9 +215,9 @@ def process_xyz_coordinates(xyzfile):
 				if nsnaps%10==0: print "{}th snapshot processed".format(nsnaps)
 			tempxyz.append(line)
 
-	snapshot_array=np.array(snapshot_list)
+	snapshot_array=np.array(snapshot_list[10000:])
 	average_coord=average_xyz_coordinates(snapshot_array)
-	generate_mol_from_xyz_and_pattern(average_coord, atm_list)
+	generate_mol_from_xyz_and_pattern(average_coord, atm_list, fname=xyzfile+'_average')
 
 
 def average_xyz_coordinates(xyz_array):
@@ -238,7 +238,7 @@ def generate_mol_from_xyz_and_pattern(xyz_array, atm_list, fname="average_mol.xy
 		w.write(str(len(atm_list))+"\n")
 		w.write("AVERAGE MOLECULE COORDINATES\n")
 		for i, atm in enumerate(atm_list):
-			w.write("{}\t{}\t{}\t{}\n".format(atm, xyz_array[i][0], xyz_array[i][1], xyz_array[i][2]))
+			w.write("{}      {}      {}      {}\n".format(atm, xyz_array[i][0], xyz_array[i][1], xyz_array[i][2]))
 
 if __name__ == "__main__":
 	import statistics
@@ -250,4 +250,8 @@ if __name__ == "__main__":
 	import pandas as pd
 
 	# process_z_matrix_trajectory('cb6.inp-pos-1-aligned.gzmat')
-	process_xyz_coordinates("/home/macenrola/XYLENE_probing/cb6.inp-pos-1-aligned.xyz")
+	for f in ['/home/macenrola/Documents/XYLENE/inputs/for-reaction-frozen-cb/MO-CB6.inp-pos-1-aligned-just-CB6.xyz',
+				'/home/macenrola/Documents/XYLENE/inputs/for-reaction-frozen-cb/MO-CB7.inp-pos-1-aligned-just-CB6.xyz',
+				'/home/macenrola/Documents/XYLENE/inputs/for-reaction-frozen-cb/MP-CB6.inp-pos-1-aligned-just-CB6.xyz',
+				'/home/macenrola/Documents/XYLENE/inputs/for-reaction-frozen-cb/MP-CB7.inp-pos-1-aligned-just-CB6.xyz']:
+		process_xyz_coordinates(f)
