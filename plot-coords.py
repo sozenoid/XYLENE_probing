@@ -226,7 +226,7 @@ pwd = {}""".format(cwd)
 				plot_colormap(x,y, [k*627.5 for k in z],name)
 
 		if name[-3:]=='Log':
-			#print name
+			print name
 			T=float(f.split('/')[0])
 			with open(dumpfile,'ab') as a:
 				ctime,atime=compute_time(f,thres=[0.3, 0.7], T=T)
@@ -247,7 +247,7 @@ pwd = {}""".format(cwd)
 			except : print "impossible to fit and or plot for {}; lines are {}".format(name, lines)
 
 			#scale=np.median(lines)/np.log(2)
-			KS_test(lines, fit_scale)
+			#KS_test(lines, fit_scale)
 
 		if name[-4:]=="dump":
 			reformat_all_dump(f)

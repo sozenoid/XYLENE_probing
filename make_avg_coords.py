@@ -255,20 +255,84 @@ def generate_mol_from_xyz_and_pattern(xyz_array, atm_list, fname="average_mol.xy
 #
 #
 # This part is to average a trajectory of a cb complex as cylindrical distribution
-# The trajectories need to be aligned according to CB then converted to cylindrical coordinates along the CB axis 
-#
+# The trajectories need to be aligned according to CB then converted to cylindrical coordinates along the CB axis
+# The trajectory is initially converted form xyz to sdf using openbabel
 #
 #################
 
-def build_trajectory_as_molecule_with_conformers(xyztraj):
+def edit_xyz_file_to_add_format_charge(sdffile, chargeTAG="M  CHG  1   8   1"):
+	"""
+	PRE : XYZ trajs from cp2k don't contain the charge so converting them to openbabel don't actually add the charges which raises an error in rdkit
+	POST : This method will modify the sdf file in question to add a charge tag at the bottom of each conformation to make it readable by the rdkit
+	"""
+	with open(sdffile, 'rb') as r:
+		with open(sdffile+"-w-charge.sdf", 'wb') as w:
+			for line in r:
+				if "M  END" in line:
+					w.write(chargeTAG +"\n"+line)
+				else:
+					w.write(line)
+
+	return None
+
+def align_trajectory_with_axes_according_to_cb(sdftraj):
 	"""
 	PRE:  Takes an xyz trajectory
 	POST: Returns an rdkit mol with each conformer storing a trajectory snapshot, will align the conformers based on the
 	"""
 
+	supp = Chem.SDMolSupplier(sdftraj, removeHs=False)
+	w = Chem.SDWriter(sdftraj+"-aligned.sdf")
+	### GET THE BASE CONFORMER
+	traj = supp[0]
+
+	#### Get the alignment with the axes transform
+	frags = Chem.GetMolFrags(traj, asMols=True)
+	if frags[0].GetNumAtoms()<frags[1].GetNumAtoms():
+		guest, cb = frags[0], frags[1]
+	else:
+		guest, cb = frags[1], frags[0]
+	cantransform=Chem.rdMolTransforms.ComputeCanonicalTransform(cb.GetConformer())
+	#### ALIGNS traj
+	AllChem.TransformMol(traj, cantransform)
+	w.write(traj)
+
+	for mol in supp:
+		AllChem.TransformMol(mol, cantransform)
+		w.write(mol)
+		# traj.AddConformer(mol.GetConformer())
+
+def get_xyz_from_mol(mol):
+		"""
+		PRE: Takes in a mol rdkit that has one conformer (or at least the coordinats will be taken from the first one)
+		POST: returns an ndarray with the xyz coordinates
+		"""
+		atom_list=[]
+		conf=mol.GetConformer(0)
+		for i in range(mol.GetNumAtoms()):
+			atom_list.append(np.array(list(conf.GetAtomPosition(i))))
+		return np.array(atom_list)
+
+def xyz_to_cylindrical(xyzarray):
+	"""
+	PRE: Takes in a xyz array
+	POST: returns an array that corresponds the cylindrical transform of those coordinates with the cylindrical axis being along the CB axis
+	"""
+	pass 
+
+def compute_cylindrical_transform_for_sdf_trajectory(sdffile):
+	"""
+	PRE:  Takes in sdf trajectory that has been pre aligned along with the axes according to the CB
+	POST: Will produce an array of snapshots in cylindrical coordinates and probably plot it
+	"""
+	supp = Chem.SDMolSupplier(sdffile, removeHs=False)
+	get_xyz_from_mol(supp[0])
 
 
 if __name__ == "__main__":
+	import rdkit
+	from rdkit import Chem
+	from rdkit.Chem import AllChem
 	import statistics
 	import numpy as np
 	import numpy.core.multiarray
@@ -278,8 +342,13 @@ if __name__ == "__main__":
 	import pandas as pd
 
 	# process_z_matrix_trajectory('cb6.inp-pos-1-aligned.gzmat')
-	for f in ['/home/macenrola/Documents/XYLENE/inputs/for-reaction-frozen-cb/MO-CB6.inp-pos-1-aligned-just-CB6.xyz',
-				'/home/macenrola/Documents/XYLENE/inputs/for-reaction-frozen-cb/MO-CB7.inp-pos-1-aligned-just-CB6.xyz',
-				'/home/macenrola/Documents/XYLENE/inputs/for-reaction-frozen-cb/MP-CB6.inp-pos-1-aligned-just-CB6.xyz',
-				'/home/macenrola/Documents/XYLENE/inputs/for-reaction-frozen-cb/MP-CB7.inp-pos-1-aligned-just-CB6.xyz']:
-		process_xyz_coordinates(f)
+	# for f in ['/home/macenrola/Documents/XYLENE/inputs/for-reaction-frozen-cb/MO-CB6.inp-pos-1-aligned-just-CB6.xyz',
+	# 			'/home/macenrola/Documents/XYLENE/inputs/for-reaction-frozen-cb/MO-CB7.inp-pos-1-aligned-just-CB6.xyz',
+	# 			'/home/macenrola/Documents/XYLENE/inputs/for-reaction-frozen-cb/MP-CB6.inp-pos-1-aligned-just-CB6.xyz',
+	# 			'/home/macenrola/Documents/XYLENE/inputs/for-reaction-frozen-cb/MP-CB7.inp-pos-1-aligned-just-CB6.xyz']:
+	# 	process_xyz_coordinates(f)
+
+
+	# align_trajectory_with_axes_according_to_cb("/home/macenrola/Documents/heptylamine/TRAJS/700-heptylamine.inp-pos-1.sdf-w-charge.sdf")
+	# edit_xyz_file_to_add_format_charge("/home/macenrola/Documents/heptylamine/TRAJS/700-heptylamine.inp-pos-1.sdf")
+	compute_cylindrical_transform_for_sdf_trajectory("/home/macenrola/Documents/heptylamine/TRAJS/700-heptylamine.inp-pos-1.sdf-w-charge.sdf-aligned.sdf")
