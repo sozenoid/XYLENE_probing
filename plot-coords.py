@@ -148,7 +148,7 @@ def reformat_all_dump(time_dist_dump_file):
 	POST: will produce  different files named after the temperature and system and containing only the real time
 	"""
 	system_markers=['cb6-MO', 'cb7-MO', 'cb6-MP', 'cb7-MP', 'MO', 'MP',
-	'oxylene-cb6', 'pxylene-cb6', 'mxylene-cb6', 'oxylene-cb7', 'pxylene-cb7', 'mxylene-cb7', 
+	'oxylene-cb6', 'pxylene-cb6', 'mxylene-cb6', 'oxylene-cb7', 'pxylene-cb7', 'mxylene-cb7',
 	'adamantanol_cb7']
 	systems = dict()
 	with open(time_dist_dump_file, 'rb') as r: lines = [x.strip().split() for x in r.readlines()]
@@ -206,7 +206,7 @@ pwd = {}""".format(cwd)
 		flist=sys.argv[1:]
 	MP=False
 	dumpfile='{}/DUMP_MTS'.format(cwd)
-        with open(dumpfile, 'wb'): 
+        with open(dumpfile, 'wb'):
 		print("writing to {}".format(dumpfile))
 	timedist =[]
 	for f in sorted(flist):
@@ -226,7 +226,7 @@ pwd = {}""".format(cwd)
 				plot_colormap(x,y, [k*627.5 for k in z],name)
 
 		if name[-3:]=='Log':
-			print name
+			#print name
 			T=float(f.split('/')[0])
 			with open(dumpfile,'ab') as a:
 				ctime,atime=compute_time(f,thres=[0.3, 0.7], T=T)
@@ -247,10 +247,11 @@ pwd = {}""".format(cwd)
 			except : print "impossible to fit and or plot for {}; lines are {}".format(name, lines)
 
 			#scale=np.median(lines)/np.log(2)
-			#KS_test(lines, fit_scale)
+			KS_test(lines, fit_scale)
 
 		if name[-4:]=="dump":
 			reformat_all_dump(f)
 
 		if name[-4:]==".xyz":
+			print name 
 			print_average_energy_for_xyz_file(f)

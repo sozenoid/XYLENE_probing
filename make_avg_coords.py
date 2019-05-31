@@ -240,6 +240,34 @@ def generate_mol_from_xyz_and_pattern(xyz_array, atm_list, fname="average_mol.xy
 		for i, atm in enumerate(atm_list):
 			w.write("{}      {}      {}      {}\n".format(atm, xyz_array[i][0], xyz_array[i][1], xyz_array[i][2]))
 
+
+
+
+
+
+
+
+
+
+
+
+#################3
+#
+#
+# This part is to average a trajectory of a cb complex as cylindrical distribution
+# The trajectories need to be aligned according to CB then converted to cylindrical coordinates along the CB axis 
+#
+#
+#################
+
+def build_trajectory_as_molecule_with_conformers(xyztraj):
+	"""
+	PRE:  Takes an xyz trajectory
+	POST: Returns an rdkit mol with each conformer storing a trajectory snapshot, will align the conformers based on the
+	"""
+
+
+
 if __name__ == "__main__":
 	import statistics
 	import numpy as np
