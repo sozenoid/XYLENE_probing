@@ -147,7 +147,7 @@ def reformat_all_dump(time_dist_dump_file):
 	      the third column is the MTD time and the last the real time
 	POST: will produce  different files named after the temperature and system and containing only the real time
 	"""
-	system_markers=['cb6-MO', 'cb7-MO', 'cb6-MP', 'cb7-MP', 'MO', 'MP',
+	system_markers=['MO-CB6', 'MO-CB7', 'MP-CB6', 'MP-CB7', 'MO-vac', 'MP-vac',
 	'oxylene-cb6', 'pxylene-cb6', 'mxylene-cb6', 'oxylene-cb7', 'pxylene-cb7', 'mxylene-cb7',
 	'adamantanol_cb7']
 	systems = dict()
@@ -236,7 +236,8 @@ pwd = {}""".format(cwd)
 				else:
 					print "accelerated time out of bounds ({})".format(ctime)
 		if name[-2:]=="KS":
-			with open(f, 'rb') as r: lines=sorted([float(x.strip()) for x in r.readlines()])
+			with open(f, 'rb') as r: lines=sorted([float(x.strip()) for x in r.readlines()])[:-3]
+			# print lines 
 			#scale=float(name.split('-')[-2])
 			try:
 				fit_scale, sortedist, p =compute_avg_time_from_fit(lines)

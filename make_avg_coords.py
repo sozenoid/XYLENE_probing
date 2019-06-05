@@ -318,7 +318,7 @@ def xyz_to_cylindrical(xyzarray):
 	PRE: Takes in a xyz array
 	POST: returns an array that corresponds the cylindrical transform of those coordinates with the cylindrical axis being along the CB axis
 	"""
-	pass 
+	pass
 
 def compute_cylindrical_transform_for_sdf_trajectory(sdffile):
 	"""
@@ -346,9 +346,9 @@ if __name__ == "__main__":
 	# 			'/home/macenrola/Documents/XYLENE/inputs/for-reaction-frozen-cb/MO-CB7.inp-pos-1-aligned-just-CB6.xyz',
 	# 			'/home/macenrola/Documents/XYLENE/inputs/for-reaction-frozen-cb/MP-CB6.inp-pos-1-aligned-just-CB6.xyz',
 	# 			'/home/macenrola/Documents/XYLENE/inputs/for-reaction-frozen-cb/MP-CB7.inp-pos-1-aligned-just-CB6.xyz']:
-	# 	process_xyz_coordinates(f)
+	process_xyz_coordinates('/home/macenrola/Documents/XYLENE/base-systems-equilibrated/starting-trajectories-for-frozen/CB6-aligned-from-MP-centered.xyz')
 
 
 	# align_trajectory_with_axes_according_to_cb("/home/macenrola/Documents/heptylamine/TRAJS/700-heptylamine.inp-pos-1.sdf-w-charge.sdf")
 	# edit_xyz_file_to_add_format_charge("/home/macenrola/Documents/heptylamine/TRAJS/700-heptylamine.inp-pos-1.sdf")
-	compute_cylindrical_transform_for_sdf_trajectory("/home/macenrola/Documents/heptylamine/TRAJS/700-heptylamine.inp-pos-1.sdf-w-charge.sdf-aligned.sdf")
+	# compute_cylindrical_transform_for_sdf_trajectory("/home/macenrola/Documents/heptylamine/TRAJS/700-heptylamine.inp-pos-1.sdf-w-charge.sdf-aligned.sdf")

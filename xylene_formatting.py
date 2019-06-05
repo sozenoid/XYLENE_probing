@@ -1,5 +1,4 @@
 
-print "haha"
 def format_mol_for_vasp(rdkitmol, name):
 	"""
 	:param rdkitmol: Takes a rdkitmol
@@ -851,7 +850,7 @@ def make_min_script_cp2k_for_xyzlist(xyzlist):
 #$ -l mem=3G
 #$ -N {0}
 #$ -pe mpi 32
-#$ -cwd 
+#$ -cwd
 # 8. Load required module alongside default module
 module unload compilers mpi
 module load compilers/gnu/4.9.2
@@ -892,6 +891,67 @@ def print_centroid_distance(list_of_sdf_complex):
 		dist2 = sum([(x[0] - x[1]) ** 2 for x in zip(f1, f2)])
 		print f, dist2**(.5)
 
+
+
+def xyz_to_cp2kinp(xyzfile, charge=0, patternfile="/home/macenrola/Documents/XYLENE/correlation_for_reaction/slow-reaction-MP-CB6/breaking-down-cb-and-guest/base_energy.inp"):
+	"""
+	PRE:  Takes in an xyz file and a cp2k input file with three {} symbols, the first gives the project name, the second the charge and the last the xyz block string
+	POST: Will return a input file named after the xyz file based on the input file.
+	"""
+	name=xyzfile.split("/")[-1]
+	with open(xyzfile, 'rb') as r:
+		xyzblock = "".join(r.readlines()[2:])
+
+	with open(patternfile, 'rb') as r:
+		editable_file = ''.join(r.readlines())
+
+
+	edited_file = editable_file.format(name, charge, xyzblock)
+
+	with open(xyzfile+"_inp", "wb") as  w:
+		w.write(edited_file)
+
+
+def rescale_velocities_from_input_file(cp2kinp, scale):
+	"""
+	PRE: Takes in an input file from cp2k with existing velocity input
+	POST: will rescale it by a given factor
+	"""
+	past_velocity=False
+	past_coords=False
+	atom_list=[]
+	speed_list=[]
+	with open(cp2kinp, 'rb') as r:
+		lines = r.readlines()
+	dic_weights={'C':12,'H':1,'N':14, 'O':16}
+	#BUILD THE ATOM LIST
+	for i in range(len(lines)):
+		if "&END COORD" in lines[i] or lines[i].strip()==[]:
+			break
+		if past_coords:
+			atom_list.append(lines[i].strip().split()[0])
+		if "&COORD" in lines[i]:
+			past_coords=True
+
+	for i in range(len(lines)):
+		if "&END VELOCITY" in lines[i]:
+			break
+		if past_velocity:
+			speed=[float(x) for x in lines[i].strip().split()]
+			speed_list.append(sum([x**2 for x in speed]))
+			lines[i] = "{0:+1.12f}   {1:+1.12f}   {2:+1.12f}\n".format(*[x*scale for x in speed])
+		if "&VELOCITY" in lines[i]:
+			past_velocity=True
+
+	ekintot=0.5*sum([x[0]*dic_weights[x[1]] for x in zip(speed_list, atom_list)])*911.447
+
+	print "total kinetic energy is: {} Ha; The speed scale factor to bring it to 1 kcal/mol should be: 1/{}".format(ekintot, (ekintot*627.509)**.5)
+
+	with open(cp2kinp+"_rescale", 'wb') as w:
+		w.writelines(lines)
+
+	return None
+
 if __name__ == "__main__":
 	import rdkit
 	from rdkit import Chem
@@ -911,15 +971,16 @@ if __name__ == "__main__":
 	# mxylene = Chem.MolFromPDBFile('/home/macenrola/Documents/nwchem/MXYLENE_OUT.pdb', removeHs=False, sanitize=False)
 	# print oxylene, pxylene, mxylene
 	# align_xylenes(oxylene, mxylene, pxylene)
+	# for f in glob.glob('/home/macenrola/Documents/XYLENE/correlation_for_reaction/slow-reaction-MP-CB6/breaking-down-cb-and-guest/*gh1.xyz'):
+	# 	xyz_to_cp2kinp(f, charge=1)
 
-
-	#
+	rescale_velocities_from_input_file("/home/macenrola/Documents/XYLENE/correlation_for_reaction/slow-reaction-MP-CB6/vibrational_analysis/traj_from_mode_368/base_vib.inp", 1/545.678989048)
 	# flist = sorted(glob.glob('/home/macenrola/Desktop/intermediate/try-stepper-popping-ts/oxylene-cb6-neutral.xyz'))
 	# make_gaussian_input_files_for_xyzgroup(flist)
 	# print flist
 
-	flist = glob.glob('/home/macenrola/Documents/amberconvergedmols/top50/results/*_COMPLEX.com_OUT.out.sdf')
-	print_centroid_distance(sorted(flist))
+	# flist = glob.glob('/home/macenrola/Documents/amberconvergedmols/top50/results/*_COMPLEX.com_OUT.out.sdf')
+	# print_centroid_distance(sorted(flist))
 
 	# flist = sorted(glob.glob('/home/macenrola/Desktop/prepareinputs/cp2kneb/raw-G16-Outputs/all-mins/m*.xyz'))
 	# make_min_script_cp2k_for_xyzlist(flist)
@@ -939,4 +1000,3 @@ if __name__ == "__main__":
 
 
 	# doc_pdb_in_cb6('/home/macenrola/Documents/XYLENE/neutral_cb6/CB6.pdb', glob.glob('/home/macenrola/Documents/XYLENE/neutral_cb6/*.pdbqt.pdb'))
-
