@@ -189,7 +189,7 @@ def parse_xyz_block(xyz_block):
 	POST: Will return an array of array as np.array(np.array(), np.array(),...) each sub array contains [x,y,z] coord of a specific atom
 	"""
 	# let go of the atom names, the order is supposed to keep that information
-	coords = np.array([np.array([float(y) for y in x.strip().split()[1:]]) for x in xyz_block[2:]]) # skip the two first lines that hold atom number and energy info
+	coords = np.array([np.array([float(y) for y in x.strip().split()[1:]]) for x in xyz_block[2:]], dtype=np.float64) # skip the two first lines that hold atom number and energy info
 	return coords
 
 def process_xyz_coordinates(xyzfile):
@@ -328,6 +328,69 @@ def compute_cylindrical_transform_for_sdf_trajectory(sdffile):
 	supp = Chem.SDMolSupplier(sdffile, removeHs=False)
 	get_xyz_from_mol(supp[0])
 
+def make_mass_matrix_from_atom_list(atom_list):
+	"""
+	PRE: Takes in an atom list
+	POST: Will return the mass matrix associated with it
+	the matrix is square and has 3n*3n elements and is diagonal for n atoms, the square root of the matrix is also returned
+	"""
+	dic_weights={'C':12,'H':1,'N':14, 'O':16}
+	diag=[]
+	for ats in atom_list:
+		diag.extend([dic_weights[ats]*1.66e-27]*3) # those masses are atomic masses so the factor 1.66e-27
+
+	mass_matrix = np.diag(diag)
+	# sqrt_mass_matrix = scipy.linalg.sqrtm(mass_matrix) # in the case of diagonal matrices, it is just the square root of the elements element wise
+	sqrt_mass_matrix=np.diag([x**.5 for x in diag])
+
+	return mass_matrix, sqrt_mass_matrix
+
+
+def make_covariance_matrix(xyzfile):
+	"""
+	PRE: Takes in an xyz file containing a trajectory
+	POST: Will return the covariance of the atomic coordinates: For n atoms the matrix will be 3n*3n elements are each component of speed is an individual variable
+	"""
+	print xyzfile
+	natoms = -1
+	snapshot_list=[]
+	with open(xyzfile, 'rb') as r:
+		tempxyz=[]
+		for i, line in enumerate(r):
+			# if i==10000: break
+			if i==0:
+				natoms=line.strip()
+			if line.strip()==natoms and tempxyz!=[]:
+				if i<1000:
+					atm_list=[x.strip().split()[0] for x in tempxyz[2:]]
+				xyz_array=parse_xyz_block(tempxyz)
+				xyz_vec=np.reshape(xyz_array, 3*int(natoms))
+				snapshot_list.append(xyz_vec)
+				tempxyz=[]
+				nsnaps=len(snapshot_list)
+				# if nsnaps%10==0: print "{}th snapshot processed".format(nsnaps)
+			tempxyz.append(line)
+
+	mass_matrix, sqrt_mass_matrix= make_mass_matrix_from_atom_list(atm_list)
+	snapshot_array=np.array(snapshot_list).T
+	covmat=np.cov(snapshot_array*1e-10) # Factor 1e-10 there because we fed angstrom in the procedure
+
+	mass_weighted_covmat = np.matmul(np.matmul(sqrt_mass_matrix,covmat), sqrt_mass_matrix)
+
+	eigenvalues, eigenvectors = scipy.linalg.eig(mass_weighted_covmat)
+	k,T,hbar = 1.38e-23, 300, 1.054e-34 # those are the masses of
+	frequencies = [np.sqrt(k*T/np.real(x)) for x in eigenvalues if x>0] # the frequencies are normally given in Hz but here we divide by the speed of light in cm-1/s to get cm-1 (2.9979e10)
+
+	get_entropy_from_frequency_list(frequencies, k, T, hbar)
+
+
+def get_entropy_from_frequency_list(frequency_list, k,T, hbar ):
+	"""
+	PRE  : Takes in a list in frequencies in hertz
+	POST : returns a value of the entropy as given by the formulae of statistical thermodynamic
+	"""
+	alpha=hbar/k/T
+	print 0.00198588*sum([alpha *x/(np.exp(alpha*x) - 1) -  np.log(1-np.exp(-alpha*x)) for x in frequency_list[6:]])  # The prefactor instead of k is the value of R in kcal/mol
 
 if __name__ == "__main__":
 	import rdkit
@@ -340,14 +403,17 @@ if __name__ == "__main__":
 	from sklearn.cluster import KMeans
 	import matplotlib.pyplot as plt
 	import pandas as pd
+	import scipy
+	import glob
 
 	# process_z_matrix_trajectory('cb6.inp-pos-1-aligned.gzmat')
 	# for f in ['/home/macenrola/Documents/XYLENE/inputs/for-reaction-frozen-cb/MO-CB6.inp-pos-1-aligned-just-CB6.xyz',
 	# 			'/home/macenrola/Documents/XYLENE/inputs/for-reaction-frozen-cb/MO-CB7.inp-pos-1-aligned-just-CB6.xyz',
 	# 			'/home/macenrola/Documents/XYLENE/inputs/for-reaction-frozen-cb/MP-CB6.inp-pos-1-aligned-just-CB6.xyz',
 	# 			'/home/macenrola/Documents/XYLENE/inputs/for-reaction-frozen-cb/MP-CB7.inp-pos-1-aligned-just-CB6.xyz']:
-	process_xyz_coordinates('/home/macenrola/Documents/XYLENE/base-systems-equilibrated/starting-trajectories-for-frozen/CB6-aligned-from-MP-centered.xyz')
-
+	# process_xyz_coordinates('/home/macenrola/Documents/XYLENE/base-systems-equilibrated/starting-trajectories-for-frozen/CB6-aligned-from-MP-centered.xyz')
+	for f in glob.glob("/home/macenrola/Documents/XYLENE/Entropy-from-covariance/*xyz"):
+		make_covariance_matrix(f)
 
 	# align_trajectory_with_axes_according_to_cb("/home/macenrola/Documents/heptylamine/TRAJS/700-heptylamine.inp-pos-1.sdf-w-charge.sdf")
 	# edit_xyz_file_to_add_format_charge("/home/macenrola/Documents/heptylamine/TRAJS/700-heptylamine.inp-pos-1.sdf")
