@@ -192,10 +192,10 @@ def parse_xyz_block(xyz_block):
 	coords = np.array([np.array([float(y) for y in x.strip().split()[1:]]) for x in xyz_block[2:]], dtype=np.float64) # skip the two first lines that hold atom number and energy info
 	return coords
 
-def process_xyz_coordinates(xyzfile):
+def return_list_of_snapshots_and_atom_list(xyzfile):
 	"""
-	PRE: Takes in an xyz file  that contains an xyz coordinate, each snapshot must have an equal number of atoms in the same order. They need to be pre aligned RMS wise.
-	POST: Will process each snapshot and produce an average coordinate
+	PRE: Takes in an xyz file
+	POST: Returns a list of atoms and a list of snapshots of the trajectory as arrays
 	"""
 	natoms = -1
 	snapshot_list=[]
@@ -212,10 +212,17 @@ def process_xyz_coordinates(xyzfile):
 				snapshot_list.append(xyz_array)
 				tempxyz=[]
 				nsnaps=len(snapshot_list)
-				if nsnaps%10==0: print "{}th snapshot processed".format(nsnaps)
+				# if nsnaps%10==0: print "{}th snapshot processed".format(nsnaps)
 			tempxyz.append(line)
 
-	snapshot_array=np.array(snapshot_list[10000:])
+	return atm_list, np.array(snapshot_list)
+
+def process_xyz_coordinates(xyzfile):
+	"""
+	PRE: Takes in an xyz file  that contains an xyz coordinate, each snapshot must have an equal number of atoms in the same order. They need to be pre aligned RMS wise.
+	POST: Will process each snapshot and produce an average coordinate
+	"""
+	atm_list, snapshot_array= return_list_of_snapshots_and_atom_list(xyzfile)
 	average_coord=average_xyz_coordinates(snapshot_array)
 	generate_mol_from_xyz_and_pattern(average_coord, atm_list, fname=xyzfile+'_average')
 
@@ -352,34 +359,19 @@ def make_covariance_matrix(xyzfile):
 	POST: Will return the covariance of the atomic coordinates: For n atoms the matrix will be 3n*3n elements are each component of speed is an individual variable
 	"""
 	print xyzfile
-	natoms = -1
-	snapshot_list=[]
-	with open(xyzfile, 'rb') as r:
-		tempxyz=[]
-		for i, line in enumerate(r):
-			# if i==10000: break
-			if i==0:
-				natoms=line.strip()
-			if line.strip()==natoms and tempxyz!=[]:
-				if i<1000:
-					atm_list=[x.strip().split()[0] for x in tempxyz[2:]]
-				xyz_array=parse_xyz_block(tempxyz)
-				xyz_vec=np.reshape(xyz_array, 3*int(natoms))
-				snapshot_list.append(xyz_vec)
-				tempxyz=[]
-				nsnaps=len(snapshot_list)
-				# if nsnaps%10==0: print "{}th snapshot processed".format(nsnaps)
-			tempxyz.append(line)
+	atm_list, snapshot_array= return_list_of_snapshots_and_atom_list(xyzfile)
+
+	reshaped_snapshots = [np.reshape(x, len(atm_list)*3) for x in list(snapshot_array)]
 
 	mass_matrix, sqrt_mass_matrix= make_mass_matrix_from_atom_list(atm_list)
-	snapshot_array=np.array(snapshot_list).T
+	snapshot_array=np.array(reshaped_snapshots).T
 	covmat=np.cov(snapshot_array*1e-10) # Factor 1e-10 there because we fed angstrom in the procedure
 
 	mass_weighted_covmat = np.matmul(np.matmul(sqrt_mass_matrix,covmat), sqrt_mass_matrix)
 
 	eigenvalues, eigenvectors = scipy.linalg.eig(mass_weighted_covmat)
-	k,T,hbar = 1.38e-23, 300, 1.054e-34 # those are the masses of
-	frequencies = [np.sqrt(k*T/np.real(x)) for x in eigenvalues if x>0] # the frequencies are normally given in Hz but here we divide by the speed of light in cm-1/s to get cm-1 (2.9979e10)
+	k,T,hbar = 1.38e-23, 300, 1.054e-34 # those are the masses of kB T and hbar
+	frequencies = [np.sqrt(k*T/np.real(x)) for x in eigenvalues if x>0] # the frequencies are normally given in Hz but here we can divide by the speed of light in cm-1/s to get cm-1 (2.9979e10)
 
 	get_entropy_from_frequency_list(frequencies, k, T, hbar)
 
@@ -390,8 +382,30 @@ def get_entropy_from_frequency_list(frequency_list, k,T, hbar ):
 	POST : returns a value of the entropy as given by the formulae of statistical thermodynamic
 	"""
 	alpha=hbar/k/T
-	print 0.00198588*sum([alpha *x/(np.exp(alpha*x) - 1) -  np.log(1-np.exp(-alpha*x)) for x in frequency_list[6:]])  # The prefactor instead of k is the value of R in kcal/mol
+	print 0.00198588*sum([alpha *x/(np.exp(alpha*x) - 1) -  np.log(1-np.exp(-alpha*x)) for x in frequency_list[:]])  # The prefactor instead of k is the value of R in kcal/mol, let go of rotational and translational frequencies
 
+def power_spectrum_from_velocityxyz(xyzfile):
+	"""
+	PRE : Takes in an xyz file containing velocity (most likely in bohr/au_time)
+	POST: Will produce the power spectrum
+	"""
+	# atm_list, snapshot_array= return_list_of_snapshots_and_atom_list(xyzfile)
+	#
+	# reshaped_snapshots = [np.reshape(x, len(atm_list)*3) for x in list(snapshot_array)]
+	# snapshot_array=np.array(reshaped_snapshots).T
+	#
+	# total_correlation = []
+	# for component in list(snapshot_array):
+	# 	total_correlation.append(np.correlate(component, component, mode='full'))
+	#
+	# total_correlation = np.sum(np.array(total_correlation), axis=0)
+	#
+	# cPickle.dump(total_correlation, open('/home/macenrola/Documents/XYLENE/correlation_for_reaction/slow-reaction-MP-CB6/vibrational_analysis/traj_from_mode_368/totcor', 'wb'))
+	total_correlation=cPickle.load(open('/home/macenrola/Documents/XYLENE/correlation_for_reaction/slow-reaction-MP-CB6/vibrational_analysis/traj_from_mode_368/totcor', 'rb'))
+	print total_correlation
+	# plt.plot((total_correlation))
+	plt.plot(np.linspace(-1e15/2.9979e10/2, 1e15/2.9979e10/2, len(total_correlation)), [np.abs(A)**2 for A in numpy.fft.fftshift(numpy.fft.fft(total_correlation))]) # gives the spectrum with x axis in cm-1
+	plt.show()
 if __name__ == "__main__":
 	import rdkit
 	from rdkit import Chem
@@ -405,6 +419,8 @@ if __name__ == "__main__":
 	import pandas as pd
 	import scipy
 	import glob
+	import cPickle
+	from matplotlib import pyplot as plt
 
 	# process_z_matrix_trajectory('cb6.inp-pos-1-aligned.gzmat')
 	# for f in ['/home/macenrola/Documents/XYLENE/inputs/for-reaction-frozen-cb/MO-CB6.inp-pos-1-aligned-just-CB6.xyz',
@@ -412,9 +428,9 @@ if __name__ == "__main__":
 	# 			'/home/macenrola/Documents/XYLENE/inputs/for-reaction-frozen-cb/MP-CB6.inp-pos-1-aligned-just-CB6.xyz',
 	# 			'/home/macenrola/Documents/XYLENE/inputs/for-reaction-frozen-cb/MP-CB7.inp-pos-1-aligned-just-CB6.xyz']:
 	# process_xyz_coordinates('/home/macenrola/Documents/XYLENE/base-systems-equilibrated/starting-trajectories-for-frozen/CB6-aligned-from-MP-centered.xyz')
-	for f in glob.glob("/home/macenrola/Documents/XYLENE/Entropy-from-covariance/*xyz"):
-		make_covariance_matrix(f)
-
+	# for f in glob.glob("/home/macenrola/Documents/XYLENE/Entropy-from-covariance/*xyz"):
+	# 	make_covariance_matrix(f)
+	power_spectrum_from_velocityxyz("/home/macenrola/Documents/XYLENE/correlation_for_reaction/slow-reaction-MP-CB6/vibrational_analysis/traj_from_mode_368/sample_vel_coupling")
 	# align_trajectory_with_axes_according_to_cb("/home/macenrola/Documents/heptylamine/TRAJS/700-heptylamine.inp-pos-1.sdf-w-charge.sdf")
 	# edit_xyz_file_to_add_format_charge("/home/macenrola/Documents/heptylamine/TRAJS/700-heptylamine.inp-pos-1.sdf")
 	# compute_cylindrical_transform_for_sdf_trajectory("/home/macenrola/Documents/heptylamine/TRAJS/700-heptylamine.inp-pos-1.sdf-w-charge.sdf-aligned.sdf")
