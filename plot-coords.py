@@ -102,7 +102,7 @@ def compute_time(fname, thres=[0.3,0.7], T=300):
 			badcrit=[var[1]<=thres[0], var[2]<=thres[0]] # if both carbons have very low coordinations
 			accelerated_time+=np.exp(beta*Ha2kcal*var[7])
 		elif len(thres)==1:
-			crit=[var[1]>=4]
+			crit=[var[1]>=thres[0]]
 			badcrit=[False]				     # it is a bad sign ghh
 			accelerated_time+=np.exp(beta*Ha2kcal*var[4])
 		if all(badcrit): break
@@ -237,7 +237,7 @@ pwd = {}""".format(cwd)
 					print "accelerated time out of bounds ({})".format(ctime)
 		if name[-2:]=="KS":
 			with open(f, 'rb') as r: lines=sorted([float(x.strip()) for x in r.readlines()])[:-3]
-			# print lines 
+			# print lines
 			#scale=float(name.split('-')[-2])
 			try:
 				fit_scale, sortedist, p =compute_avg_time_from_fit(lines)
@@ -254,5 +254,5 @@ pwd = {}""".format(cwd)
 			reformat_all_dump(f)
 
 		if name[-4:]==".xyz":
-			print name 
+			print name
 			print_average_energy_for_xyz_file(f)
