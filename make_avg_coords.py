@@ -331,6 +331,26 @@ def xyz_to_cylindrical(xyzarray):
 
 	return cylarray
 
+def get_probability_density_by_histogram(rlist, zlist):
+	"""
+	PRE : Takes in two lists that define a cloud of points, first list is x and the second y or (r, z) here
+	POST: will plot the density
+	"""
+	xedges=np.linspace(0,8, 200)
+	yedges=np.linspace(-15,5, 200)
+
+	H, xedges, yedges = np.histogram2d(rlist, zlist, bins=(xedges, yedges))
+	H = H.T  # Let each row list bins with common y range.
+
+	# fig = plt.figure(figsize=(7, 3))
+	# ax = fig.add_subplot(131, title='imshow: square bins')
+	plt.imshow(H, interpolation='nearest', origin='low'
+	, extent=[xedges[0], xedges[-1], yedges[0], yedges[-1]])
+	#### RAW SCATTER IS TOO SHADY, TOO MANY POINTS
+	# plt.scatter(rlist, zlist, s=1)
+	plt.xlabel("RADIUS FROM CB SYMMETRY AXIS (ANGSTROM)")
+	plt.ylabel("Z DISTANCE FROM ORIGIN (ANGSTROM)")
+
 def compute_cylindrical_transform_for_sdf_trajectory(sdffile):
 	"""
 	PRE:  Takes in sdf trajectory that has been pre aligned along with the axes according to the CB
@@ -342,19 +362,21 @@ def compute_cylindrical_transform_for_sdf_trajectory(sdffile):
 	zlist = []
 	for i, mol in enumerate(supp):
 		print i
-		if i==10: break
+		# if i==100: break
 
 		temp_cylarray = xyz_to_cylindrical(get_xyz_from_mol(mol)).T
 		rlist.extend(temp_cylarray[0])
 		zlist.extend(temp_cylarray[2])
 		# plt.scatter(r,z)
 		# plt.show()
-	plt.scatter(rlist, zlist, s=1)
-	plt.xlabel("RADIUS FROM CB SYMMETRY AXIS (ANGSTROM)")
-	plt.ylabel("Z DISTANCE FROM ORIGIN (ANGSTROM)")
+	get_probability_density_by_histogram(rlist, zlist )
+
 	plt.savefig(sdffile+'-rz.png')
+	############
+
 	cPickle.dump((rlist,zlist), open(sdffile+'-rzlists', 'wb'))
-	plt.show()
+	# plt.show()
+
 def make_mass_matrix_from_atom_list(atom_list):
 	"""
 	PRE: Takes in an atom list
