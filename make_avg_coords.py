@@ -336,8 +336,9 @@ def get_probability_density_by_histogram(rlist, zlist):
 	PRE : Takes in two lists that define a cloud of points, first list is x and the second y or (r, z) here
 	POST: will plot the density
 	"""
-	xedges=np.linspace(0,8, 200)
-	yedges=np.linspace(-15,5, 200)
+	from matplotlib.colors import LogNorm
+	xedges=np.linspace(0,8, 100)
+	yedges=np.linspace(-15,5, 100)
 
 	H, xedges, yedges = np.histogram2d(rlist, zlist, bins=(xedges, yedges))
 	H = H.T  # Let each row list bins with common y range.
@@ -345,7 +346,11 @@ def get_probability_density_by_histogram(rlist, zlist):
 	# fig = plt.figure(figsize=(7, 3))
 	# ax = fig.add_subplot(131, title='imshow: square bins')
 	plt.imshow(H, interpolation='nearest', origin='low'
-	, extent=[xedges[0], xedges[-1], yedges[0], yedges[-1]])
+	, extent=[xedges[0], xedges[-1], yedges[0], yedges[-1]],cmap="jet", norm=LogNorm())
+
+	plt.colorbar()
+
+	# plt.contour(H)
 	#### RAW SCATTER IS TOO SHADY, TOO MANY POINTS
 	# plt.scatter(rlist, zlist, s=1)
 	plt.xlabel("RADIUS FROM CB SYMMETRY AXIS (ANGSTROM)")
@@ -356,25 +361,29 @@ def compute_cylindrical_transform_for_sdf_trajectory(sdffile):
 	PRE:  Takes in sdf trajectory that has been pre aligned along with the axes according to the CB
 	POST: Will produce an array of snapshots in cylindrical coordinates and probably plot it
 	"""
-	supp = Chem.SDMolSupplier(sdffile, removeHs=False)
-	# Chem.MolToMolFile(supp[0], '/home/macenrola/Desktop/ULTRALOL.sdf')
-	rlist = []
-	zlist = []
-	for i, mol in enumerate(supp):
-		print i
-		# if i==100: break
 
-		temp_cylarray = xyz_to_cylindrical(get_xyz_from_mol(mol)).T
-		rlist.extend(temp_cylarray[0])
-		zlist.extend(temp_cylarray[2])
-		# plt.scatter(r,z)
-		# plt.show()
+	########## TO PROCESS
+	# supp = Chem.SDMolSupplier(sdffile, removeHs=False)
+	# rlist = []
+	# zlist = []
+	# for i, mol in enumerate(supp):
+	# 	print i
+	# 	# if i==100: break
+	#
+	# 	temp_cylarray = xyz_to_cylindrical(get_xyz_from_mol(mol)).T
+	# 	rlist.extend(temp_cylarray[0])
+	# 	zlist.extend(temp_cylarray[2])
+
+	###### FROM SAVED
+	rlist, zlist = cPickle.load(open(sdffile, 'rb'))
 	get_probability_density_by_histogram(rlist, zlist )
 
 	plt.savefig(sdffile+'-rz.png')
+	plt.show()
+	
 	############
 
-	cPickle.dump((rlist,zlist), open(sdffile+'-rzlists', 'wb'))
+	# cPickle.dump((rlist,zlist), open(sdffile+'-rzlists', 'wb'))
 	# plt.show()
 
 def make_mass_matrix_from_atom_list(atom_list):
@@ -476,8 +485,12 @@ if __name__ == "__main__":
 	# 	make_covariance_matrix(f)
 	# power_spectrum_from_velocityxyz("/home/macenrola/Documents/XYLENE/correlation_for_reaction/slow-reaction-MP-CB6/vibrational_analysis/traj_from_mode_368/sample_vel_coupling.xyz")
 	# f="/home/macenrola/Documents/heptylamine/TRAJS/300-heptylamine.inp-pos-1.xyz.sdf-w-charge.sdf-aligned.sdf"
-	for f in glob.glob("/home/macenrola/Documents/heptylamine/TRAJS/SDFs/*-w-charge.sdf-aligned.sdf"):
-		print f
+	#for f in glob.glob("/home/macenrola/Documents/heptylamine/TRAJS/SDFs/*00-heptylamine.inp-pos-1.xyz.sdf-w-charge.sdf-aligned.sdf-rzlists"):
+	#	print f
 		# edit_xyz_file_to_add_format_charge(f)
 		# align_trajectory_with_axes_according_to_cb(f+"-w-charge.sdf")
-		compute_cylindrical_transform_for_sdf_trajectory(f)
+	#	compute_cylindrical_transform_for_sdf_trajectory(f)
+	for f in glob.glob('/home/macenrola/Documents/XYLENE/base-systems-equilibrated/equilibrated+NVE-long/M*.inp-pos-1.xyz-aligned-centered.xyz'):
+		make_covariance_matrix(f)
+	for f in glob.glob('/home/macenrola/Documents/XYLENE/base-systems-equilibrated/equilibrated+NVE-long/just-*-prot.inp-pos-1.xyz-aligned-centered.xyz'):
+		make_covariance_matrix(f)
