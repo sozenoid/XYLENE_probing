@@ -107,8 +107,8 @@ def compute_time(fname, thres=[0.3,0.7], T=300):
 			accelerated_time+=np.exp(beta*Ha2kcal*var[4])
 		if all(badcrit): break
 		if all(crit):
-			print "in the zone: MTD_time: {}; Real_equilvalent: {}".format(var[0], accelerated_time)
-			return current_time, accelerated_time
+			print "in the zone: MTD_time: {}; Real_equilvalent: {}".format(var[0], accelerated_time*1e-15)
+			return current_time, accelerated_time*1e-15 # factor 1e-15 added to account for fs units
 	return 0.0,0.0
 
 
@@ -236,7 +236,7 @@ pwd = {}""".format(cwd)
 				else:
 					print "accelerated time out of bounds ({})".format(ctime)
 		if name[-2:]=="KS":
-			with open(f, 'rb') as r: lines=sorted([float(x.strip()) for x in r.readlines()])[:-3]
+			with open(f, 'rb') as r: lines=sorted([float(x.strip()) for x in r.readlines()])[:]
 			# print lines
 			#scale=float(name.split('-')[-2])
 			try:
