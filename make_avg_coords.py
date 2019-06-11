@@ -202,7 +202,9 @@ def return_list_of_snapshots_and_atom_list(xyzfile):
 	with open(xyzfile, 'rb') as r:
 		tempxyz=[]
 		for i, line in enumerate(r):
-			# if i==10000: break
+# =============================================================================
+# 			if i==1000000: break
+# =============================================================================
 			if i==0:
 				natoms=line.strip()
 			if line.strip()==natoms and tempxyz!=[]:
@@ -212,7 +214,7 @@ def return_list_of_snapshots_and_atom_list(xyzfile):
 				snapshot_list.append(xyz_array)
 				tempxyz=[]
 				nsnaps=len(snapshot_list)
-				# if nsnaps%10==0: print "{}th snapshot processed".format(nsnaps)
+				if nsnaps%1000==0: print "{}th snapshot processed".format(nsnaps)
 			tempxyz.append(line)
 
 	return atm_list, np.array(snapshot_list)
@@ -442,21 +444,32 @@ def power_spectrum_from_velocityxyz(xyzfile):
 	PRE : Takes in an xyz file containing velocity (most likely in bohr/au_time)
 	POST: Will produce the power spectrum
 	"""
-	# atm_list, snapshot_array= return_list_of_snapshots_and_atom_list(xyzfile)
+	print "Getting the snaps"
+	atm_list, snapshot_array= return_list_of_snapshots_and_atom_list(xyzfile)
 	#
-	# reshaped_snapshots = [np.reshape(x, len(atm_list)*3) for x in list(snapshot_array)]
-	# snapshot_array=np.array(reshaped_snapshots).T
+	print "Got the snaps, now reshaping"
+	snapshot_array = [np.reshape(x, len(atm_list)*3) for x in list(snapshot_array)]
+	print "reshaping level 1"
+	snapshot_array=np.array(snapshot_array).T
+	print "Reshaping level 2"
+	total_correlation = None
+	print "Computing the correlation"
+	for i, component in enumerate(snapshot_array):
+		print "Step {} in the correlation computation".format(i)
+		if i==0: total_correlation=np.correlate(component, component, mode='full')
+		else: total_correlation+=(np.correlate(component, component, mode='full'))
 	#
-	# total_correlation = []
-	# for component in list(snapshot_array):
-	# 	total_correlation.append(np.correlate(component, component, mode='full'))
+	print "Summing the correlation"
+# =============================================================================
+# 	total_correlation = np.sum(np.array(total_correlation), axis=0)
+# =============================================================================
 	#
-	# total_correlation = np.sum(np.array(total_correlation), axis=0)
-	#
-	# cPickle.dump(total_correlation, open('/home/macenrola/Documents/XYLENE/correlation_for_reaction/slow-reaction-MP-CB6/vibrational_analysis/traj_from_mode_368/totcor', 'wb'))
-	total_correlation=cPickle.load(open('/home/macenrola/Documents/XYLENE/correlation_for_reaction/slow-reaction-MP-CB6/vibrational_analysis/traj_from_mode_368/totcor', 'rb'))
+	cPickle.dump(total_correlation, open('/home/macenrola/Documents/XYLENE/correlation_for_reaction/slow-reaction-MP-CB6/vibrational_analysis/traj_from_mode_368/totcor', 'wb'))
+	# total_correlation=cPickle.load(open('/home/macenrola/Documents/XYLENE/correlation_for_reaction/slow-reaction-MP-CB6/vibrational_analysis/traj_from_mode_368/totcor', 'rb'))
 	print total_correlation
-	# plt.plot((total_correlation))
+# =============================================================================
+# 	plt.plot(total_correlation)
+# =============================================================================
 	plt.plot(np.linspace(-1e15/2.9979e10/2, 1e15/2.9979e10/2, len(total_correlation)), [np.abs(A)**2 for A in numpy.fft.fftshift(numpy.fft.fft(total_correlation))]) # gives the spectrum with x axis in cm-1
 	plt.show()
 if __name__ == "__main__":
@@ -483,14 +496,16 @@ if __name__ == "__main__":
 	# process_xyz_coordinates('/home/macenrola/Documents/XYLENE/base-systems-equilibrated/starting-trajectories-for-frozen/CB6-aligned-from-MP-centered.xyz')
 	# for f in glob.glob("/home/macenrola/Documents/XYLENE/base-systems-equilibrated/equilibrated+NVE-long/just*aligned-centered.xyz"):
 	# 	make_covariance_matrix(f)
-	# power_spectrum_from_velocityxyz("/home/macenrola/Documents/XYLENE/correlation_for_reaction/slow-reaction-MP-CB6/vibrational_analysis/traj_from_mode_368/sample_vel_coupling.xyz")
+	power_spectrum_from_velocityxyz("/home/macenrola/Documents/XYLENE/correlation_for_reaction/slow-reaction-MP-CB6/vibrational_analysis/traj_from_mode_368/base_vib-vel-1.xyz")
 	# f="/home/macenrola/Documents/heptylamine/TRAJS/300-heptylamine.inp-pos-1.xyz.sdf-w-charge.sdf-aligned.sdf"
 	#for f in glob.glob("/home/macenrola/Documents/heptylamine/TRAJS/SDFs/*00-heptylamine.inp-pos-1.xyz.sdf-w-charge.sdf-aligned.sdf-rzlists"):
 	#	print f
 		# edit_xyz_file_to_add_format_charge(f)
 		# align_trajectory_with_axes_according_to_cb(f+"-w-charge.sdf")
 	#	compute_cylindrical_transform_for_sdf_trajectory(f)
-	for f in glob.glob('/home/macenrola/Documents/XYLENE/base-systems-equilibrated/equilibrated+NVE-long/M*.inp-pos-1.xyz-aligned-centered.xyz'):
-		make_covariance_matrix(f)
-	for f in glob.glob('/home/macenrola/Documents/XYLENE/base-systems-equilibrated/equilibrated+NVE-long/just-*-prot.inp-pos-1.xyz-aligned-centered.xyz'):
-		make_covariance_matrix(f)
+# =============================================================================
+# 	for f in glob.glob('/home/macenrola/Documents/XYLENE/base-systems-equilibrated/equilibrated+NVE-long/M*.inp-pos-1.xyz-aligned-centered.xyz'):
+# 		make_covariance_matrix(f)
+# 	for f in glob.glob('/home/macenrola/Documents/XYLENE/base-systems-equilibrated/equilibrated+NVE-long/just-*-prot.inp-pos-1.xyz-aligned-centered.xyz'):
+# 		make_covariance_matrix(f)
+# =============================================================================
