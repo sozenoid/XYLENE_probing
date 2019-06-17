@@ -217,7 +217,7 @@ def return_list_of_snapshots_and_atom_list(xyzfile):
 				if nsnaps%1000==0: print "{}th snapshot processed".format(nsnaps)
 			tempxyz.append(line)
 
-	return atm_list, np.array(snapshot_list)
+	return atm_list, np.array(snapshot_list)[-20000:]
 
 def process_xyz_coordinates(xyzfile):
 	"""
@@ -471,6 +471,7 @@ def power_spectrum_from_velocityxyz(xyzfile):
 # 	plt.plot(total_correlation)
 # =============================================================================
 	plt.plot(np.linspace(-1e15/2.9979e10/2, 1e15/2.9979e10/2, len(total_correlation)), [np.abs(A)**2 for A in numpy.fft.fftshift(numpy.fft.fft(total_correlation))]) # gives the spectrum with x axis in cm-1
+	plt.savefig('/home/macenrola/Desktop/last_20000.pdf')
 	plt.show()
 if __name__ == "__main__":
 	import rdkit
