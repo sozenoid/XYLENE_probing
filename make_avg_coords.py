@@ -217,7 +217,7 @@ def return_list_of_snapshots_and_atom_list(xyzfile):
 				if nsnaps%1000==0: print "{}th snapshot processed".format(nsnaps)
 			tempxyz.append(line)
 
-	return atm_list, np.array(snapshot_list)[-20000:]
+	return atm_list, np.array(snapshot_list)[:]
 
 def process_xyz_coordinates(xyzfile):
 	"""
@@ -397,10 +397,15 @@ def make_mass_matrix_from_atom_list(atom_list):
 	dic_weights={'C':12,'H':1,'N':14, 'O':16}
 	diag=[]
 	for ats in atom_list:
-		diag.extend([dic_weights[ats]*1.66e-27]*3) # those masses are atomic masses so the factor 1.66e-27
+		diag.extend([dic_weights[ats]*1.660540e-27]*3) # those masses are atomic masses so the factor 1.66e-27
+# =============================================================================
+# 		diag.extend([dic_weights[ats]]*3) # those masses are atomic masses so the factor 1.66e-27
+# =============================================================================
 
 	mass_matrix = np.diag(diag)
-	# sqrt_mass_matrix = scipy.linalg.sqrtm(mass_matrix) # in the case of diagonal matrices, it is just the square root of the elements element wise
+# =============================================================================
+# 	sqrt_mass_matrix = scipy.linalg.sqrtm(mass_matrix) # in the case of diagonal matrices, it is just the square root of the elements element wise
+# =============================================================================
 	sqrt_mass_matrix=np.diag([x**.5 for x in diag])
 
 	return mass_matrix, sqrt_mass_matrix
@@ -415,20 +420,23 @@ def make_covariance_matrix(xyzfile):
 	atm_list, snapshot_array= return_list_of_snapshots_and_atom_list(xyzfile)
 
 	reshaped_snapshots = [np.reshape(x, len(atm_list)*3) for x in list(snapshot_array)]
-
 	mass_matrix, sqrt_mass_matrix= make_mass_matrix_from_atom_list(atm_list)
 	snapshot_array=np.array(reshaped_snapshots).T
 	covmat=np.cov(snapshot_array*1e-10) # Factor 1e-10 there because we fed angstrom in the procedure
+# =============================================================================
+# 	covmat=np.cov(snapshot_array) # Factor 1e-10 there because we fed angstrom in the procedure
+# =============================================================================
 
-	mass_weighted_covmat = np.matmul(np.matmul(sqrt_mass_matrix,covmat), sqrt_mass_matrix)
-
+	mass_weighted_covmat = np.dot(np.dot(sqrt_mass_matrix,covmat), sqrt_mass_matrix)
+	print mass_weighted_covmat
 	eigenvalues, eigenvectors = scipy.linalg.eig(mass_weighted_covmat)
-	k,T,hbar = 1.38e-23, 300, 1.054e-34 # those are the masses of kB T and hbar
+	k,T,hbar = 1.3807e-23, 300, 1.054e-34 # those are the masses of kB T and hbar
 	negeigcount = sum(n < 0 for n in eigenvalues) # Count the negative frequencies to remove them
-	# print sorted(eigenvalues)
-	frequencies = [np.sqrt(k*T/np.real(x)) for x in eigenvalues if x>0] # the frequencies are normally given in Hz but here we can divide by the speed of light in cm-1/s to get cm-1 (2.9979e10)
-	# print "Frequences are in cm-1", sorted([x/2.9979e10 for x in frequencies[6-negeigcount:]])
+	print sorted(eigenvalues)
+	frequencies = [(k*T/np.real(x))**.5 for x in eigenvalues if np.real(x)>0] # the frequencies are normally given in Hz but here we can divide by the speed of light in cm-1/s to get cm-1 (2.9979e10)
+	print "Frequences are in cm-1", sorted([x/2.9979e10 for x in frequencies[6-negeigcount:]])
 	get_entropy_from_frequency_list(frequencies[6-negeigcount:], k, T, hbar)
+	get_energy_from_frequency_list(frequencies[6-negeigcount:], k, T, hbar)
 
 
 def get_entropy_from_frequency_list(frequency_list, k,T, hbar ):
@@ -437,8 +445,36 @@ def get_entropy_from_frequency_list(frequency_list, k,T, hbar ):
 	POST : returns a value of the entropy as given by the formulae of statistical thermodynamic
 	"""
 	alpha=hbar/k/T
-	print 0.00198588*sum([alpha *x/(np.exp(alpha*x) - 1) -  np.log(1-np.exp(-alpha*x)) for x in sorted(frequency_list)])  # The prefactor instead of k is the value of R in kcal/mol, let go of rotational and translational frequencies
+	print k*sum([alpha *x/(np.exp(alpha*x) - 1) -  np.log(1-np.exp(-alpha*x)) for x in sorted(frequency_list)])  # The prefactor instead of k is the value of R in kcal/mol, let go of rotational and translational frequencies
 
+def get_energy_from_frequency_list(frequency_list, k,T, hbar ):
+	"""
+	PRE  : Takes in a list in frequencies in hertz
+	POST : returns a value of the entropy as given by the formulae of statistical thermodynamic
+	"""
+	alpha=hbar/k/T
+# =============================================================================
+# 	print sum([(hbar*x/2 + hbar*x/(np.exp(alpha*x) - 1)) for x in sorted(frequency_list)])  # The prefactor instead of k is the value of R in kcal/mol, let go of rotational and translational frequencies
+# =============================================================================
+	print sum([(hbar*x/(np.exp(alpha*x) - 1)) for x in sorted(frequency_list)])  # The prefactor instead of k is the value of R in kcal/mol, let go of rotational and translational frequencies
+
+
+def convert_position_snapshots_to_velocity_snapshots(xyztraj, dt=1e-15):
+	"""
+	PRE  : Takes in an xyz trajectory where the snaps are separated by a small time step (for the velocity to be "instant")
+	POST : will compute the velocity based on the time step size and also provide an estimate of the kinetic energy at each step
+	"""
+	print xyztraj
+	atm_list, snapshot_pos= return_list_of_snapshots_and_atom_list(xyztraj) # in Angstroms
+	print snapshot_pos.shape
+	snapshots_vels = np.diff(snapshot_pos, axis=0) # in Angstrom/fs
+	print snapshots_vels.shape
+	dic_weights={'C':12,'H':1,'N':14, 'O':16}
+	conv=(1e-10/1e-15)**2*1.66e-27*6.022e23/4.184/1e3 # (Ang/fs)**2*amu*mol/kcal
+	ekin = [0.5*conv*sum([y[0]**2*y[1] for y in zip(np.reshape(x, x.shape[0]*x.shape[1]), [dic_weights[i] for k in atm_list for i in [k]*3])]) for x in snapshots_vels]
+	plt.plot(ekin)
+	plt.show()
+	
 def power_spectrum_from_velocityxyz(xyzfile):
 	"""
 	PRE : Takes in an xyz file containing velocity (most likely in bohr/au_time)
@@ -470,9 +506,43 @@ def power_spectrum_from_velocityxyz(xyzfile):
 # =============================================================================
 # 	plt.plot(total_correlation)
 # =============================================================================
-	plt.plot(np.linspace(-1e15/2.9979e10/2, 1e15/2.9979e10/2, len(total_correlation)), [np.abs(A)**2 for A in numpy.fft.fftshift(numpy.fft.fft(total_correlation))]) # gives the spectrum with x axis in cm-1
+	magnitude  =[np.abs(A)**2 for A in numpy.fft.fftshift(numpy.fft.fft(total_correlation))]
+	angle      =[np.angle(A) for A in numpy.fft.fftshift(numpy.fft.fft(total_correlation))]
+	freqs = np.linspace(-1e15/2.9979e10/2, 1e15/2.9979e10/2, len(total_correlation))
+	significant = [x for x in zip(freqs, magnitude, angle) if x[1]>0.001]
+	print significant
+	plt.plot(freqs, magnitude, color='red')
+	plt.stem([x[0] for x in significant], [x[2] for x in significant]) # gives the spectrum with x axis in cm-1
+# =============================================================================
+# 	plt.plot(freqs, angle) # gives the spectrum with x axis in cm-1
+# =============================================================================
 	plt.savefig('/home/macenrola/Desktop/last_20000.pdf')
 	plt.show()
+	
+def split_velocity_file(xyz_vel, natoms=(127,108,19)):
+	"""
+	=========
+	DOES NOT SEEM TO MAKE MUCH SENSE... WEIRDLY; keep it to short trajectories of like 3ps
+	=========
+	PRE  : Takes in a velocity file formatted as an open babel xyz file, the atom breakdown is given in natoms, the smaller fragment is on top of the stack
+	POST : returns two xyz_velocity files and adapts the headers for the two molecule components
+	"""
+	atm_list, snapshot_pos= return_list_of_snapshots_and_atom_list(xyz_vel) # in Angstroms
+	with open(xyz_vel+"-small-frag.xyz", "wb") as w:
+		for i, els in enumerate(snapshot_pos):
+			w.write(str(natoms[-1])+"\n")
+			w.write("i =   {}; and this is the small fragment\n".format(i))
+			for coord in zip(atm_list[:natoms[-1]], els):
+				w.write("{}    {}    {}    {}\n".format(coord[0], *coord[1]))
+				
+
+	with open(xyz_vel+"-large-frag.xyz", "wb") as w:
+		for i, els in enumerate(snapshot_pos):
+			w.write(str(natoms[1])+"\n")
+			w.write("i =   {}; and this is the small fragment\n".format(i))
+			for coord in zip(atm_list[natoms[-1]:], els):
+				w.write("{}    {}    {}    {}\n".format(coord[0], *coord[1]))
+				
 if __name__ == "__main__":
 	import rdkit
 	from rdkit import Chem
@@ -497,7 +567,7 @@ if __name__ == "__main__":
 	# process_xyz_coordinates('/home/macenrola/Documents/XYLENE/base-systems-equilibrated/starting-trajectories-for-frozen/CB6-aligned-from-MP-centered.xyz')
 	# for f in glob.glob("/home/macenrola/Documents/XYLENE/base-systems-equilibrated/equilibrated+NVE-long/just*aligned-centered.xyz"):
 	# 	make_covariance_matrix(f)
-	power_spectrum_from_velocityxyz("/home/macenrola/Documents/XYLENE/correlation_for_reaction/slow-reaction-MP-CB6/vibrational_analysis/traj_from_mode_368/base_vib-vel-1.xyz")
+	power_spectrum_from_velocityxyz("/home/macenrola/Documents/XYLENE/correlation_for_reaction/slow-reaction-MP-CB6/vibrational_analysis/traj_from_mode_368/sample_vel-large-frag.xyz")
 	# f="/home/macenrola/Documents/heptylamine/TRAJS/300-heptylamine.inp-pos-1.xyz.sdf-w-charge.sdf-aligned.sdf"
 	#for f in glob.glob("/home/macenrola/Documents/heptylamine/TRAJS/SDFs/*00-heptylamine.inp-pos-1.xyz.sdf-w-charge.sdf-aligned.sdf-rzlists"):
 	#	print f
@@ -505,8 +575,25 @@ if __name__ == "__main__":
 		# align_trajectory_with_axes_according_to_cb(f+"-w-charge.sdf")
 	#	compute_cylindrical_transform_for_sdf_trajectory(f)
 # =============================================================================
+# 	make_covariance_matrix("/home/macenrola/Documents/XYLENE/correlation_for_reaction/slow-reaction-MP-CB6/vibrational_analysis/traj_from_mode_368/sample_pos_just_cb.xyz")
+# =============================================================================
+# =============================================================================
 # 	for f in glob.glob('/home/macenrola/Documents/XYLENE/base-systems-equilibrated/equilibrated+NVE-long/M*.inp-pos-1.xyz-aligned-centered.xyz'):
 # 		make_covariance_matrix(f)
+# =============================================================================
+# =============================================================================
 # 	for f in glob.glob('/home/macenrola/Documents/XYLENE/base-systems-equilibrated/equilibrated+NVE-long/just-*-prot.inp-pos-1.xyz-aligned-centered.xyz'):
 # 		make_covariance_matrix(f)
+# =============================================================================
+# =============================================================================
+# 	convert_position_snapshots_to_velocity_snapshots('/home/macenrola/Documents/XYLENE/correlation_for_reaction/slow-reaction-MP-CB6/vibrational_analysis/traj_from_mode_368/guest-host-sep/just_xylene.xyz')
+# 	convert_position_snapshots_to_velocity_snapshots('/home/macenrola/Documents/XYLENE/correlation_for_reaction/slow-reaction-MP-CB6/vibrational_analysis/traj_from_mode_368/guest-host-sep/sample_pos.xyz')
+# 	convert_position_snapshots_to_velocity_snapshots('/home/macenrola/Documents/XYLENE/correlation_for_reaction/slow-reaction-MP-CB6/vibrational_analysis/traj_from_mode_368/guest-host-sep/just_cb.xyz')
+# 
+# =============================================================================
+# =============================================================================
+# 	convert_position_snapshots_to_velocity_snapshots('/home/macenrola/Documents/XYLENE/correlation_for_reaction/slow-reaction-MP-CB6/vibrational_analysis/traj_from_mode_368/sample_pos_coupling.xyz')
+# =============================================================================
+# =============================================================================
+# 	split_velocity_file("/home/macenrola/Documents/XYLENE/correlation_for_reaction/slow-reaction-MP-CB6/vibrational_analysis/traj_from_mode_368/sample_vel")
 # =============================================================================

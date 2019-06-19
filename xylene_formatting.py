@@ -1035,7 +1035,7 @@ def get_CB_xyz():
 	return 'N          1.17300       -4.41760        2.95110\nC         -0.07500       -4.63490        3.66880\nC         -0.07650       -3.49110        4.75390\nN          1.17230       -2.78650        4.50310\nC          1.91910       -3.35830        3.47140\nN         -1.31240       -4.40640        2.93690\nC         -2.05220       -3.33530        3.44210\nN         -1.31300       -2.77040        4.48410\nO          3.06910       -3.04680        3.14370\nO         -3.19390       -3.01040        3.09840\nN          1.18540       -0.44340        5.26920\nC         -0.05910       -0.01130        5.88770\nC         -0.04410        1.55190        5.68630\nN          1.20390        1.78870        4.97420\nC          1.94010        0.62010        4.76980\nN         -1.29940       -0.42330        5.24500\nC         -2.03050        0.65390        4.74010\nN         -1.28190        1.81100        4.96560\nO          3.08940        0.55040        4.32120\nO         -3.17410        0.60510        4.27370\nN          1.25270       -3.81360       -3.70770\nC          0.01240       -3.88180       -4.46710\nC          0.03120       -2.55400       -5.31600\nN          1.27790       -1.91530       -4.91890\nC          2.00910       -2.67830       -4.00540\nN         -1.23310       -3.78670       -3.71890\nC         -1.96390       -2.63750       -4.02810\nN         -1.20710       -1.89080       -4.93330\nO          3.15450       -2.43990       -3.60820\nO         -3.11020       -2.37850       -3.64670\nN          1.30960        4.46300       -2.83730\nC          0.07310        5.23030       -2.77760\nC          0.05980        5.78830       -1.30300\nN          1.29610        5.26980       -0.73560\nC          2.04250        4.52450       -1.65040\nN         -1.17630        4.48880       -2.86860\nC         -1.93030        4.55030       -1.69480\nN         -1.18980        5.27500       -0.75900\nO          3.18450        4.08590       -1.47470\nO         -3.08300        4.13030       -1.54540\nN          1.23780        3.86200        3.64110\nC         -0.00160        4.62390        3.69430\nC          0.01760        5.44570        2.34910\nN          1.26310        5.03310        1.71850\nC          1.99350        4.13490        2.49920\nN         -1.24760        3.87520        3.61620\nC         -1.97870        4.16020        2.46070\nN         -1.22240        5.05090        1.69610\nO          3.13950        3.73390        2.26940\nO         -3.12530        3.77450        2.20880\nC          1.86110       -0.76170       -5.58080\nC         -1.87940       -1.75130        5.35010\nC         -1.76030       -0.72970       -5.60640\nC          1.74120       -1.77950        5.38070\nN          1.19820       -5.29810        0.64790\nC         -0.04980       -5.92660        0.23990\nC         -0.03340       -5.78520       -1.33020\nN          1.21380       -5.08130       -1.59320\nC          1.95220       -4.83790       -0.43330\nN         -1.28820       -5.26570        0.62620\nC         -2.02140       -4.80680       -0.47050\nN         -1.27080       -5.07480       -1.61710\nO          3.10340       -4.39170       -0.38280\nO         -3.16440       -4.33840       -0.43910\nC          1.74550       -5.34570        1.99160\nC         -1.87060       -5.32000        1.95580\nC         -1.81570       -4.87070       -2.94710\nC          1.79430       -4.90080       -2.91210\nC          1.78630        3.09970        4.74790\nC         -1.83280        3.13150        4.71800\nC          1.84530        5.66680        0.54850\nC         -1.76680        5.68600        0.50910\nN         -1.17310        2.69850       -4.56390\nC          0.07660        2.57330       -5.29950\nC          0.06730        1.07360       -5.78430\nN         -1.18350        0.55440       -5.25060\nC         -1.92640        1.52260       -4.57170\nN          1.31140        2.67280       -4.53360\nC          2.04410        1.48380       -4.53070\nN          1.30020        0.53150       -5.23130\nO         -3.07880        1.39070       -4.14490\nO          3.18430        1.33100       -4.07910\nC         -1.73190        3.95610       -4.09950\nC          1.88410        3.91890       -4.05570\nH         -0.08170       -5.64240        4.10140\nH         -0.08720       -3.87010        5.78280\nH         -0.07020       -0.31300        6.94190\nH         -0.03930        2.11060        6.62990\nH          0.00540       -4.78930       -5.08230\nH          0.03450       -2.73140       -6.39810\nH          0.09010        6.01950       -3.53880\nH          0.06170        6.88370       -1.25380\nH         -0.00740        5.25800        4.58910\nH          0.02420        6.53120        2.50460\nH          1.77990       -0.89980       -6.66660\nH          2.91210       -0.73560       -5.29180\nH         -2.93010       -1.65570        5.07510\nH         -1.79850       -2.08760        6.39120\nH         -2.81600       -0.68260       -5.33670\nH         -1.66240       -0.87150       -6.69060\nH          2.79740       -1.70010        5.12170\nH          1.63950       -2.11990        6.41920\nH         -0.06570       -6.96910        0.58040\nH         -0.02960       -6.74880       -1.85300\nH          2.80370       -5.09540        1.90860\nH          1.63560       -6.36570        2.38080\nH         -2.92390       -5.05990        1.84720\nH         -1.78050       -6.34490        2.33740\nH         -2.87210       -4.63220       -2.81980\nH         -1.71330       -5.80280       -3.51710\nH          2.85220       -4.68140       -2.76120\nH          1.68720       -5.83670       -3.47480\nH          2.84150        2.93900        4.52460\nH          1.68910        3.69160        5.66700\nH         -2.88620        2.99070        4.47540\nH         -1.74090        3.72890        5.63390\nH          2.90030        5.39200        0.53700\nH          1.74700        6.75450        0.65230\nH         -1.65740        6.77280        0.60990\nH         -2.82470        5.42510        0.47160\nH          0.09490        3.29630       -6.12350\nH          0.07420        0.97040       -6.87590\nH         -2.79190        3.77840       -3.91420\nH         -1.61700        4.70600       -4.89330\nH          1.80270        4.67220       -4.84870\nH          2.93490        3.71960       -3.84360\n'
 
 
-def align_xyz_from_file_to_file(f, angle=0, shift=(0,1,0)):
+def align_xyz_from_file_to_file(f, angle=0, shift=(0,0,0)):
 	"""
 	PRE: Takes in a xyz file
 	POST: will align the corresponding molecule, write it to another file called f+'_aligned'.
@@ -1055,18 +1055,17 @@ def align_xyz_from_file_to_file(f, angle=0, shift=(0,1,0)):
 	for i, s in enumerate(shift):
 		rescoords[i] = [x+s for x in rescoords[i]]
 	
-	print rescoords
 	with open(f+'_a_{}_s_{}_aligned.xyz'.format(angle*np.pi, shift[1]), "wb") as w:
 		w.write(str(len(res[0]))+"\n")
 		w.write("name is {}\n".format(f))
 		for i in range(len(res[0])):
-			w.write("{0}\t{1:+2.12f}\t{2:+2.12f}\t{3:+2.12f}\n".format(res[0][i], *rescoords.T[i]))
+			w.write("{0}    {1:+2.12f}    {2:+2.12f}    {3:+2.12f}\n".format(res[0][i], *rescoords.T[i]))
 
 	with open(f+'_a_{}_s_{}_docked.xyz'.format(angle*np.pi, shift[1]), "wb") as w:
 		w.write(str(len(res[0])+126)+"\n")
 		w.write("name is {}-docked\n".format(f))
 		for i in range(len(res[0])):
-			w.write("{0}\t{1:+2.12f}\t{2:+2.12f}\t{3:+2.12f}\n".format(res[0][i], *rescoords.T[i]))
+			w.write("{0}    {1:+2.12f}    {2:+2.12f}    {3:+2.12f}\n".format(res[0][i], *rescoords.T[i]))
 		w.write(get_CB_xyz())
 	return
 
@@ -1077,27 +1076,23 @@ def format_gaussian_input_from_xyz(xyz_file):
 	"""
 	name=xyz_file.split("/")[-1]
 	route="#N PM6D3 opt=(ts, noeigentest, modredundant, calcall, maxcyc=999) freq"
-# =============================================================================
-# 	freeze=" D       2       3       9      10 F"
-# =============================================================================
+	freeze=" D       2       3       9      10 F"
 	# route="#N wB97XD/6-31G(d) opt=(ReadOptimize)"
 	# route="#N PM6D3 opt=(ReadOptimize)"
 	# route="#N PM6D3 opt=(ts, noeigentest, modredundant, calcfc, maxcyc=999) freq=noraman"
 	checkpoint="%Chk={}.chk".format(name)
-	mem="%mem=4gb"
-	procs="%NProcShared=1"
+	mem="%mem=120gb"
+	procs="%NProcShared=24"
 	# route="#N PM6D3 freq=noraman"
 	if 'diradical' in f or 'N2' in f:
 		charge_mult="1 3"
 		print "{} is diradical or n2".format(f)
 	else:
-		charge_mult = "1 1"
-# =============================================================================
-# 	if 'TS' in f:
-# 		route="#n wB97XD/6-31G(d) opt=(ts, noeigentest, modredundant, calcfc, maxcyc=999) maxdisk=100GB freq"
-# 	else:
-# 		route="#N wB97XD/6-31G(d) opt freq=noraman"
-# =============================================================================
+		charge_mult = "2 1"
+	if 'TS' in f:
+		route="#n wB97XD/6-31G(d) opt=(ts, noeigentest, modredundant, calcfc, maxcyc=999) maxdisk=100GB freq"
+	else:
+		route="#n wB97XD/6-31G(d) opt=(modredundant, maxcyc=999) maxdisk=100GB freq"
 
 	with open(xyz_file, 'rb') as r:
 		coords = r.readlines()[2:]
@@ -1112,9 +1107,7 @@ def format_gaussian_input_from_xyz(xyz_file):
 		w.writelines(coords)
 		w.write("\n")
 		# w.write("notatoms=1-{}\n".format(len(coords)-126))
-# =============================================================================
-# 		w.write(freeze+"\n")
-# =============================================================================
+		w.write(freeze+"\n")
 		w.write("\n")
 
 if __name__ == "__main__":
@@ -1133,9 +1126,11 @@ if __name__ == "__main__":
 # 				print a, s
 # 				align_xyz_from_file_to_file(f, a/np.pi, (0,s,0))
 # =============================================================================
-	for f in glob.glob("/home/macenrola/Documents/XYLENE/inputs/SP-DONT-WORK/M*_docked.xyz"):
+	for f in glob.glob("/home/macenrola/Documents/DBOA/doubly-charged/*docked.xyz"):
 		format_gaussian_input_from_xyz(f)
-	
+# =============================================================================
+# 		align_xyz_from_file_to_file(f)
+# =============================================================================
 	# oxylene = Chem.MolFromMolFile('/home/macenrola/Documents/vasp/xylene/alignments/pXyleneProtonated_wB97XD_631Gd_small_complexes.com_OUT.mol', removeHs=False)
 	# format_mol_for_vasp(oxylene, 'pXylene_protonated')
 	# oxylene = Chem.MolFromMolFile('/home/macenrola/Documents/vasp/xylene/alignments/oXyleneProtonated_wB97XD_631Gd_small_complexes.com_OUT.mol', removeHs=False)
