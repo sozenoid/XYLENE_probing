@@ -528,8 +528,35 @@ def power_spectrum_from_velocityxyz(xyzfile):
 # 	plt.savefig('/home/macenrola/Desktop/last_20000.pdf')
 # 	plt.show()
 # =============================================================================
-	
-def split_velocity_file(xyz_vel, natoms=(127,108,19)):
+# =============================================================================
+# 	
+# def split_velocity_file(xyz_vel, natoms=(127,108,19)):
+# 	"""
+# 	=========
+# 	GO FOR IT; there was a bug in the file splitting part i'd say, probably better to keep trajectories short 
+# 	=========
+# 	PRE  : Takes in a velocity file formatted as an open babel xyz file, the atom breakdown is given in natoms, the smaller fragment is on top of the stack
+# 	POST : returns two xyz_velocity files and adapts the headers for the two molecule components
+# 	"""
+# 	atm_list, snapshot_pos= return_list_of_snapshots_and_atom_list(xyz_vel) # in Angstroms
+# 	with open(xyz_vel+"-small-frag.xyz", "wb") as w:
+# 		for i, els in enumerate(snapshot_pos):
+# 			w.write(str(natoms[-1])+"\n")
+# 			w.write("i =   {}; and this is the small fragment\n".format(i))
+# 			for coord in zip(atm_list[:natoms[-1]], els):
+# 				w.write("{}    {}    {}    {}\n".format(coord[0], *coord[1]))
+# 				
+# 
+# 	with open(xyz_vel+"-large-frag.xyz", "wb") as w:
+# 		for i, els in enumerate(snapshot_pos):
+# 			w.write(str(natoms[1])+"\n")
+# 			w.write("i =   {}; and this is the small fragment\n".format(i))
+# 			for coord in zip(atm_list[natoms[-1]:], els):
+# 				w.write("{}    {}    {}    {}\n".format(coord[0], *coord[1]))
+# =============================================================================
+				
+
+def split_velocity_file(xyz_vel, natoms_small_frag=19):
 	"""
 	=========
 	GO FOR IT; there was a bug in the file splitting part i'd say, probably better to keep trajectories short 
@@ -537,22 +564,23 @@ def split_velocity_file(xyz_vel, natoms=(127,108,19)):
 	PRE  : Takes in a velocity file formatted as an open babel xyz file, the atom breakdown is given in natoms, the smaller fragment is on top of the stack
 	POST : returns two xyz_velocity files and adapts the headers for the two molecule components
 	"""
-	atm_list, snapshot_pos= return_list_of_snapshots_and_atom_list(xyz_vel) # in Angstroms
-	with open(xyz_vel+"-small-frag.xyz", "wb") as w:
-		for i, els in enumerate(snapshot_pos):
-			w.write(str(natoms[-1])+"\n")
-			w.write("i =   {}; and this is the small fragment\n".format(i))
-			for coord in zip(atm_list[:natoms[-1]], els):
-				w.write("{}    {}    {}    {}\n".format(coord[0], *coord[1]))
-				
-
-	with open(xyz_vel+"-large-frag.xyz", "wb") as w:
-		for i, els in enumerate(snapshot_pos):
-			w.write(str(natoms[1])+"\n")
-			w.write("i =   {}; and this is the small fragment\n".format(i))
-			for coord in zip(atm_list[natoms[-1]:], els):
-				w.write("{}    {}    {}    {}\n".format(coord[0], *coord[1]))
-				
+	small_frag = xyz_vel+"-small_frag.xyz"
+	large_frag = xyz_vel+"-large_frag.xyz"
+	marker=None
+	line_list=[]
+	with open(small_frag, "wb") as ws:
+		with open(large_frag, "wb") as wb:
+			with open(xyz_vel, "rb") as r:
+				for i, line in enumerate(r):
+					if i%10000==0: print i
+					line_list.append(line)
+					if i==0:
+						marker=line
+					if marker == line and i>0:
+						ws.writelines(line_list[:natoms_small_frag+2])
+						wb.writelines(line_list[:2])
+						wb.writelines(line_list[natoms_small_frag+2:-1])
+						line_list=[line]
 
 def split_xyz_file_in_chuncks(xyz_file, nsnaps=10000):
 	"""
@@ -592,7 +620,7 @@ def plot_sequence_of_ffts(MAG_LIST):
 	"""
 	MAG_LIST = cPickle.load(open(MAG_LIST, "rb"))
 	target_frequencies = [x>0.1 for x in MAG_LIST[-2]]
-	MAG_ARRAY = np.asarray(MAG_LIST[:-1])
+	MAG_ARRAY = np.asarray(MAG_LIST[10:])
 	print MAG_ARRAY.shape
 	mag_target = []
 	for i, (target, mag) in enumerate(zip(target_frequencies, list(MAG_ARRAY.T))):
@@ -678,25 +706,28 @@ if __name__ == "__main__":
 # 	split_velocity_file("/home/macenrola/Documents/XYLENE/correlation_for_reaction/slow-reaction-MP-CB6/vibrational_analysis/traj_from_mode_368/split_by_chunks/sample_vel_coupling.xyz")
 # =============================================================================
 # =============================================================================
-# 	split_xyz_file_in_chuncks("/home/macenrola/Documents/XYLENE/correlation_for_reaction/slow-reaction-MP-CB6/vibrational_analysis/traj_from_mode_368/split_by_chunks/sample_vel_coupling.xyz")
+# 	split_xyz_file_in_chuncks("/home/macenrola/Documents/Thesis/XYLENE/coupling/frequency_move/sample_vel_coupling.xyz")
 # =============================================================================
 	
+	
 # =============================================================================
-# 	
 # 	magnitude=[]
-# 	for f in sorted(glob.glob("/home/macenrola/Documents/XYLENE/correlation_for_reaction/slow-reaction-MP-CB6/vibrational_analysis/traj_from_mode_368/split_by_chunks/sample_vel_coupling.xyz-part-*xyz"))[:]:
+# 	for f in sorted(glob.glob("/home/macenrola/Documents/Thesis/XYLENE/coupling/frequency_move/sample_vel_coupling.xyz-part-*.xyz"))[:]:
 # 		print f 
 # 		mag = power_spectrum_from_velocityxyz(f)
 # 		magnitude.append(mag)
-# 	cPickle.dump(magnitude, open("/home/macenrola/Documents/XYLENE/correlation_for_reaction/slow-reaction-MP-CB6/vibrational_analysis/traj_from_mode_368/split_by_chunks/sample_vel_coupling.xyz-part-MAG", "wb"))
+# 	cPickle.dump(magnitude, open("/home/macenrola/Documents/Thesis/XYLENE/coupling/frequency_move/sample_vel_coupling.xyz-MAG", "wb"))
 # 	
 # 		
 # =============================================================================
+	plot_sequence_of_ffts("/home/macenrola/Documents/Thesis/XYLENE/coupling/frequency_move/sample_vel_coupling.xyz-MAG")
 # =============================================================================
-# 	plot_sequence_of_ffts("/home/macenrola/Documents/XYLENE/correlation_for_reaction/slow-reaction-MP-CB6/vibrational_analysis/traj_from_mode_368/split_by_chunks/sample_vel_coupling.xyz-part-MAG")
+# 	get_kinetic_energy_from_velocity_file("/home/macenrola/Documents/Thesis/XYLENE/coupling/sample_vel_coupling.xyz")
 # =============================================================================
 # =============================================================================
-# 	get_kinetic_energy_from_velocity_file("/home/macenrola/Documents/XYLENE/correlation_for_reaction/slow-reaction-MP-CB6/vibrational_analysis/traj_from_mode_368/split_by_chunks/JUST_CB/sample_vel_coupling.xyz-large-frag.xyz")
+# 	ekin_all=cPickle.load(open("/home/macenrola/Documents/Thesis/XYLENE/coupling/sample_vel_coupling.xyz-large_frag.xyz-EKIN", "rb"))
+# 	plt.plot(ekin_all)
 # =============================================================================
-	ekin_all=cPickle.load(open("/home/macenrola/Documents/XYLENE/correlation_for_reaction/slow-reaction-MP-CB6/vibrational_analysis/traj_from_mode_368/split_by_chunks/sample_vel_coupling.xyz-EKIN", "rb"))
-	plt.plot(ekin_all)
+# =============================================================================
+# 	split_velocity_file_bis("/home/macenrola/Documents/Thesis/XYLENE/coupling/sample_vel_coupling.xyz")
+# =============================================================================
