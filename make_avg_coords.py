@@ -612,11 +612,12 @@ def get_kinetic_energy_from_velocity_file(xyz_vel):
 	PRE : Takes in a velocity file formatted as per open babel
 	POST:
 	"""
-	atm_list, snapshot_vel= return_list_of_snapshots_and_atom_list(xyztraj) # in Angstroms
+	atm_list, snapshot_vel= return_list_of_snapshots_and_atom_list(xyz_vel) # in Angstroms
 	dic_weights={'C':12,'H':1,'N':14, 'O':16}
-	conv=911.447*627.509 # (Ang/fs)**2*amu*mol/kcal
-	ekin = [0.5*conv*sum([y[0]**2*y[1] for y in zip(np.reshape(x, x.shape[0]*x.shape[1]), [dic_weights[i] for k in atm_list for i in [k]*3])]) for x in snapshots_vel]
-	plt.plot(ekin)
+	conv=911.447*627.509 # (Ang/fs)**2*amu*mol/kcal the 911 factor is INCLUDING THE FACTOR 2, the proper conversion is amu/m_e
+	ekin = [conv*sum([y[0]**2*y[1] for y in zip(np.reshape(x, x.shape[0]*x.shape[1]), [dic_weights[i] for k in atm_list for i in [k]*3])]) for x in snapshot_vel]
+	cPickle.dump(ekin, open(xyz_vel+"-EKIN","wb"))
+	plt.plot(ekin, linewidth=0.2)
 	plt.show()
 	
 if __name__ == "__main__":
@@ -674,7 +675,7 @@ if __name__ == "__main__":
 # 	convert_position_snapshots_to_velocity_snapshots('/home/macenrola/Documents/XYLENE/correlation_for_reaction/slow-reaction-MP-CB6/vibrational_analysis/traj_from_mode_368/sample_pos_coupling.xyz')
 # =============================================================================
 # =============================================================================
-# 	split_velocity_file("/home/macenrola/Documents/XYLENE/correlation_for_reaction/slow-reaction-MP-CB6/vibrational_analysis/traj_from_mode_368/sample_vel")
+# 	split_velocity_file("/home/macenrola/Documents/XYLENE/correlation_for_reaction/slow-reaction-MP-CB6/vibrational_analysis/traj_from_mode_368/split_by_chunks/sample_vel_coupling.xyz")
 # =============================================================================
 # =============================================================================
 # 	split_xyz_file_in_chuncks("/home/macenrola/Documents/XYLENE/correlation_for_reaction/slow-reaction-MP-CB6/vibrational_analysis/traj_from_mode_368/split_by_chunks/sample_vel_coupling.xyz")
@@ -691,4 +692,11 @@ if __name__ == "__main__":
 # 	
 # 		
 # =============================================================================
-	plot_sequence_of_ffts("/home/macenrola/Documents/XYLENE/correlation_for_reaction/slow-reaction-MP-CB6/vibrational_analysis/traj_from_mode_368/split_by_chunks/sample_vel_coupling.xyz-part-MAG")
+# =============================================================================
+# 	plot_sequence_of_ffts("/home/macenrola/Documents/XYLENE/correlation_for_reaction/slow-reaction-MP-CB6/vibrational_analysis/traj_from_mode_368/split_by_chunks/sample_vel_coupling.xyz-part-MAG")
+# =============================================================================
+# =============================================================================
+# 	get_kinetic_energy_from_velocity_file("/home/macenrola/Documents/XYLENE/correlation_for_reaction/slow-reaction-MP-CB6/vibrational_analysis/traj_from_mode_368/split_by_chunks/JUST_CB/sample_vel_coupling.xyz-large-frag.xyz")
+# =============================================================================
+	ekin_all=cPickle.load(open("/home/macenrola/Documents/XYLENE/correlation_for_reaction/slow-reaction-MP-CB6/vibrational_analysis/traj_from_mode_368/split_by_chunks/sample_vel_coupling.xyz-EKIN", "rb"))
+	plt.plot(ekin_all)
