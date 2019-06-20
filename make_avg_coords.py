@@ -500,29 +500,39 @@ def power_spectrum_from_velocityxyz(xyzfile):
 # 	total_correlation = np.sum(np.array(total_correlation), axis=0)
 # =============================================================================
 	#
-	cPickle.dump(total_correlation, open('/home/macenrola/Documents/XYLENE/correlation_for_reaction/slow-reaction-MP-CB6/vibrational_analysis/traj_from_mode_368/totcor', 'wb'))
+# =============================================================================
+# 	cPickle.dump(total_correlation, open('/home/macenrola/Documents/XYLENE/correlation_for_reaction/slow-reaction-MP-CB6/vibrational_analysis/traj_from_mode_368/totcor', 'wb'))
+# =============================================================================
 	# total_correlation=cPickle.load(open('/home/macenrola/Documents/XYLENE/correlation_for_reaction/slow-reaction-MP-CB6/vibrational_analysis/traj_from_mode_368/totcor', 'rb'))
-	print total_correlation
+# =============================================================================
+# 	print total_correlation
+# =============================================================================
 # =============================================================================
 # 	plt.plot(total_correlation)
 # =============================================================================
 	magnitude  =[np.abs(A)**2 for A in numpy.fft.fftshift(numpy.fft.fft(total_correlation))]
 	angle      =[np.angle(A) for A in numpy.fft.fftshift(numpy.fft.fft(total_correlation))]
 	freqs = np.linspace(-1e15/2.9979e10/2, 1e15/2.9979e10/2, len(total_correlation))
-	significant = [x for x in zip(freqs, magnitude, angle) if x[1]>0.001]
-	print significant
-	plt.plot(freqs, magnitude, color='red')
-	plt.stem([x[0] for x in significant], [x[2] for x in significant]) # gives the spectrum with x axis in cm-1
+	print freqs
+	return magnitude
+# =============================================================================
+# 	significant = [x for x in zip(freqs, magnitude, angle) if x[1]>0.001]
+# 	print significant
+# 	plt.plot(freqs, magnitude, color='red')
+# 	plt.stem([x[0] for x in significant], [x[2] for x in significant]) # gives the spectrum with x axis in cm-1
+# =============================================================================
 # =============================================================================
 # 	plt.plot(freqs, angle) # gives the spectrum with x axis in cm-1
 # =============================================================================
-	plt.savefig('/home/macenrola/Desktop/last_20000.pdf')
-	plt.show()
+# =============================================================================
+# 	plt.savefig('/home/macenrola/Desktop/last_20000.pdf')
+# 	plt.show()
+# =============================================================================
 	
 def split_velocity_file(xyz_vel, natoms=(127,108,19)):
 	"""
 	=========
-	DOES NOT SEEM TO MAKE MUCH SENSE... WEIRDLY; keep it to short trajectories of like 3ps
+	GO FOR IT; there was a bug in the file splitting part i'd say, probably better to keep trajectories short 
 	=========
 	PRE  : Takes in a velocity file formatted as an open babel xyz file, the atom breakdown is given in natoms, the smaller fragment is on top of the stack
 	POST : returns two xyz_velocity files and adapts the headers for the two molecule components
@@ -543,6 +553,72 @@ def split_velocity_file(xyz_vel, natoms=(127,108,19)):
 			for coord in zip(atm_list[natoms[-1]:], els):
 				w.write("{}    {}    {}    {}\n".format(coord[0], *coord[1]))
 				
+
+def split_xyz_file_in_chuncks(xyz_file, nsnaps=10000):
+	"""
+	PRE  : Will take in an xyz trajectory formatted as in openbabel like
+	=====================
+	     127
+ i =   954829, time =   954829.000, E =      -508.3449994676
+    =====================
+	It is assumed that the very first line of the file serves as a marker to separate the various snaps
+	POST : Will produce a series of files named consecutively with each having nsnaps snapshots, the total number is the number of snaps in the 
+	original file divided by nsnaps
+	"""
+	parts_name = xyz_file+"-part-{}-{}.xyz"
+	csnap=-1
+	marker=None
+	prev_line=""
+	with open(xyz_file, "rb") as r:
+		for i, line in enumerate(r):
+# =============================================================================
+# 			if i==10000: break
+# =============================================================================
+			if i==0:
+				marker=line
+			if marker == line:
+				csnap+=1
+				if csnap%nsnaps==0:
+					if i>0:
+						w.close()
+					w = open(parts_name.format(csnap, csnap+nsnaps), "wb")
+			w.write(line)
+				
+
+def plot_sequence_of_ffts(MAG_LIST):
+	"""
+	PRE  : Takes in a list of correlation as a list of lists, assuming they correspond to the same frequency x axis 
+	POST : Will plot a log scale evolution of the major frequency present at the last snapshot
+	"""
+	MAG_LIST = cPickle.load(open(MAG_LIST, "rb"))
+	target_frequencies = [x>0.1 for x in MAG_LIST[-2]]
+	MAG_ARRAY = np.asarray(MAG_LIST[:-1])
+	print MAG_ARRAY.shape
+	mag_target = []
+	for i, (target, mag) in enumerate(zip(target_frequencies, list(MAG_ARRAY.T))):
+		if target:
+			mag_target.append(mag)
+	mag_target = list(np.array(mag_target))
+	
+	print mag_target
+	
+	for els in mag_target:
+		plt.semilogy(els)
+	plt.show()
+	
+
+def get_kinetic_energy_from_velocity_file(xyz_vel):
+	"""
+	PRE : Takes in a velocity file formatted as per open babel
+	POST:
+	"""
+	atm_list, snapshot_vel= return_list_of_snapshots_and_atom_list(xyztraj) # in Angstroms
+	dic_weights={'C':12,'H':1,'N':14, 'O':16}
+	conv=911.447*627.509 # (Ang/fs)**2*amu*mol/kcal
+	ekin = [0.5*conv*sum([y[0]**2*y[1] for y in zip(np.reshape(x, x.shape[0]*x.shape[1]), [dic_weights[i] for k in atm_list for i in [k]*3])]) for x in snapshots_vel]
+	plt.plot(ekin)
+	plt.show()
+	
 if __name__ == "__main__":
 	import rdkit
 	from rdkit import Chem
@@ -558,6 +634,7 @@ if __name__ == "__main__":
 	import glob
 	import cPickle
 	from matplotlib import pyplot as plt
+	from mpl_toolkits.mplot3d import Axes3D
 
 	# process_z_matrix_trajectory('cb6.inp-pos-1-aligned.gzmat')
 	# for f in ['/home/macenrola/Documents/XYLENE/inputs/for-reaction-frozen-cb/MO-CB6.inp-pos-1-aligned-just-CB6.xyz',
@@ -567,7 +644,9 @@ if __name__ == "__main__":
 	# process_xyz_coordinates('/home/macenrola/Documents/XYLENE/base-systems-equilibrated/starting-trajectories-for-frozen/CB6-aligned-from-MP-centered.xyz')
 	# for f in glob.glob("/home/macenrola/Documents/XYLENE/base-systems-equilibrated/equilibrated+NVE-long/just*aligned-centered.xyz"):
 	# 	make_covariance_matrix(f)
-	power_spectrum_from_velocityxyz("/home/macenrola/Documents/XYLENE/correlation_for_reaction/slow-reaction-MP-CB6/vibrational_analysis/traj_from_mode_368/sample_vel-large-frag.xyz")
+# =============================================================================
+# 	power_spectrum_from_velocityxyz("/home/macenrola/Documents/XYLENE/correlation_for_reaction/slow-reaction-MP-CB6/vibrational_analysis/traj_from_mode_368/sample_vel-large-frag.xyz")
+# =============================================================================
 	# f="/home/macenrola/Documents/heptylamine/TRAJS/300-heptylamine.inp-pos-1.xyz.sdf-w-charge.sdf-aligned.sdf"
 	#for f in glob.glob("/home/macenrola/Documents/heptylamine/TRAJS/SDFs/*00-heptylamine.inp-pos-1.xyz.sdf-w-charge.sdf-aligned.sdf-rzlists"):
 	#	print f
@@ -597,3 +676,19 @@ if __name__ == "__main__":
 # =============================================================================
 # 	split_velocity_file("/home/macenrola/Documents/XYLENE/correlation_for_reaction/slow-reaction-MP-CB6/vibrational_analysis/traj_from_mode_368/sample_vel")
 # =============================================================================
+# =============================================================================
+# 	split_xyz_file_in_chuncks("/home/macenrola/Documents/XYLENE/correlation_for_reaction/slow-reaction-MP-CB6/vibrational_analysis/traj_from_mode_368/split_by_chunks/sample_vel_coupling.xyz")
+# =============================================================================
+	
+# =============================================================================
+# 	
+# 	magnitude=[]
+# 	for f in sorted(glob.glob("/home/macenrola/Documents/XYLENE/correlation_for_reaction/slow-reaction-MP-CB6/vibrational_analysis/traj_from_mode_368/split_by_chunks/sample_vel_coupling.xyz-part-*xyz"))[:]:
+# 		print f 
+# 		mag = power_spectrum_from_velocityxyz(f)
+# 		magnitude.append(mag)
+# 	cPickle.dump(magnitude, open("/home/macenrola/Documents/XYLENE/correlation_for_reaction/slow-reaction-MP-CB6/vibrational_analysis/traj_from_mode_368/split_by_chunks/sample_vel_coupling.xyz-part-MAG", "wb"))
+# 	
+# 		
+# =============================================================================
+	plot_sequence_of_ffts("/home/macenrola/Documents/XYLENE/correlation_for_reaction/slow-reaction-MP-CB6/vibrational_analysis/traj_from_mode_368/split_by_chunks/sample_vel_coupling.xyz-part-MAG")
