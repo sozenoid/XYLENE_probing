@@ -35,6 +35,8 @@ def format_gaussian_input_from_xyz(xyz_file):
 		route="#n wB97XD/6-31G(d) opt=(ts, noeigentest, modredundant, calcfc, maxcyc=999) maxdisk=100GB freq"
 	else:
 		route="#n wB97XD/6-31G(d) opt=(modredundant, maxcyc=999) maxdisk=100GB freq"
+		
+	
 
 	with open(xyz_file, 'rb') as r:
 		coords = r.readlines()[2:]
@@ -56,7 +58,17 @@ if __name__ == "__main__":
 	import sys
 	
 	if len(sys.argv)==1:
-		print "Please provide input files"
+		print """
+		Please provide input files
+		You need to run the following lines before having the command to work
+			echo "alias gengauss='python `pwd`/generate_gaussian_input_files.py'" >> ~/.bashrc
+			source ~/.bashrc
+		Then you can use the script in any directory using:
+			gengauss *xyz
+		and edit the script by going to the generate_gaussian_input_files.py file and doing
+			nano generate_gaussian_input_files.py
+		
+		"""
 	if len(sys.argv)==2:
 		format_gaussian_input_from_xyz(sys.argv[1])
 	if len(sys.argv)>2:
