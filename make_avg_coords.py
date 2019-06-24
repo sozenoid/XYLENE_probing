@@ -647,6 +647,79 @@ def get_kinetic_energy_from_velocity_file(xyz_vel):
 	cPickle.dump(ekin, open(xyz_vel+"-EKIN","wb"))
 	plt.plot(ekin, linewidth=0.2)
 	plt.show()
+
+def plot_E_kin(fekin, legend, symb):
+	"""
+	PRE : Takes in an Ekin file
+	POST: Plots it
+	"""
+	
+	ekin_all=cPickle.load(open(fekin, "rb"))
+	speedup=10
+	ekin_sampled = ekin_all[0::speedup]
+	x = range(len(ekin_all))[0::speedup]
+	plt.plot(x,ekin_sampled, linewidth=0.2, alpha=0.2)
+	width=1000
+	moving_av = np.convolve(ekin_sampled, np.ones(width)/width)
+	plt.plot(x[width:], moving_av[width-1:-width], linewidth=1, linestyle=symb, label=legend)
+	plt.axhline(1,linestyle='--', linewidth=0.4, color='k', xmin=0.5)
+	plt.axhline(0,linestyle='--', linewidth=0.4, color='k', xmin=0.5)
+	plt.xlabel(r"Time [fs]")
+	plt.ylabel(r"$E_{kin}$ [kcal/mol]")
+	plt.legend()
+	plt.savefig(fekin+'.pdf')
+# =============================================================================
+# 	plt.close()
+# =============================================================================
+	
+
+def plot_single_spectrum(fname, i=0):
+	"""
+	PRE: Takes a list of list with the magnitude of the fft of the velocity autocorrelation function computed over different time frames 
+	POST : Will print the spectrum corresponding to the ith element in the list 
+	"""
+	maglist=cPickle.load(open(fname, "rb"))
+	freqs = np.linspace(-1e15/2.9979e10/2, 1e15/2.9979e10/2, len(maglist[i]))
+	ekin = np.trapz(maglist[i])
+	plt.close()
+	plt.plot(freqs, [x/ekin for x in maglist[i]])
+	plt.show()
+	
+
+def plot_three_stacked_spectra(fname, indices, fname_10):
+	"""
+	PRE   : Takes in a MAG file with three indices
+	POST  : Will plot the three indicies stacked 
+	"""
+	maglist=cPickle.load(open(fname, "rb"))
+	yticks = [10**x for x in range(-16,1)]
+	nplots=len(indices)+1
+	freqs = np.linspace(-1e15/2.9979e10/2, 1e15/2.9979e10/2, len(maglist[-1]))
+	fig, ax = plt.subplots(nplots, 1, sharex='col', sharey='row')
+	for i in range(nplots):
+		if i==0: 
+			maglistsmall=cPickle.load(open(fname_10, "rb"))
+			freqsmall = np.linspace(-1e15/2.9979e10/2, 1e15/2.9979e10/2, len(maglistsmall[0]))
+			ekin = np.max(maglistsmall[0])	
+			ax[0].semilogy(freqsmall, [x/ekin for x in maglistsmall[0]], label="{}-{} ps".format(0, 10), linewidth=0.4)
+		else:
+			ekin = np.max(maglist[indices[i-1]])	
+			ax[i].semilogy(freqs, [x/ekin for x in maglist[indices[i-1]]], label="{}-{} ps".format(indices[i-1]*100, (indices[i-1]+1)*100), linewidth=0.4)
+
+		ax[i].get_yaxis().set_minor_formatter(plt.NullFormatter())
+		ax[i].set_ylim((10**-16,1.2e1))
+		ax[i].set_xlim((-6e3,6e3))
+		ax[i].set_yticks(yticks[::4])
+		ax[i].set_yticks(yticks[::2], minor=True)
+		ax[i].grid(which='minor')
+		ax[i].legend(loc='east')
+	
+	fig.text(0.03, 0.5, 'Intensity [a.u.]', ha='center', va='center', rotation='vertical')
+# =============================================================================
+# 	plt.ylabel("Intensity [a.u.]")
+# =============================================================================
+	plt.xlabel(r"Frequency [cm$^{-1}$]")
+	plt.show()
 	
 if __name__ == "__main__":
 	import rdkit
@@ -720,14 +793,28 @@ if __name__ == "__main__":
 # 	
 # 		
 # =============================================================================
-	plot_sequence_of_ffts("/home/macenrola/Documents/Thesis/XYLENE/coupling/frequency_move/sample_vel_coupling.xyz-MAG")
+# =============================================================================
+# 	plot_sequence_of_ffts("/home/macenrola/Documents/Thesis/XYLENE/coupling/frequency_move/sample_vel_coupling.xyz-MAG")
+# =============================================================================
 # =============================================================================
 # 	get_kinetic_energy_from_velocity_file("/home/macenrola/Documents/Thesis/XYLENE/coupling/sample_vel_coupling.xyz")
 # =============================================================================
 # =============================================================================
-# 	ekin_all=cPickle.load(open("/home/macenrola/Documents/Thesis/XYLENE/coupling/sample_vel_coupling.xyz-large_frag.xyz-EKIN", "rb"))
-# 	plt.plot(ekin_all)
+# 	plot_E_kin("/home/macenrola/Documents/XYLENE/correlation_for_reaction/slow-reaction-MP-CB6/vibrational_analysis/traj_from_mode_368/sample_vel_coupling.xyz-small_frag.xyz-EKIN",  r'$m$-xylene', "-.")
+# =============================================================================
+# =============================================================================
+# 	plot_E_kin("/home/macenrola/Documents/XYLENE/correlation_for_reaction/slow-reaction-MP-CB6/vibrational_analysis/traj_from_mode_368/sample_vel_coupling.xyz-EKIN")
+# =============================================================================
+# =============================================================================
+# 	plot_E_kin("/home/macenrola/Documents/XYLENE/correlation_for_reaction/slow-reaction-MP-CB6/vibrational_analysis/traj_from_mode_368/sample_vel_coupling.xyz-large_frag.xyz-EKIN", r'CB[6]', ':')
 # =============================================================================
 # =============================================================================
 # 	split_velocity_file_bis("/home/macenrola/Documents/Thesis/XYLENE/coupling/sample_vel_coupling.xyz")
 # =============================================================================
+# =============================================================================
+# 	for i in range(10):
+# =============================================================================
+# =============================================================================
+# 	plot_single_spectrum("/home/macenrola/Documents/XYLENE/correlation_for_reaction/slow-reaction-MP-CB6/vibrational_analysis/traj_from_mode_368/ALL_100k/sample_vel_coupling.xyz-MAG", i=5)
+# =============================================================================
+	plot_three_stacked_spectra("/home/macenrola/Documents/XYLENE/correlation_for_reaction/slow-reaction-MP-CB6/vibrational_analysis/traj_from_mode_368/ALL_100k/sample_vel_coupling.xyz-MAG", [0,1,2,5,9], "/home/macenrola/Documents/XYLENE/correlation_for_reaction/slow-reaction-MP-CB6/vibrational_analysis/traj_from_mode_368/ALL_FREQS/sample_vel_coupling.xyz-MAG")
