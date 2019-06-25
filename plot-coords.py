@@ -181,7 +181,52 @@ def print_average_energy_for_xyz_file(xyzfile):
 
 	print "The energy is {} ({} snapshots)".format(sum(E_list)/len(E_list), len(E_list))
 
+def plot_big_array_of_fes(flist):
+	"""
+	PRE : Takes a big array of FES txt files
+	POST: Will plot a grid of plots with all the images
+	"""
+	nplots = len(flist)
+	print nplots, nplots%10, nplots/10
+	nrows=20
+# =============================================================================
+# 	fig, ax = plt.subplots(nrows, nplots/nrows, sharex='col', sharey='row')
+# =============================================================================
+	fig, axes = plt.subplots(nrows+1,nplots/nrows)
 
+	cmap = plt.get_cmap('PiYG')
+	dim = 100
+	for i, ax in enumerate(axes.reshape(-1)):
+		if i==nplots:
+			break
+		name = '-'.join(flist[i].split('/')[-4:])
+		print i, name
+		x,y,z=get_xyz(sorted(flist)[i])
+		title = [name.split('-')[0]] + name.split('-')[3:6]
+		x = np.asarray(x).reshape((dim, dim))
+		y = np.asarray(y).reshape((dim, dim))
+		z = np.asarray(z).reshape((dim, dim))
+		levels = MaxNLocator(nbins=15).tick_values(z.min(), z.max())
+		cf = ax.contourf(x,y,z, cmap=cmap, levels=levels)
+		ax.set(aspect='equal')
+		ax.set_title('-'.join(title))
+		ax.get_xaxis().set_major_formatter(plt.NullFormatter())
+		ax.get_yaxis().set_major_formatter(plt.NullFormatter())
+		ax.title.set_fontsize(3)
+		ax.title.set_position([.5, 0.8])
+	plt.subplots_adjust(wspace=0, hspace=0)
+	plt.tight_layout()
+	plt.tick_params(
+    axis='both',          # changes apply to the x-axis
+    which='both',      # both major and minor ticks are affected
+    bottom=False,      # ticks along the bottom edge are off
+    top=False,         # ticks along the top edge are off
+    labelbottom=False,
+	labeltop=False) # labels along the bottom edge are off
+	plt.show()
+	
+	
+	
 if __name__ == "__main__":
 	import glob
 	from matplotlib import cm
@@ -200,6 +245,7 @@ if __name__ == "__main__":
 Please use 1D or 2D fes data produced by graph.popt and ending in '.txt'
 of a 2 colvar output file from a metadynamic run ending in 'Log'
 pwd = {}""".format(cwd)
+		plot_big_array_of_fes(glob.glob("/home/macenrola/Documents/XYLENE/inputs/for-reaction-flexible-cb/sanity_check_isomerisation/restarts/*00/*-*/MO-vac/*txt"))
 	elif len(sys.argv)==2:
 		flist=[sys.argv[1]]
 	else:
@@ -248,7 +294,7 @@ pwd = {}""".format(cwd)
 			except : print "impossible to fit and or plot for {}; lines are {}".format(name, lines)
 
 			#scale=np.median(lines)/np.log(2)
-			#KS_test(lines, fit_scale)
+			KS_test(lines, fit_scale)
 
 		if name[-4:]=="dump":
 			reformat_all_dump(f)

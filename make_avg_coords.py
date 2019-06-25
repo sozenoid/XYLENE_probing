@@ -657,14 +657,14 @@ def plot_E_kin(fekin, legend, symb):
 	ekin_all=cPickle.load(open(fekin, "rb"))
 	speedup=10
 	ekin_sampled = ekin_all[0::speedup]
-	x = range(len(ekin_all))[0::speedup]
+	x = np.linspace(0, len(ekin_all)/1000.0, len(ekin_all))[0::speedup]
 	plt.plot(x,ekin_sampled, linewidth=0.2, alpha=0.2)
 	width=1000
 	moving_av = np.convolve(ekin_sampled, np.ones(width)/width)
 	plt.plot(x[width:], moving_av[width-1:-width], linewidth=1, linestyle=symb, label=legend)
 	plt.axhline(1,linestyle='--', linewidth=0.4, color='k', xmin=0.5)
 	plt.axhline(0,linestyle='--', linewidth=0.4, color='k', xmin=0.5)
-	plt.xlabel(r"Time [fs]")
+	plt.xlabel(r"Time [ps]")
 	plt.ylabel(r"$E_{kin}$ [kcal/mol]")
 	plt.legend()
 	plt.savefig(fekin+'.pdf')
@@ -719,6 +719,9 @@ def plot_three_stacked_spectra(fname, indices, fname_10):
 # 	plt.ylabel("Intensity [a.u.]")
 # =============================================================================
 	plt.xlabel(r"Frequency [cm$^{-1}$]")
+# =============================================================================
+# 	plt.autoscale(enable=True, tight=True)
+# =============================================================================
 	plt.show()
 	
 if __name__ == "__main__":
@@ -800,15 +803,6 @@ if __name__ == "__main__":
 # 	get_kinetic_energy_from_velocity_file("/home/macenrola/Documents/Thesis/XYLENE/coupling/sample_vel_coupling.xyz")
 # =============================================================================
 # =============================================================================
-# 	plot_E_kin("/home/macenrola/Documents/XYLENE/correlation_for_reaction/slow-reaction-MP-CB6/vibrational_analysis/traj_from_mode_368/sample_vel_coupling.xyz-small_frag.xyz-EKIN",  r'$m$-xylene', "-.")
-# =============================================================================
-# =============================================================================
-# 	plot_E_kin("/home/macenrola/Documents/XYLENE/correlation_for_reaction/slow-reaction-MP-CB6/vibrational_analysis/traj_from_mode_368/sample_vel_coupling.xyz-EKIN")
-# =============================================================================
-# =============================================================================
-# 	plot_E_kin("/home/macenrola/Documents/XYLENE/correlation_for_reaction/slow-reaction-MP-CB6/vibrational_analysis/traj_from_mode_368/sample_vel_coupling.xyz-large_frag.xyz-EKIN", r'CB[6]', ':')
-# =============================================================================
-# =============================================================================
 # 	split_velocity_file_bis("/home/macenrola/Documents/Thesis/XYLENE/coupling/sample_vel_coupling.xyz")
 # =============================================================================
 # =============================================================================
@@ -817,4 +811,19 @@ if __name__ == "__main__":
 # =============================================================================
 # 	plot_single_spectrum("/home/macenrola/Documents/XYLENE/correlation_for_reaction/slow-reaction-MP-CB6/vibrational_analysis/traj_from_mode_368/ALL_100k/sample_vel_coupling.xyz-MAG", i=5)
 # =============================================================================
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
 	plot_three_stacked_spectra("/home/macenrola/Documents/XYLENE/correlation_for_reaction/slow-reaction-MP-CB6/vibrational_analysis/traj_from_mode_368/ALL_100k/sample_vel_coupling.xyz-MAG", [0,1,2,5,9], "/home/macenrola/Documents/XYLENE/correlation_for_reaction/slow-reaction-MP-CB6/vibrational_analysis/traj_from_mode_368/ALL_FREQS/sample_vel_coupling.xyz-MAG")
+# =============================================================================
+# 	plot_E_kin("/home/macenrola/Documents/XYLENE/correlation_for_reaction/slow-reaction-MP-CB6/vibrational_analysis/traj_from_mode_368/sample_vel_coupling.xyz-small_frag.xyz-EKIN",  r'$m$-xylene', "-.")
+# 	plot_E_kin("/home/macenrola/Documents/XYLENE/correlation_for_reaction/slow-reaction-MP-CB6/vibrational_analysis/traj_from_mode_368/sample_vel_coupling.xyz-large_frag.xyz-EKIN", r'CB[6]', ':')
+# 
+# =============================================================================
