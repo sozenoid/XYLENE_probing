@@ -294,7 +294,7 @@ pwd = {}""".format(cwd)
 			except : print "impossible to fit and or plot for {}; lines are {}".format(name, lines)
 
 			#scale=np.median(lines)/np.log(2)
-			KS_test(lines, fit_scale)
+			#KS_test(lines, fit_scale)
 
 		if name[-4:]=="dump":
 			reformat_all_dump(f)

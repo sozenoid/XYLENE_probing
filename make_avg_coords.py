@@ -724,6 +724,194 @@ def plot_three_stacked_spectra(fname, indices, fname_10):
 # =============================================================================
 	plt.show()
 	
+def make_mtd_time_plot(time_plot_file):
+	"""
+	PRE  : Takes in a summary file for the isomerisation 
+	POST : Gives out a double plot for vacuum and CBs
+	"""
+# =============================================================================
+# 	GETS A USEABLE DIC FOR PLOTTING
+# =============================================================================
+	with open(time_plot_file , "rb") as r:
+		lines = r.readlines()
+	split_res = [x.strip().split("KS") for x in lines]
+	res_dic = {}
+	for el in split_res:
+		if el==['']: continue
+		id_system = el[0][-13:-1]
+		key = id_system[:6] 
+		if key in res_dic:
+			res_dic[key].append((id_system[-5:], el[1][1:]))
+		else:
+			res_dic[key] = [(id_system[-5:], el[1][1:])]
+		
+	for k in res_dic:
+		res_dic[k] = list(zip(*res_dic[k]))
+		
+# =============================================================================
+# 	PLOTS IT
+# =============================================================================
+	fig, ax = plt.subplots(2, 1, sharex='col', sharey='row')
+	for (i,k),s in zip(enumerate(res_dic), line_styles()):
+		print i,k,s
+		xtrend = np.linspace(0.001,0.004,100)
+		line = res_dic[k]
+		plottable = [1/float(x) for x in line[0]], [np.log(1/float(x[0])/float(x[1])) for x in zip(line[0], line[1])]
+		if 'CB' in k:
+			ax[1].scatter(plottable[0], plottable[1], marker=i, label=k )
+			slope, intercept, r_value, p_value, std_err = stats.linregress([x[2:] for x in plottable])
+			ax[1].plot(xtrend, [x*slope+intercept for x in xtrend], '--', linewidth=1, linestyle=s)
+			ax[1].set_xlim((0.001,0.004))
+			ax[1].set_ylabel(r"ln($\frac{k}{T}$) []")
+			ax[1].legend(loc='lower left')
+			ax[1].grid(True, alpha=0.2)
+		elif "vac" in k:
+			ax[0].scatter(plottable[0], plottable[1], marker=i, label=k)
+			slope, intercept, r_value, p_value, std_err = stats.linregress(plottable)
+			ax[0].plot(xtrend, [x*slope+intercept for x in xtrend], '--', linewidth=1, linestyle=s)
+			ax[0].set_ylabel(r"ln($\frac{k}{T}$) []")
+			ax[0].legend(loc='lower left')
+			ax[0].grid(True, alpha=0.2)
+	plt.xlabel(r"1/T [K$^{-1}$]")
+	plt.tight_layout()
+	plt.show()
+
+def make_mtd_popping_rate_plot(time_plot_file):
+	"""
+	PRE  : Takes in a summary file for the popping 
+	POST : Gives out a triple plot for o m p xylenes
+	"""
+# =============================================================================
+# 	GETS A USEABLE DIC FOR PLOTTING
+# =============================================================================
+	with open(time_plot_file , "rb") as r:
+		lines = r.readlines()
+	split_res = [x.strip().split("KS") for x in lines]
+	res_dic = {}
+	for el in split_res:
+		if el==['']: continue
+		id_system = el[0][-19:-1]
+		key = '-'.join(id_system.split("-")[:-1])
+		if key[0]=='-': key=key[1:]
+		print el, key, id_system
+		if key in res_dic:
+			res_dic[key].append((id_system.split("-")[-1], el[1][1:]))
+		else:
+			res_dic[key] = [(id_system.split("-")[-1], el[1][1:])]
+		
+	for k in res_dic:
+		res_dic[k] = list(zip(*res_dic[k]))
+		
+# =============================================================================
+# 	PLOTS IT
+# =============================================================================
+	fig, ax = plt.subplots(3, 1, sharex='col', sharey='row')
+	ref_dic={'o':(0, r'$o$-xylene'),'m':(1,r'$m$-xylene'),'p':(2,r'$p$-xylene')}
+	lstyle=line_styles()
+	for (i,k),s in zip(enumerate(sorted(res_dic)), lstyle):
+		j = ref_dic[k[0]][0]
+		xtrend = np.linspace(0.001,0.004,100)
+		line = res_dic[k]
+		plottable = [1/float(x) for x in line[0]], [np.log(1/float(x[0])/float(x[1])) for x in zip(line[0], line[1])]
+		ax[j].scatter(plottable[0], plottable[1], marker=6+i%2, label="{} in {}".format(ref_dic[k[0]][1], k[-3:].upper()))
+		slope, intercept, r_value, p_value, std_err = stats.linregress(plottable)
+		ax[j].plot(xtrend, [x*slope+intercept for x in xtrend], '--', linewidth=1, linestyle=lstyle[i%2])
+		ax[j].set_ylabel(r"ln($\frac{k}{T}$)")
+		ax[j].legend(loc='lower left')
+		ax[j].grid(True, alpha=0.2)
+		ax[1].set_xlim((0.001,0.004))
+	plt.xlabel(r"1/T [K$^{-1}$]")
+	plt.tight_layout()
+	plt.show()
+
+def make_KS_plot(KS_PLOTTING_LISTS, ax):
+	"""
+	PRE: Takes in a list of escape times and an axis, it will fill the axis with the data
+	POST:Plots the KS test on the same pic, by fitting the cumulative distribution of the exponential to the curve then computing the KS test 
+	"""
+	def f_to_fit(x, scale):
+		return 1-np.exp(-x/scale)
+	
+	ref_dic={'o':(0, r'$o$-xylene'),'m':(1,r'$m$-xylene'),'p':(2,r'$p$-xylene')}
+	for f,ls in zip(sorted(KS_PLOTTING_LISTS)[:], line_styles()):
+		name = f.split("/")[-1]
+		print name
+		with open(f, "rb") as r:
+			time_dist=[float(x.strip()) for x in r.readlines()]
+		sortedist = sorted(time_dist)
+		p = 1. * np.arange(len(sortedist)) / (len(sortedist) - 1)
+		#
+		#
+		xn = np.geomspace(sortedist[0], sortedist[-1], 200)
+		p0 = np.median(sortedist)
+		popt, pcov = scipy.optimize.curve_fit(f_to_fit, sortedist, p, p0=p0)
+		
+		ks_test_res=scipy.stats.kstest(rvs=time_dist, cdf='expon', args=(0,popt), N=len(time_dist))			#
+	# FOR RATES OF ISOMERIZATION
+		ax.semilogx(sortedist, p)
+		ax.semilogx(xn, f_to_fit(xn, *popt), linestyle=ls, label=name.split('-')[-2][:-2]+" K")
+	# sort both labels and handles by labels
+	ax.set_xlim((1e-12,1e8))
+	ax.text(0.02, 0.5, name.split("dump")[-1][1:7],
+        horizontalalignment='left',
+        verticalalignment='top',
+        transform=ax.transAxes)
+	ax.grid(True, alpha=0.2)
+# =============================================================================
+# 	# FOR RATES OF POPPING
+#		ax.semilogx(sortedist, p, label=name.split('-')[-2])
+# 	#	ax.semilogx(xn, f_to_fit(xn, *popt), linestyle=ls, label="{0} in {1}".format(ref_dic[name.split('-')[-4][0]][1], name.split('-')[-3].upper()))
+# 	ax.set_xlim((1e-12,1e8))
+# 	ax.text(1, 0.5, "{0} in {1}".format(ref_dic[name.split('-')[-4][0]][1], name.split('-')[-3].upper()), 
+# 							horizontalalignment='right',
+# 							verticalalignment='top',
+# 							transform=ax.transAxes)
+# 	ax.grid(True, alpha=0.2)	
+# =============================================================================
+
+# =============================================================================
+# 	ax.set_xlabel('Time to reaction [s]')
+# =============================================================================
+	ax.set_ylabel('CDF')
+	
+def stack_ks_plots(list_of_list_of_escape_times):
+	"""
+	PRE: Takes in a list of lists of time distributions
+	POST: Will read all the lists and create a stacked plot with it
+	"""
+	fig, ax = plt.subplots(6, 1, sharex="col")
+	for i, l in enumerate(list_of_list_of_escape_times):
+		make_KS_plot(l, ax[i])
+	handles, labels = ax[i].get_legend_handles_labels()
+	labels, handles = zip(*sorted(zip(labels, handles), key=lambda t: t[0], reverse=True))
+	plt.legend(handles, labels, loc="upper center", bbox_to_anchor=(0.5,8.8), ncol=6)
+# =============================================================================
+# 	plt.legend(handles, labels, loc="upper right", bbox_to_anchor=(1.3,7.5), ncol=1)
+# =============================================================================
+	plt.tight_layout()
+	plt.xlabel('Time to reaction [s]')
+	
+	
+def line_styles():
+	linestyles = dict(
+    [('solid',               (0, ())),
+     ('loosely dotted',      (0, (1, 10))),
+     ('dotted',              (0, (1, 5))),
+     ('densely dotted',      (0, (1, 1))),
+
+     ('loosely dashed',      (0, (5, 10))),
+     ('dashed',              (0, (5, 5))),
+     ('densely dashed',      (0, (5, 1))),
+
+     ('loosely dashdotted',  (0, (3, 10, 1, 10))),
+     ('dashdotted',          (0, (3, 5, 1, 5))),
+     ('densely dashdotted',  (0, (3, 1, 1, 1))),
+
+     ('loosely dashdotdotted', (0, (3, 10, 1, 10, 1, 10))),
+     ('dashdotdotted',         (0, (3, 5, 1, 5, 1, 5))),
+     ('densely dashdotdotted', (0, (3, 1, 1, 1, 1, 1)))])
+	
+	return sorted(linestyles.values())
 if __name__ == "__main__":
 	import rdkit
 	from rdkit import Chem
@@ -811,18 +999,50 @@ if __name__ == "__main__":
 # =============================================================================
 # 	plot_single_spectrum("/home/macenrola/Documents/XYLENE/correlation_for_reaction/slow-reaction-MP-CB6/vibrational_analysis/traj_from_mode_368/ALL_100k/sample_vel_coupling.xyz-MAG", i=5)
 # =============================================================================
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	plot_three_stacked_spectra("/home/macenrola/Documents/XYLENE/correlation_for_reaction/slow-reaction-MP-CB6/vibrational_analysis/traj_from_mode_368/ALL_100k/sample_vel_coupling.xyz-MAG", [0,1,2,5,9], "/home/macenrola/Documents/XYLENE/correlation_for_reaction/slow-reaction-MP-CB6/vibrational_analysis/traj_from_mode_368/ALL_FREQS/sample_vel_coupling.xyz-MAG")
 # =============================================================================
+# 	
+# 
+# 	# KS STACKED POPPING
+# 	stack_ks_plots([
+# 			glob.glob("/home/macenrola/Documents/XYLENE/inputs/for-reaction-flexible-cb/outputs/popping/DUMP_MTS-dump-oxylene-cb6-*KS"),
+# 			glob.glob("/home/macenrola/Documents/XYLENE/inputs/for-reaction-flexible-cb/outputs/popping/DUMP_MTS-dump-oxylene-cb7-*KS"),
+# 			glob.glob("/home/macenrola/Documents/XYLENE/inputs/for-reaction-flexible-cb/outputs/popping/DUMP_MTS-dump-mxylene-cb6-*KS"),
+# 			glob.glob("/home/macenrola/Documents/XYLENE/inputs/for-reaction-flexible-cb/outputs/popping/DUMP_MTS-dump-mxylene-cb7-*KS"),
+# 			glob.glob("/home/macenrola/Documents/XYLENE/inputs/for-reaction-flexible-cb/outputs/popping/DUMP_MTS-dump-pxylene-cb6-*KS"),
+# 			glob.glob("/home/macenrola/Documents/XYLENE/inputs/for-reaction-flexible-cb/outputs/popping/DUMP_MTS-dump-pxylene-cb7-*KS"),
+# 			])
+# 	
+# =============================================================================
+	
+# =============================================================================
+# 	# POPPING RATE
+# 	make_mtd_popping_rate_plot(glob.glob("/home/macenrola/Documents/XYLENE/inputs/for-reaction-flexible-cb/outputs/popping/popping_times")[0])
+# 	
+# =============================================================================
+	# KS STACKED _ISOMERISATION
+	stack_ks_plots([
+			glob.glob("/home/macenrola/Documents/XYLENE/inputs/for-reaction-flexible-cb/outputs/DUMP_MTS_CLEANED_FES-dump-MO-vac-*-KS"),
+			glob.glob("/home/macenrola/Documents/XYLENE/inputs/for-reaction-flexible-cb/outputs/DUMP_MTS_CLEANED_FES-dump-MP-vac-*-KS"),
+			glob.glob("/home/macenrola/Documents/XYLENE/inputs/for-reaction-flexible-cb/outputs/DUMP_MTS_CLEANED_FES-dump-MO-CB6-*-KS"),
+			glob.glob("/home/macenrola/Documents/XYLENE/inputs/for-reaction-flexible-cb/outputs/DUMP_MTS_CLEANED_FES-dump-MP-CB6-*-KS"),
+			glob.glob("/home/macenrola/Documents/XYLENE/inputs/for-reaction-flexible-cb/outputs/DUMP_MTS_CLEANED_FES-dump-MO-CB7-*-KS"),
+			glob.glob("/home/macenrola/Documents/XYLENE/inputs/for-reaction-flexible-cb/outputs/DUMP_MTS_CLEANED_FES-dump-MP-CB7-*-KS")
+			])
+	
+	
+	
+# =============================================================================
+# #MAKE MTD TIME PLOT
+# 	make_mtd_time_plot("/home/macenrola/Documents/XYLENE/images/results_isomerization_times")
+# 	
+# =============================================================================
+	
+# =============================================================================
+	# PLOT STACKED SPECTRA
+# 	plot_three_stacked_spectra("/home/macenrola/Documents/XYLENE/correlation_for_reaction/slow-reaction-MP-CB6/vibrational_analysis/traj_from_mode_368/ALL_100k/sample_vel_coupling.xyz-MAG", [0,1,2,5,9], "/home/macenrola/Documents/XYLENE/correlation_for_reaction/slow-reaction-MP-CB6/vibrational_analysis/traj_from_mode_368/ALL_FREQS/sample_vel_coupling.xyz-MAG")
+# =============================================================================
+# =============================================================================
+	# PLOT EKIN
 # 	plot_E_kin("/home/macenrola/Documents/XYLENE/correlation_for_reaction/slow-reaction-MP-CB6/vibrational_analysis/traj_from_mode_368/sample_vel_coupling.xyz-small_frag.xyz-EKIN",  r'$m$-xylene', "-.")
 # 	plot_E_kin("/home/macenrola/Documents/XYLENE/correlation_for_reaction/slow-reaction-MP-CB6/vibrational_analysis/traj_from_mode_368/sample_vel_coupling.xyz-large_frag.xyz-EKIN", r'CB[6]', ':')
 # 

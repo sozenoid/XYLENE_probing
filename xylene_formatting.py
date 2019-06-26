@@ -1055,13 +1055,13 @@ def align_xyz_from_file_to_file(f, angle=0, shift=(0,0,0)):
 	for i, s in enumerate(shift):
 		rescoords[i] = [x+s for x in rescoords[i]]
 	
-	with open(f+'_a_{}_s_{}_aligned.xyz'.format(angle*np.pi, shift[1]), "wb") as w:
+	with open(f+'_a_{}_s_{}_{}_aligned.xyz'.format(angle*np.pi, shift[0], shift[1]), "wb") as w:
 		w.write(str(len(res[0]))+"\n")
 		w.write("name is {}\n".format(f))
 		for i in range(len(res[0])):
 			w.write("{0}    {1:+2.12f}    {2:+2.12f}    {3:+2.12f}\n".format(res[0][i], *rescoords.T[i]))
 
-	with open(f+'_a_{}_s_{}_docked.xyz'.format(angle*np.pi, shift[1]), "wb") as w:
+	with open(f+'_a_{}_s_{}_{}_docked.xyz'.format(angle*np.pi, shift[0], shift[1]), "wb") as w:
 		w.write(str(len(res[0])+126)+"\n")
 		w.write("name is {}-docked\n".format(f))
 		for i in range(len(res[0])):
@@ -1076,23 +1076,25 @@ def format_gaussian_input_from_xyz(xyz_file):
 	"""
 	name=xyz_file.split("/")[-1]
 	route="#N PM6D3 opt=(ts, noeigentest, modredundant, calcall, maxcyc=999) freq"
-	freeze=" D       2       3       9      10 F"
+	freeze=" D       2       3       9      10 F" # FOR DBOA
+	freeze=" A       1       7       6 F"
 	# route="#N wB97XD/6-31G(d) opt=(ReadOptimize)"
 	# route="#N PM6D3 opt=(ReadOptimize)"
 	# route="#N PM6D3 opt=(ts, noeigentest, modredundant, calcfc, maxcyc=999) freq=noraman"
 	checkpoint="%Chk={}.chk".format(name)
-	mem="%mem=120gb"
-	procs="%NProcShared=24"
+	mem="%mem=30gb"
+	procs="%NProcShared=3"
 	# route="#N PM6D3 freq=noraman"
 	if 'diradical' in f or 'N2' in f:
 		charge_mult="1 3"
 		print "{} is diradical or n2".format(f)
 	else:
-		charge_mult = "2 1"
+		charge_mult = "1 1"
 	if 'TS' in f:
 		route="#n wB97XD/6-31G(d) opt=(ts, noeigentest, modredundant, calcfc, maxcyc=999) maxdisk=100GB freq"
 	else:
 		route="#n wB97XD/6-31G(d) opt=(modredundant, maxcyc=999) maxdisk=100GB freq"
+		route="#n PM6D3 opt=(ts, calcall, noeigentest, modredundant, maxcyc=999) maxdisk=100GB freq"
 
 	with open(xyz_file, 'rb') as r:
 		coords = r.readlines()[2:]
@@ -1119,14 +1121,15 @@ if __name__ == "__main__":
 	import scipy
 	from sklearn.decomposition import PCA
 	import sys
+	
 # =============================================================================
-# 	for f in glob.glob('/home/macenrola/Documents/XYLENE/inputs/SP-DONT-WORK/*-vac.com_OUT.out.xyz'):
+# 	for f in glob.glob('/home/macenrola/Documents/XYLENE/inputs/SP-DONT-WORK/z_shift_x_0.8/MO-vac.com_OUT.out.xyz'):
 # 		for a in np.linspace(0, 350, 36):
-# 			for s in np.linspace(0, 1, 11):
+# 			for s in np.linspace(0, 2, 11):
 # 				print a, s
-# 				align_xyz_from_file_to_file(f, a/np.pi, (0,s,0))
+# 				align_xyz_from_file_to_file(f, a/np.pi, (s,0.8,0))
 # =============================================================================
-	for f in glob.glob("/home/macenrola/Documents/DBOA/doubly-charged/*docked.xyz"):
+	for f in glob.glob("/home/macenrola/Documents/XYLENE/inputs/SP-DONT-WORK/z_shift_x_0.*/*_docked.xyz"):
 		format_gaussian_input_from_xyz(f)
 # =============================================================================
 # 		align_xyz_from_file_to_file(f)
