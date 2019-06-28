@@ -732,6 +732,8 @@ def make_mtd_time_plot(time_plot_file):
 # =============================================================================
 # 	GETS A USEABLE DIC FOR PLOTTING
 # =============================================================================
+	R=1.99E-03
+	lnkkb_h=23.75951822
 	with open(time_plot_file , "rb") as r:
 		lines = r.readlines()
 	split_res = [x.strip().split("KS") for x in lines]
@@ -759,19 +761,21 @@ def make_mtd_time_plot(time_plot_file):
 		plottable = [1/float(x) for x in line[0]], [np.log(1/float(x[0])/float(x[1])) for x in zip(line[0], line[1])]
 		if 'CB' in k:
 			ax[1].scatter(plottable[0], plottable[1], marker=i, label=k )
-			slope, intercept, r_value, p_value, std_err = stats.linregress([x[2:] for x in plottable])
+			slope, intercept, r_value, p_value, std_err = scipy.stats.linregress([x[:] for x in plottable])
 			ax[1].plot(xtrend, [x*slope+intercept for x in xtrend], '--', linewidth=1, linestyle=s)
 			ax[1].set_xlim((0.001,0.004))
-			ax[1].set_ylabel(r"ln($\frac{k}{T}$) []")
+			ax[1].set_ylabel(r"ln($\frac{k}{T}$)")
 			ax[1].legend(loc='lower left')
 			ax[1].grid(True, alpha=0.2)
+			print k, slope, intercept, -slope*R, (intercept-lnkkb_h)*R
 		elif "vac" in k:
 			ax[0].scatter(plottable[0], plottable[1], marker=i, label=k)
-			slope, intercept, r_value, p_value, std_err = stats.linregress(plottable)
+			slope, intercept, r_value, p_value, std_err = scipy.stats.linregress(plottable)
 			ax[0].plot(xtrend, [x*slope+intercept for x in xtrend], '--', linewidth=1, linestyle=s)
-			ax[0].set_ylabel(r"ln($\frac{k}{T}$) []")
+			ax[0].set_ylabel(r"ln($\frac{k}{T}$)")
 			ax[0].legend(loc='lower left')
 			ax[0].grid(True, alpha=0.2)
+			print k, slope, intercept, -slope*R, (intercept-lnkkb_h)*R
 	plt.xlabel(r"1/T [K$^{-1}$]")
 	plt.tight_layout()
 	plt.show()
@@ -814,7 +818,7 @@ def make_mtd_popping_rate_plot(time_plot_file):
 		line = res_dic[k]
 		plottable = [1/float(x) for x in line[0]], [np.log(1/float(x[0])/float(x[1])) for x in zip(line[0], line[1])]
 		ax[j].scatter(plottable[0], plottable[1], marker=6+i%2, label="{} in {}".format(ref_dic[k[0]][1], k[-3:].upper()))
-		slope, intercept, r_value, p_value, std_err = stats.linregress(plottable)
+		slope, intercept, r_value, p_value, std_err = scipy.stats.linregress(plottable)
 		ax[j].plot(xtrend, [x*slope+intercept for x in xtrend], '--', linewidth=1, linestyle=lstyle[i%2])
 		ax[j].set_ylabel(r"ln($\frac{k}{T}$)")
 		ax[j].legend(loc='lower left')
@@ -920,15 +924,128 @@ def plot_instantaneous_binding_energy(complexfile, cbfile, guestfile):
 	PRE  : Takes in three files containing the complex, CB and the guest's energy  
 	POST : Will plot the instantaneous binding energy
 	"""
-	with open(complexfile, "rb"):
+	with open(complexfile, "rb") as r:
 		complexlist = r.readlines()
- 
-    with open(cbfile, "rb") as r:
+		
+	with open(cbfile, "rb") as r:
 		cblist = r.readlines()
 		
 	with open(guestfile, 'rb') as r:
 		guestlist = r.readlines()
 	
+	complexdata = list(zip(*[(x.strip().split(',')) for x in complexlist]))
+	cbdata = list(zip(*[(x.strip().split(',')) for x in cblist]))
+	guestdata = list(zip(*[x.strip().split(',') for x in guestlist]))
+	
+	complexdata = [float(x)/1000 for x in complexdata[0]],[float(x) for x in complexdata[1]]
+	cbdata = [float(x.split('down')[1].split('-')[0])/1000+20 for x in cbdata[0]], [float(x) for x in cbdata[1]]
+	guestdata = [float(x.split('down')[1].split('-')[0])/1000+20 for x in guestdata[0]], [float(x) for x in guestdata[1]]
+	
+	cbdatasorted = sorted(cbdata[0]), [k for _,k in sorted(zip(cbdata[0], cbdata[1]))]
+	guestdatasorted = sorted(guestdata[0]), [k for _,k in sorted(zip(guestdata[0], guestdata[1]))]
+	lw=0.2
+	fig, axes = plt.subplots(2,2, sharex="col")
+	for dtset, zeropoint, ax in zip([complexdata, cbdatasorted, guestdatasorted], [508.3467427, 467.013497, 41.209], axes.flat):
+		print zeropoint
+		ax.plot(dtset[0], [(x+zeropoint)*627.5 for x in dtset[1]], linewidth=lw)
+		ax.set_ylabel(r"$E_{pot}$ - $E_0$ [kcal/mol] ")
+		ax.set_xlabel(r"Time [ps]")
+		ax.grid(alpha=0.2)
+	
+	ebindax=axes.flat[-1]
+	ebindax.plot(guestdatasorted[0],[(x[0]-x[1]-x[2])*627.5 for x in zip(complexdata[1], cbdatasorted[1], guestdatasorted[1])],linewidth=lw)
+	ebindax.set_ylabel(r"$E_{bind}$ [kcal/mol]")
+	ebindax.set_xlabel(r"Time [ps]")
+	plt.tight_layout()
+	ebindax.grid(alpha=0.2)
+	
+def plot_ener(num, enerfile):
+	"""
+	PRE : Takes in an ener file
+	POST: Plots it
+	"""
+	with open(enerfile, "rb") as r:
+		energ = r.readlines()
+	ids = energ[0].strip().split("       ")
+	energ = list(zip(*[(x.strip().split('      ')) for x in energ[1:]]))
+	
+	print len(energ)
+	float_energ=[]
+	for ls in energ:
+		float_energ.append([float(x) for x in ls])
+	
+	print zip(range(len(energ)), ids)
+	avgnum = sum(float_energ[num])/len(float_energ[num])
+	plt.plot(float_energ[1], [(x-avgnum)*627.5 for x in float_energ[num]])
+	
+
+def plot_sp_not_stable_output(resfile="/home/macenrola/Documents/XYLENE/inputs/SP-DONT-WORK/z_shift_res/resfile"):
+	"""
+	PRE: Takes in a resfile containing the name of the files of a MO TS in CB7
+	POST: Plots its experimental cumulative distribution
+	"""
+	with open(resfile,"rb") as r:
+		plt.plot(sorted([(float(x.split(",")[-1].strip())+0.6057797455-0.3393539069)*627.5 for x in r.readlines()])[:-58])
+		plt.xlabel("Index of MO@CB[7] starting point")
+		plt.ylabel("$E_{bind}$ [kcal/mol]")
+		
+	with open(resfile,"rb") as r:
+		lines = r.readlines()
+		sp = [x.strip().split(',') for x in lines]
+		names, energies = list(zip(*sp))
+		names = [x for _,x in sorted(zip(energies, names))]
+		
+		print names, sorted(energies)
+
+
+def plot_nice_FES(festxt, colvar_traj):
+	"""
+	PRE  : Takes in a txt file 
+	POST : Will plot a nice FES plot
+	"""
+	def get_xyz(fname):
+		"""
+		pre: takes in a file name
+		post: will plot the file
+		"""
+		with open(fname, 'rb') as r:
+			lines = r.readlines()
+	
+		x = [float(k.strip().split()[0]) for k in lines]
+		y = [float(k.strip().split()[1]) for k in lines]
+		try:
+			z = [float(k.strip().split()[2]) for k in lines]
+			return x,y,z
+		except:
+			return x,y
+
+
+	def plot_colormap(x,y,z,name, xtraj, ytraj):
+		"""
+		pre: takes in x,y,z and will plot a colormap
+		"""
+		dim = 100
+		x = np.asarray(x).reshape((dim, dim))
+	        y = np.asarray(y).reshape((dim, dim))
+	        z = np.asarray([k*627.5 for k in z]).reshape((dim, dim))
+		levels = plt.MaxNLocator(nbins=15).tick_values(z.min(), z.max())
+		cmap = plt.get_cmap('PiYG')
+		fig, ax = plt.subplots(constrained_layout=True)
+		cf = ax.contourf(x,y,z,levels=levels, cmap=cmap)
+		print len(xtraj[30000:-15000])
+		ax.plot(xtraj[30000:-15000], ytraj[30000:-15000], linestyle=":", color="k")
+		plt.axhline(0.7,linestyle='--', linewidth=0.4, color='k', xmin=0, xmax=0.325)
+		plt.axvline(0.295,linestyle='--', linewidth=0.4, color='k', ymin=0.7)
+		ax.set_xlabel(r"$C_1$")
+		ax.set_ylabel(r"$C_2$")
+		cbar=fig.colorbar(cf, ax=ax)
+		cbar.ax.set_ylabel('Free energy (kcal/mol)')
+		plt.show()
+		
+	x, y,z = get_xyz(festxt)
+	_, co, ct = get_xyz(colvar_traj)
+	
+	plot_colormap(x, y, z, '-'.join(festxt.split('/')[-4:]), co, ct)
 if __name__ == "__main__":
 	import rdkit
 	from rdkit import Chem
@@ -1016,18 +1133,41 @@ if __name__ == "__main__":
 # =============================================================================
 # 	plot_single_spectrum("/home/macenrola/Documents/XYLENE/correlation_for_reaction/slow-reaction-MP-CB6/vibrational_analysis/traj_from_mode_368/ALL_100k/sample_vel_coupling.xyz-MAG", i=5)
 # =============================================================================
+# =============================================================================
+# 	
+# 	
+# 	## PLOT NICE FES
+# 	plot_nice_FES("/home/macenrola/Documents/XYLENE/inputs/for-reaction-flexible-cb/sanity_check_isomerisation/restarts/300/25-48/MO-CB6/40-MO-CB6.inp-1_40000.restart.txt", "/home/macenrola/Documents/XYLENE/images/40-MO-CB6.inp-COLVAR.metadynLog")
+# # =============================================================================
+# =============================================================================
+# 	# ECDF FOR SP DONT WORK
+# 	plot_sp_not_stable_output()
+# =============================================================================
 	
-
-	# KS STACKED POPPING
-	stack_ks_plots([
-			glob.glob("/home/macenrola/Documents/XYLENE/inputs/for-reaction-flexible-cb/outputs/popping/DUMP_MTS-dump-oxylene-cb6-*KS"),
-			glob.glob("/home/macenrola/Documents/XYLENE/inputs/for-reaction-flexible-cb/outputs/popping/DUMP_MTS-dump-oxylene-cb7-*KS"),
-			glob.glob("/home/macenrola/Documents/XYLENE/inputs/for-reaction-flexible-cb/outputs/popping/DUMP_MTS-dump-mxylene-cb6-*KS"),
-			glob.glob("/home/macenrola/Documents/XYLENE/inputs/for-reaction-flexible-cb/outputs/popping/DUMP_MTS-dump-mxylene-cb7-*KS"),
-			glob.glob("/home/macenrola/Documents/XYLENE/inputs/for-reaction-flexible-cb/outputs/popping/DUMP_MTS-dump-pxylene-cb6-*KS"),
-			glob.glob("/home/macenrola/Documents/XYLENE/inputs/for-reaction-flexible-cb/outputs/popping/DUMP_MTS-dump-pxylene-cb7-*KS"),
-			])
-	
+# =============================================================================
+# 	plot_ener(4, "/home/macenrola/Documents/XYLENE/base-systems-equilibrated/equilibrated+NVE-long/just-mxylene-prot.inp-1.ener")
+# =============================================================================
+# =============================================================================
+# 	
+# 	# PLOT THE REACTIVE TRAJECTORY
+# 	
+# 	plot_instantaneous_binding_energy("/home/macenrola/Documents/XYLENE/correlation_for_reaction/slow-reaction-MP-CB6/breaking-down-cb-and-guest/complexres",
+# 								   "/home/macenrola/Documents/XYLENE/correlation_for_reaction/slow-reaction-MP-CB6/breaking-down-cb-and-guest/res/resfilegh2",
+# 								   "/home/macenrola/Documents/XYLENE/correlation_for_reaction/slow-reaction-MP-CB6/breaking-down-cb-and-guest/res/resfilegh1")
+# 
+# =============================================================================
+# =============================================================================
+# 	# KS STACKED POPPING
+# 	stack_ks_plots([
+# 			glob.glob("/home/macenrola/Documents/XYLENE/inputs/for-reaction-flexible-cb/outputs/popping/DUMP_MTS-dump-oxylene-cb6-*KS"),
+# 			glob.glob("/home/macenrola/Documents/XYLENE/inputs/for-reaction-flexible-cb/outputs/popping/DUMP_MTS-dump-oxylene-cb7-*KS"),
+# 			glob.glob("/home/macenrola/Documents/XYLENE/inputs/for-reaction-flexible-cb/outputs/popping/DUMP_MTS-dump-mxylene-cb6-*KS"),
+# 			glob.glob("/home/macenrola/Documents/XYLENE/inputs/for-reaction-flexible-cb/outputs/popping/DUMP_MTS-dump-mxylene-cb7-*KS"),
+# 			glob.glob("/home/macenrola/Documents/XYLENE/inputs/for-reaction-flexible-cb/outputs/popping/DUMP_MTS-dump-pxylene-cb6-*KS"),
+# 			glob.glob("/home/macenrola/Documents/XYLENE/inputs/for-reaction-flexible-cb/outputs/popping/DUMP_MTS-dump-pxylene-cb7-*KS"),
+# 			])
+# 	
+# =============================================================================
 	
 # =============================================================================
 # 	# POPPING RATE
@@ -1048,11 +1188,9 @@ if __name__ == "__main__":
 # 	
 # =============================================================================
 	
-# =============================================================================
-# #MAKE MTD TIME PLOT
-# 	make_mtd_time_plot("/home/macenrola/Documents/XYLENE/images/results_isomerization_times")
-# 	
-# =============================================================================
+#MAKE MTD TIME PLOT
+	make_mtd_time_plot("/home/macenrola/Documents/XYLENE/images/results_isomerization_times")
+	
 	
 # =============================================================================
 	# PLOT STACKED SPECTRA
