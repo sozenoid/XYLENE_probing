@@ -788,6 +788,8 @@ def make_mtd_popping_rate_plot(time_plot_file):
 # =============================================================================
 # 	GETS A USEABLE DIC FOR PLOTTING
 # =============================================================================
+	R=1.99E-03
+	lnkkb_h=23.75951822
 	with open(time_plot_file , "rb") as r:
 		lines = r.readlines()
 	split_res = [x.strip().split("KS") for x in lines]
@@ -813,6 +815,7 @@ def make_mtd_popping_rate_plot(time_plot_file):
 	ref_dic={'o':(0, r'$o$-xylene'),'m':(1,r'$m$-xylene'),'p':(2,r'$p$-xylene')}
 	lstyle=line_styles()
 	for (i,k),s in zip(enumerate(sorted(res_dic)), lstyle):
+		print i, k,s 
 		j = ref_dic[k[0]][0]
 		xtrend = np.linspace(0.001,0.004,100)
 		line = res_dic[k]
@@ -824,6 +827,7 @@ def make_mtd_popping_rate_plot(time_plot_file):
 		ax[j].legend(loc='lower left')
 		ax[j].grid(True, alpha=0.2)
 		ax[1].set_xlim((0.001,0.004))
+		print k, slope, intercept, -slope*R, (intercept-lnkkb_h)*R
 	plt.xlabel(r"1/T [K$^{-1}$]")
 	plt.tight_layout()
 	plt.show()
@@ -953,7 +957,7 @@ def plot_instantaneous_binding_energy(complexfile, cbfile, guestfile):
 		ax.grid(alpha=0.2)
 	
 	ebindax=axes.flat[-1]
-	ebindax.plot(guestdatasorted[0],[(x[0]-x[1]-x[2])*627.5 for x in zip(complexdata[1], cbdatasorted[1], guestdatasorted[1])],linewidth=lw)
+	ebindax.plot(guestdatasorted[0],[-(x[0]-x[1]-x[2])*627.5 for x in zip(complexdata[1], cbdatasorted[1], guestdatasorted[1])],linewidth=lw)
 	ebindax.set_ylabel(r"$E_{bind}$ [kcal/mol]")
 	ebindax.set_xlabel(r"Time [ps]")
 	plt.tight_layout()
@@ -979,23 +983,63 @@ def plot_ener(num, enerfile):
 	plt.plot(float_energ[1], [(x-avgnum)*627.5 for x in float_energ[num]])
 	
 
-def plot_sp_not_stable_output(resfile="/home/macenrola/Documents/XYLENE/inputs/SP-DONT-WORK/z_shift_res/resfile"):
+def plot_sp_not_stable_output(resfile="/home/macenrola/Documents/XYLENE/inputs/SP-DONT-WORK/resfile_with_convergence/resfile"):
 	"""
 	PRE: Takes in a resfile containing the name of the files of a MO TS in CB7
 	POST: Plots its experimental cumulative distribution
 	"""
+	resdic={}
 	with open(resfile,"rb") as r:
-		plt.plot(sorted([(float(x.split(",")[-1].strip())+0.6057797455-0.3393539069)*627.5 for x in r.readlines()])[:-58])
-		plt.xlabel("Index of MO@CB[7] starting point")
-		plt.ylabel("$E_{bind}$ [kcal/mol]")
-		
-	with open(resfile,"rb") as r:
-		lines = r.readlines()
-		sp = [x.strip().split(',') for x in lines]
-		names, energies = list(zip(*sp))
-		names = [x for _,x in sorted(zip(energies, names))]
-		
-		print names, sorted(energies)
+		for line in r:
+			if "======"==line[:6]:
+				cline=line
+				resdic[cline]=[]
+			else:
+				resdic[cline].append(line)
+	name_energies = []
+	for el in resdic:
+		if len(resdic[el])==3:
+			name_energies.append((float(resdic[el][-1].strip().split(',')[-1]), el.strip()))
+			
+	name_energies_sorted = [(x,y) for x,y in sorted(name_energies)]
+	
+	print "BEST"
+	for els in name_energies_sorted[:10]:
+		print els
+	print "WORST"
+	for i, els in enumerate(name_energies_sorted[:]):
+		print i, els
+	
+	with open("/home/macenrola/Documents/XYLENE/images/SP_DONT_WORK", "wb") as w:
+		for i, els in enumerate(name_energies_sorted):
+			w.write("{} {}\n".format((els[0]+0.4340774664)*627.5, i/float(len(name_energies_sorted))))
+			if any([x in els[1] for x in ["_0.2_0.2_", "_2.0_0.8", "_2.0_0.5", "_1.0_0.8"]]):
+				print "{} {} {} {}".format(i, els[1], (els[0]+0.4340774664)*627.5, i/float(len(name_energies_sorted)))
+	
+	print "ELS 500"
+# =============================================================================
+# 	for els in name_energies_sorted[501:510]:
+# 		print "scp uccahcl@myriad.rc.ucl.ac.uk:/home/uccahcl/Scratch/XYLENE/pm6ts-stability-test/z-shift/{0} {0} &".format(els[1][6:-6])
+# 	plt.plot([(x+0.4340774664)*627.5 for x,_ in name_energies_sorted[:]])   # TS HEIGHT
+# =============================================================================
+ 	plt.xlabel("Index of MO@CB[7] starting point")
+	plt.ylabel("$E_{TS}$ - $E_{m-xylene@CB[7]}$ [kcal/mol]")
+# =============================================================================
+# # =============================================================================
+# # 		plt.plot(sorted([(float(x.split(",")[-1].strip())+0.6057797455-0.3393539069)*627.5 for x in r.readlines()])[:-58])   # BINDING OF TS
+# # =============================================================================
+# 		plt.plot(sorted([(float(x.split(",")[-1].strip())+0.4340774664)*627.5 for x in r.readlines()])[:-58])   # TS HEIGHT
+# 		plt.xlabel("Index of MO@CB[7] starting point")
+# 		plt.ylabel("$E_{bind}$ [kcal/mol]")
+# 		
+# 	with open(resfile,"rb") as r:
+# 		lines = r.readlines()
+# 		sp = [x.strip().split(',') for x in lines]
+# 		names, energies = list(zip(*sp))
+# 		names = [x for _,x in sorted(zip(energies, names))]
+# 		
+# 		print names, sorted(energies)
+# =============================================================================
 
 
 def plot_nice_FES(festxt, colvar_traj):
@@ -1046,6 +1090,18 @@ def plot_nice_FES(festxt, colvar_traj):
 	_, co, ct = get_xyz(colvar_traj)
 	
 	plot_colormap(x, y, z, '-'.join(festxt.split('/')[-4:]), co, ct)
+	
+def plot_double_ring_e_pot(d=5.85, R=3.6):
+	"""
+	PRE : Takes in the radius of a double ring system with a charge located around the charged ring of radius R
+	POST: Will plot the potential as a position of the charge around the two rings
+	"""
+	x = np.linspace(-5*d, 5*d, 200)
+	epot = (1/((d-x)**2+R**2)**.5 + 1/(x**2+R**2)**.5)
+	plt.plot(x, epot/max(epot))
+	plt.xlabel("Distance between the charged ring and the point charge [Angstrom]")
+	plt.ylabel("Electrostatic potential [a.u.]")
+	
 if __name__ == "__main__":
 	import rdkit
 	from rdkit import Chem
@@ -1133,6 +1189,7 @@ if __name__ == "__main__":
 # =============================================================================
 # 	plot_single_spectrum("/home/macenrola/Documents/XYLENE/correlation_for_reaction/slow-reaction-MP-CB6/vibrational_analysis/traj_from_mode_368/ALL_100k/sample_vel_coupling.xyz-MAG", i=5)
 # =============================================================================
+	plot_double_ring_e_pot()
 # =============================================================================
 # 	
 # 	
@@ -1155,7 +1212,7 @@ if __name__ == "__main__":
 # 								   "/home/macenrola/Documents/XYLENE/correlation_for_reaction/slow-reaction-MP-CB6/breaking-down-cb-and-guest/res/resfilegh2",
 # 								   "/home/macenrola/Documents/XYLENE/correlation_for_reaction/slow-reaction-MP-CB6/breaking-down-cb-and-guest/res/resfilegh1")
 # 
-# =============================================================================
+# # =============================================================================
 # =============================================================================
 # 	# KS STACKED POPPING
 # 	stack_ks_plots([
@@ -1168,8 +1225,8 @@ if __name__ == "__main__":
 # 			])
 # 	
 # =============================================================================
-	
 # =============================================================================
+# 	
 # 	# POPPING RATE
 # 	make_mtd_popping_rate_plot(glob.glob("/home/macenrola/Documents/XYLENE/inputs/for-reaction-flexible-cb/outputs/popping/popping_times")[0])
 # 	
@@ -1188,8 +1245,10 @@ if __name__ == "__main__":
 # 	
 # =============================================================================
 	
-#MAKE MTD TIME PLOT
-	make_mtd_time_plot("/home/macenrola/Documents/XYLENE/images/results_isomerization_times")
+# =============================================================================
+# #MAKE MTD TIME PLOT
+# 	make_mtd_time_plot("/home/macenrola/Documents/XYLENE/images/results_isomerization_times")
+# =============================================================================
 	
 	
 # =============================================================================
