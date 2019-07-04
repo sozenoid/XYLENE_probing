@@ -854,28 +854,32 @@ def make_KS_plot(KS_PLOTTING_LISTS, ax):
 		p0 = np.median(sortedist)
 		popt, pcov = scipy.optimize.curve_fit(f_to_fit, sortedist, p, p0=p0)
 		
-		ks_test_res=scipy.stats.kstest(rvs=time_dist, cdf='expon', args=(0,popt), N=len(time_dist))			#
-# =============================================================================
-# 	# FOR RATES OF ISOMERIZATION
-# 		ax.semilogx(sortedist, p)
-# 		ax.semilogx(xn, f_to_fit(xn, *popt), linestyle=ls, label=name.split('-')[-2][:-2]+" K")
-# 	# sort both labels and handles by labels
-# 	ax.set_xlim((1e-12,1e8))
-# 	ax.text(0.02, 0.5, name.split("dump")[-1][1:7],
-#         horizontalalignment='left',
-#         verticalalignment='top',
-#         transform=ax.transAxes)
-# 	ax.grid(True, alpha=0.2)
-# =============================================================================
-	# FOR RATES OF POPPING
-		ax.semilogx(sortedist, p, label=name.split('-')[-2])
-		#ax.semilogx(xn, f_to_fit(xn, *popt), linestyle=ls, label=name.split('-')[-2])
+		ks_test_res=scipy.stats.kstest(rvs=time_dist, cdf='expon', args=(0,popt), N=len(time_dist))
+		print ks_test_res[1]
+	# FOR RATES OF ISOMERIZATION
+		ax.semilogx(sortedist, p)
+		ax.semilogx(xn, f_to_fit(xn, *popt), linestyle=ls, label=name.split('-')[-2][:-2]+" K")
+	# sort both labels and handles by labels
 	ax.set_xlim((1e-12,1e8))
-	ax.text(1, 0.5, "{0} in {1}".format(ref_dic[name.split('-')[-4][0]][1], name.split('-')[-3].upper()), 
-							horizontalalignment='right',
-							verticalalignment='top',
-							transform=ax.transAxes)
-	ax.grid(True, alpha=0.2)	
+	ax.text(0.02, 0.5, name.split("dump")[-1][1:7],
+        horizontalalignment='left',
+        verticalalignment='top',
+        transform=ax.transAxes)
+	ax.grid(True, alpha=0.2)
+	# END RATES OF ISOMERIZATION
+
+# =============================================================================
+# 	# FOR RATES OF POPPING
+# 		ax.semilogx(sortedist, p, label=name.split('-')[-2])
+# 		#ax.semilogx(xn, f_to_fit(xn, *popt), linestyle=ls, label=name.split('-')[-2])
+# 	ax.set_xlim((1e-12,1e8))
+# 	ax.text(1, 0.5, "{0} in {1}".format(ref_dic[name.split('-')[-4][0]][1], name.split('-')[-3].upper()), 
+# 							horizontalalignment='right',
+# 							verticalalignment='top',
+# 							transform=ax.transAxes)
+# 	ax.grid(True, alpha=0.2)	
+# 	# END RATES OF POPPING
+# =============================================================================
 
 # =============================================================================
 # 	ax.set_xlabel('Time to reaction [s]')
@@ -891,12 +895,12 @@ def stack_ks_plots(list_of_list_of_escape_times):
 	for i, l in enumerate(list_of_list_of_escape_times):
 		make_KS_plot(l, ax[i])
 	handles, labels = ax[i].get_legend_handles_labels()
+	labels, handles = zip(*sorted(zip(labels, handles), key=lambda t: t[0], reverse=True)) 
+	plt.legend(handles, labels, loc="upper center", bbox_to_anchor=(0.5,8.9), ncol=5)
 # =============================================================================
-# 	labels, handles = zip(*sorted(zip(labels, handles), key=lambda t: t[0], reverse=True)) 
-# 	plt.legend(handles, labels, loc="upper center", bbox_to_anchor=(0.5,8.9), ncol=5)
+# 	labels, handles = zip(*sorted(zip(labels, handles), key=lambda t: float(t[0]), reverse=False)) 
+# 	plt.legend(handles, labels, loc="upper right", bbox_to_anchor=(1.3,7.5), ncol=1)
 # =============================================================================
-	labels, handles = zip(*sorted(zip(labels, handles), key=lambda t: float(t[0]), reverse=False)) 
-	plt.legend(handles, labels, loc="upper right", bbox_to_anchor=(1.3,7.5), ncol=1)
 	plt.tight_layout()
 	plt.xlabel('Time to escape [s]')
 	
@@ -1189,7 +1193,9 @@ if __name__ == "__main__":
 # =============================================================================
 # 	plot_single_spectrum("/home/macenrola/Documents/XYLENE/correlation_for_reaction/slow-reaction-MP-CB6/vibrational_analysis/traj_from_mode_368/ALL_100k/sample_vel_coupling.xyz-MAG", i=5)
 # =============================================================================
-	plot_double_ring_e_pot()
+# =============================================================================
+# 	plot_double_ring_e_pot()
+# =============================================================================
 # =============================================================================
 # 	
 # 	
@@ -1231,26 +1237,24 @@ if __name__ == "__main__":
 # 	make_mtd_popping_rate_plot(glob.glob("/home/macenrola/Documents/XYLENE/inputs/for-reaction-flexible-cb/outputs/popping/popping_times")[0])
 # 	
 # =============================================================================
-# =============================================================================
-# 	# KS STACKED _ISOMERISATION
-# 	stack_ks_plots([
-# 			glob.glob("/home/macenrola/Documents/XYLENE/inputs/for-reaction-flexible-cb/outputs/DUMP_MTS_CLEANED_FES-dump-MO-vac-*-KS"),
-# 			glob.glob("/home/macenrola/Documents/XYLENE/inputs/for-reaction-flexible-cb/outputs/DUMP_MTS_CLEANED_FES-dump-MP-vac-*-KS"),
-# 			glob.glob("/home/macenrola/Documents/XYLENE/inputs/for-reaction-flexible-cb/outputs/DUMP_MTS_CLEANED_FES-dump-MO-CB6-*-KS"),
-# 			glob.glob("/home/macenrola/Documents/XYLENE/inputs/for-reaction-flexible-cb/outputs/DUMP_MTS_CLEANED_FES-dump-MP-CB6-*-KS"),
-# 			glob.glob("/home/macenrola/Documents/XYLENE/inputs/for-reaction-flexible-cb/outputs/DUMP_MTS_CLEANED_FES-dump-MO-CB7-*-KS"),
-# 			glob.glob("/home/macenrola/Documents/XYLENE/inputs/for-reaction-flexible-cb/outputs/DUMP_MTS_CLEANED_FES-dump-MP-CB7-*-KS")
-# 			])
-# 	
-# 	
-# =============================================================================
+	# KS STACKED _ISOMERISATION
+	stack_ks_plots([
+			glob.glob("/home/macenrola/Documents/XYLENE/inputs/for-reaction-flexible-cb/outputs/DUMP_MTS_CLEANED_FES-dump-MO-vac-*-KS"),
+			glob.glob("/home/macenrola/Documents/XYLENE/inputs/for-reaction-flexible-cb/outputs/DUMP_MTS_CLEANED_FES-dump-MP-vac-*-KS"),
+			glob.glob("/home/macenrola/Documents/XYLENE/inputs/for-reaction-flexible-cb/outputs/DUMP_MTS_CLEANED_FES-dump-MO-CB6-*-KS"),
+			glob.glob("/home/macenrola/Documents/XYLENE/inputs/for-reaction-flexible-cb/outputs/DUMP_MTS_CLEANED_FES-dump-MP-CB6-*-KS"),
+			glob.glob("/home/macenrola/Documents/XYLENE/inputs/for-reaction-flexible-cb/outputs/DUMP_MTS_CLEANED_FES-dump-MO-CB7-*-KS"),
+			glob.glob("/home/macenrola/Documents/XYLENE/inputs/for-reaction-flexible-cb/outputs/DUMP_MTS_CLEANED_FES-dump-MP-CB7-*-KS")
+			])
+	
+	
 	
 # =============================================================================
 # #MAKE MTD TIME PLOT
 # 	make_mtd_time_plot("/home/macenrola/Documents/XYLENE/images/results_isomerization_times")
+# 	
+# 	
 # =============================================================================
-	
-	
 # =============================================================================
 	# PLOT STACKED SPECTRA
 # 	plot_three_stacked_spectra("/home/macenrola/Documents/XYLENE/correlation_for_reaction/slow-reaction-MP-CB6/vibrational_analysis/traj_from_mode_368/ALL_100k/sample_vel_coupling.xyz-MAG", [0,1,2,5,9], "/home/macenrola/Documents/XYLENE/correlation_for_reaction/slow-reaction-MP-CB6/vibrational_analysis/traj_from_mode_368/ALL_FREQS/sample_vel_coupling.xyz-MAG")
