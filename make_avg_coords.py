@@ -1237,17 +1237,19 @@ if __name__ == "__main__":
 # 	make_mtd_popping_rate_plot(glob.glob("/home/macenrola/Documents/XYLENE/inputs/for-reaction-flexible-cb/outputs/popping/popping_times")[0])
 # 	
 # =============================================================================
-	# KS STACKED _ISOMERISATION
-	stack_ks_plots([
-			glob.glob("/home/macenrola/Documents/XYLENE/inputs/for-reaction-flexible-cb/outputs/DUMP_MTS_CLEANED_FES-dump-MO-vac-*-KS"),
-			glob.glob("/home/macenrola/Documents/XYLENE/inputs/for-reaction-flexible-cb/outputs/DUMP_MTS_CLEANED_FES-dump-MP-vac-*-KS"),
-			glob.glob("/home/macenrola/Documents/XYLENE/inputs/for-reaction-flexible-cb/outputs/DUMP_MTS_CLEANED_FES-dump-MO-CB6-*-KS"),
-			glob.glob("/home/macenrola/Documents/XYLENE/inputs/for-reaction-flexible-cb/outputs/DUMP_MTS_CLEANED_FES-dump-MP-CB6-*-KS"),
-			glob.glob("/home/macenrola/Documents/XYLENE/inputs/for-reaction-flexible-cb/outputs/DUMP_MTS_CLEANED_FES-dump-MO-CB7-*-KS"),
-			glob.glob("/home/macenrola/Documents/XYLENE/inputs/for-reaction-flexible-cb/outputs/DUMP_MTS_CLEANED_FES-dump-MP-CB7-*-KS")
-			])
-	
-	
+# =============================================================================
+# 	# KS STACKED _ISOMERISATION
+# 	stack_ks_plots([
+# 			glob.glob("/home/macenrola/Documents/XYLENE/inputs/for-reaction-flexible-cb/outputs/DUMP_MTS_CLEANED_FES-dump-MO-vac-*-KS"),
+# 			glob.glob("/home/macenrola/Documents/XYLENE/inputs/for-reaction-flexible-cb/outputs/DUMP_MTS_CLEANED_FES-dump-MP-vac-*-KS"),
+# 			glob.glob("/home/macenrola/Documents/XYLENE/inputs/for-reaction-flexible-cb/outputs/DUMP_MTS_CLEANED_FES-dump-MO-CB6-*-KS"),
+# 			glob.glob("/home/macenrola/Documents/XYLENE/inputs/for-reaction-flexible-cb/outputs/DUMP_MTS_CLEANED_FES-dump-MP-CB6-*-KS"),
+# 			glob.glob("/home/macenrola/Documents/XYLENE/inputs/for-reaction-flexible-cb/outputs/DUMP_MTS_CLEANED_FES-dump-MO-CB7-*-KS"),
+# 			glob.glob("/home/macenrola/Documents/XYLENE/inputs/for-reaction-flexible-cb/outputs/DUMP_MTS_CLEANED_FES-dump-MP-CB7-*-KS")
+# 			])
+# 	
+# 	
+# =============================================================================
 	
 # =============================================================================
 # #MAKE MTD TIME PLOT
@@ -1256,12 +1258,12 @@ if __name__ == "__main__":
 # 	
 # =============================================================================
 # =============================================================================
-	# PLOT STACKED SPECTRA
-# 	plot_three_stacked_spectra("/home/macenrola/Documents/XYLENE/correlation_for_reaction/slow-reaction-MP-CB6/vibrational_analysis/traj_from_mode_368/ALL_100k/sample_vel_coupling.xyz-MAG", [0,1,2,5,9], "/home/macenrola/Documents/XYLENE/correlation_for_reaction/slow-reaction-MP-CB6/vibrational_analysis/traj_from_mode_368/ALL_FREQS/sample_vel_coupling.xyz-MAG")
+# =============================================================================
+# 	# PLOT STACKED SPECTRA
+#  	plot_three_stacked_spectra("/home/macenrola/Documents/XYLENE/correlation_for_reaction/slow-reaction-MP-CB6/vibrational_analysis/traj_from_mode_368/ALL_100k/sample_vel_coupling.xyz-MAG", [0,1,2,5,9], "/home/macenrola/Documents/XYLENE/correlation_for_reaction/slow-reaction-MP-CB6/vibrational_analysis/traj_from_mode_368/ALL_FREQS/sample_vel_coupling.xyz-MAG")
 # =============================================================================
 # =============================================================================
-	# PLOT EKIN
-# 	plot_E_kin("/home/macenrola/Documents/XYLENE/correlation_for_reaction/slow-reaction-MP-CB6/vibrational_analysis/traj_from_mode_368/sample_vel_coupling.xyz-small_frag.xyz-EKIN",  r'$m$-xylene', "-.")
-# 	plot_E_kin("/home/macenrola/Documents/XYLENE/correlation_for_reaction/slow-reaction-MP-CB6/vibrational_analysis/traj_from_mode_368/sample_vel_coupling.xyz-large_frag.xyz-EKIN", r'CB[6]', ':')
-# 
-# =============================================================================
+# PLOT EKIN
+	plot_E_kin("/home/macenrola/Documents/XYLENE/correlation_for_reaction/slow-reaction-MP-CB6/vibrational_analysis/traj_from_mode_368/sample_vel_coupling.xyz-small_frag.xyz-EKIN",  r'$m$-xylene', "-.")
+	plot_E_kin("/home/macenrola/Documents/XYLENE/correlation_for_reaction/slow-reaction-MP-CB6/vibrational_analysis/traj_from_mode_368/sample_vel_coupling.xyz-large_frag.xyz-EKIN", r'CB[6]', ':')
+

@@ -245,7 +245,7 @@ if __name__ == "__main__":
 Please use 1D or 2D fes data produced by graph.popt and ending in '.txt'
 of a 2 colvar output file from a metadynamic run ending in 'Log'
 pwd = {}""".format(cwd)
-		plot_big_array_of_fes(glob.glob("/home/macenrola/Documents/XYLENE/inputs/for-reaction-flexible-cb/sanity_check_isomerisation/restarts/*00/*-*/MO-vac/*txt"))
+		plot_big_array_of_fes(glob.glob("/home/macenrola/Documents/XYLENE/inputs/for-reaction-flexible-cb/interemediate_starting_for_slow_mtd/*00/*-*/MP-CB6/*10000.restart.txt"))
 	elif len(sys.argv)==2:
 		flist=[sys.argv[1]]
 	else:
