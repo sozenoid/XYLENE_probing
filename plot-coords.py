@@ -105,7 +105,9 @@ def compute_time(fname, thres=[0.3,0.7], T=300):
 			crit=[var[1]>=thres[0]]
 			badcrit=[False]				     # it is a bad sign ghh
 			accelerated_time+=np.exp(beta*Ha2kcal*var[4])
-		if all(badcrit): break
+		if all(badcrit): 
+			print "{} is bad".format(fname)
+			break
 		if all(crit):
 			print "in the zone: MTD_time: {}; Real_equilvalent: {}".format(var[0], accelerated_time*1e-15)
 			return current_time, accelerated_time*1e-15 # factor 1e-15 added to account for fs units
@@ -245,7 +247,7 @@ if __name__ == "__main__":
 Please use 1D or 2D fes data produced by graph.popt and ending in '.txt'
 of a 2 colvar output file from a metadynamic run ending in 'Log'
 pwd = {}""".format(cwd)
-		plot_big_array_of_fes(glob.glob("/home/macenrola/Documents/XYLENE/inputs/for-reaction-flexible-cb/interemediate_starting_for_slow_mtd/*00/*-*/MP-CB6/*10000.restart.txt"))
+		plot_big_array_of_fes(glob.glob("/home/macenrola/Documents/XYLENE/inputs/for-reaction-flexible-cb/DUMP_SLOW_REACT/fes_validation/*00/*-*/MO-CB7/*txt"))
 	elif len(sys.argv)==2:
 		flist=[sys.argv[1]]
 	else:
@@ -294,7 +296,7 @@ pwd = {}""".format(cwd)
 			except : print "impossible to fit and or plot for {}; lines are {}".format(name, lines)
 
 			#scale=np.median(lines)/np.log(2)
-			#KS_test(lines, fit_scale)
+			KS_test(lines, fit_scale)
 
 		if name[-4:]=="dump":
 			reformat_all_dump(f)

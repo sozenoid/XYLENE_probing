@@ -1106,6 +1106,46 @@ def plot_double_ring_e_pot(d=5.85, R=3.6):
 	plt.xlabel("Distance between the charged ring and the point charge [Angstrom]")
 	plt.ylabel("Electrostatic potential [a.u.]")
 	
+	
+def get_energies_pm6_stability(summary_file):
+	"""
+	PRE: summary_file is obtained after running "for f in *out; do echo '==========' $f '==========='; grep RPM6D3 $f | tail -n5 | grep 'SCF Done:'; done > full_hessian_pm6stability "
+	On a list of out files that contain a TS optimisation with calcall and a freq. between ==== === lines there will be only one line if the computation converged and several if it didn't huhu
+	POST: Plots the distribution of the stability energies
+	"""
+	cline = None
+	resdic = {}
+	with open(summary_file, "rb") as r:
+		for line in r:
+			if line[0]=="=":
+				cline=line
+			elif cline not in resdic: #### didn't hit the === tag so it means we are in between lines
+				resdic[cline] = line
+			else: # means there are several lines between === lines
+# =============================================================================
+# 				print "{} already in the dic".format(cline)
+# =============================================================================
+				resdic[cline] = "NOT CONVERGED"
+				continue
+			
+	energies = []
+	with open(summary_file+"_tmp_check","wb") as w:
+		with open(summary_file+"_failures_to_converge", "wb") as wf:
+			for i, k in enumerate([y for _,y in sorted(zip(resdic.values(), resdic.keys()))]):
+				if resdic[k]!="NOT CONVERGED":
+					w.write("{}\t{}\n".format( k,  (float(resdic[k].strip().split()[-5])+0.4340774664)*627.5))
+					print k,  (float(resdic[k].strip().split()[-5])+0.4340774664)*627.5
+					energies.append(float( resdic[k].strip().split()[-5] ))
+					print i
+				else:
+					wf.write(k.strip().strip("=").strip(" ") +"\n")
+
+
+	plt.plot(sorted([(x+0.4340774664)*627.5 for x in energies])[9:])
+	plt.ylabel("Energy of MO TS in CB7 vs protonated xylene in CB7 [kcal/mol]")
+	plt.xlabel("index")
+	
+	
 if __name__ == "__main__":
 	import rdkit
 	from rdkit import Chem
@@ -1123,6 +1163,8 @@ if __name__ == "__main__":
 	from matplotlib import pyplot as plt
 	from mpl_toolkits.mplot3d import Axes3D
 
+
+	get_energies_pm6_stability("/home/macenrola/Documents/XYLENE/inputs/SP-DONT-WORK/z_shift_full_hessian/full_hessian_pm6stabilityfull_hessian_pm6stability_MO_in_CB7")
 	# process_z_matrix_trajectory('cb6.inp-pos-1-aligned.gzmat')
 	# for f in ['/home/macenrola/Documents/XYLENE/inputs/for-reaction-frozen-cb/MO-CB6.inp-pos-1-aligned-just-CB6.xyz',
 	# 			'/home/macenrola/Documents/XYLENE/inputs/for-reaction-frozen-cb/MO-CB7.inp-pos-1-aligned-just-CB6.xyz',
@@ -1263,7 +1305,10 @@ if __name__ == "__main__":
 #  	plot_three_stacked_spectra("/home/macenrola/Documents/XYLENE/correlation_for_reaction/slow-reaction-MP-CB6/vibrational_analysis/traj_from_mode_368/ALL_100k/sample_vel_coupling.xyz-MAG", [0,1,2,5,9], "/home/macenrola/Documents/XYLENE/correlation_for_reaction/slow-reaction-MP-CB6/vibrational_analysis/traj_from_mode_368/ALL_FREQS/sample_vel_coupling.xyz-MAG")
 # =============================================================================
 # =============================================================================
-# PLOT EKIN
-	plot_E_kin("/home/macenrola/Documents/XYLENE/correlation_for_reaction/slow-reaction-MP-CB6/vibrational_analysis/traj_from_mode_368/sample_vel_coupling.xyz-small_frag.xyz-EKIN",  r'$m$-xylene', "-.")
-	plot_E_kin("/home/macenrola/Documents/XYLENE/correlation_for_reaction/slow-reaction-MP-CB6/vibrational_analysis/traj_from_mode_368/sample_vel_coupling.xyz-large_frag.xyz-EKIN", r'CB[6]', ':')
-
+# =============================================================================
+# # PLOT EKIN
+# 	plot_E_kin("/home/macenrola/Documents/XYLENE/correlation_for_reaction/slow-reaction-MP-CB6/vibrational_analysis/traj_from_mode_368/sample_vel_coupling.xyz-small_frag.xyz-EKIN",  r'$m$-xylene', "-.")
+# 	plot_E_kin("/home/macenrola/Documents/XYLENE/correlation_for_reaction/slow-reaction-MP-CB6/vibrational_analysis/traj_from_mode_368/sample_vel_coupling.xyz-large_frag.xyz-EKIN", r'CB[6]', ':')
+# 
+# 
+# =============================================================================

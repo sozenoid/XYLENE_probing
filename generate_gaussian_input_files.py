@@ -12,10 +12,10 @@ def format_gaussian_input_from_xyz(xyz_file):
 	POST: will produce a gaussian input file
 	"""
 	name=xyz_file.split("/")[-1]
-	route="#N PM6D3 opt=(ts, noeigentest, modredundant, calcall, maxcyc=999) freq"
+	route="#N wB97XD/6-31G* opt=(ts, noeigentest, calcfc, modredundant, maxcyc=999) freq"
 	freeze=" D       2       3       9      10 F"
 	checkpoint="%Chk={}.chk".format(name)
-	mem="%mem=120gb"
+	mem="%mem=110gb"
 	procs="%NProcShared=24"
 
 # =============================================================================
@@ -25,16 +25,18 @@ def format_gaussian_input_from_xyz(xyz_file):
 		charge_mult="1 3"
 		print "{} is diradical or n2".format(name)
 	else:
-		charge_mult = "2 1"
+		charge_mult = "1 1"
 		
 		
 # =============================================================================
 # 	Fine tuning the route section
 # =============================================================================
-	if 'TS' in name:
-		route="#n wB97XD/6-31G(d) opt=(ts, noeigentest, modredundant, calcfc, maxcyc=999) maxdisk=100GB freq"
-	else:
-		route="#n wB97XD/6-31G(d) opt=(modredundant, maxcyc=999) maxdisk=100GB freq"
+# =============================================================================
+# 	if 'TS' in name:
+# 		route="#n wB97XD/6-31G(d) opt=(ts, noeigentest, modredundant, calcfc, maxcyc=999) maxdisk=100GB freq"
+# 	else:
+# 		route="#n wB97XD/6-31G(d) opt=(modredundant, maxcyc=999) maxdisk=100GB freq"
+# =============================================================================
 		
 	
 	if name[-4:]==".xyz":
@@ -97,9 +99,10 @@ if __name__ == "__main__":
 			nano generate_gaussian_input_files.py
 		
 		"""
+		
 	if len(sys.argv)==2:
 		format_gaussian_input_from_xyz(sys.argv[1])
 	if len(sys.argv)>2:
-		for f in sys.argv[2:]:
+		for f in sys.argv[1:]:
 			print extract_xyz_from_gaussian_out(f)
 			format_gaussian_input_from_xyz(f)
