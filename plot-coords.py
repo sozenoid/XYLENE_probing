@@ -106,7 +106,7 @@ def compute_time(fname, thres=[0.3,0.7], T=300):
 			badcrit=[False]				     # it is a bad sign ghh
 			accelerated_time+=np.exp(beta*Ha2kcal*var[4])
 		if all(badcrit): 
-			print "{} is bad at line {}".format(fname, line)
+			print "{} is bad at line {}".format(fname, var)
 			break
 		if all(crit):
 			print "in the zone: MTD_time: {}; Real_equilvalent: {}".format(var[0], accelerated_time*1e-15)
