@@ -191,6 +191,7 @@ def plot_big_array_of_fes(flist):
 	nplots = len(flist)
 	print nplots, nplots%10, nplots/10
 	nrows=20
+	flist = sorted(flist)
 # =============================================================================
 # 	fig, ax = plt.subplots(nrows, nplots/nrows, sharex='col', sharey='row')
 # =============================================================================
@@ -203,7 +204,7 @@ def plot_big_array_of_fes(flist):
 			break
 		name = '-'.join(flist[i].split('/')[-4:])
 		print i, name
-		x,y,z=get_xyz(sorted(flist)[i])
+		x,y,z=get_xyz(flist[i])
 		title = [name.split('-')[0]] + name.split('-')[3:6]
 		x = np.asarray(x).reshape((dim, dim))
 		y = np.asarray(y).reshape((dim, dim))
@@ -247,7 +248,7 @@ if __name__ == "__main__":
 Please use 1D or 2D fes data produced by graph.popt and ending in '.txt'
 of a 2 colvar output file from a metadynamic run ending in 'Log'
 pwd = {}""".format(cwd)
-		plot_big_array_of_fes(glob.glob("/home/macenrola/Documents/XYLENE/inputs/for-reaction-flexible-cb/DUMP_SLOW_REACT/fes_validation/*00/*-*/MO-CB7/*txt"))
+		plot_big_array_of_fes(glob.glob("/home/macenrola/Documents/XYLENE/inputs/for-reaction-flexible-cb/DUMP_SLOW_REACT/fes_validation/*00/*-*/MO-CB6/*txt"))
 	elif len(sys.argv)==2:
 		flist=[sys.argv[1]]
 	else:
