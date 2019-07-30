@@ -1110,12 +1110,13 @@ def format_gaussian_input_from_xyz(xyz_file):
 	POST: will produce a gaussian input file
 	"""
 	name=xyz_file.split("/")[-1]
-	route="#N PM6D3 opt=(ts, noeigentest, modredundant, calcall, maxcyc=999) freq"
+# =============================================================================
+# 	route="#N PM6D3 opt=(ts, noeigentest, modredundant, calcall, maxcyc=999) freq"
+# =============================================================================
 	freeze=" D       2       3       9      10 F" # FOR DBOA
 	freeze=" A       1       7       6 F"
 	# route="#N wB97XD/6-31G(d) opt=(ReadOptimize)"
 	# route="#N PM6D3 opt=(ReadOptimize)"
-	# route="#N PM6D3 opt=(ts, noeigentest, modredundant, calcfc, maxcyc=999) freq=noraman"
 	checkpoint="%Chk={}.chk".format(name)
 	mem="%mem=30gb"
 	procs="%NProcShared=3"
@@ -1124,7 +1125,7 @@ def format_gaussian_input_from_xyz(xyz_file):
 		charge_mult="1 3"
 		print "{} is diradical or n2".format(f)
 	else:
-		charge_mult = "1 1"
+		charge_mult = "0 1"
 	if 'TS' in f:
 		route="#n wB97XD/6-31G(d) opt=(ts, noeigentest, modredundant, calcfc, maxcyc=999) maxdisk=100GB freq"
 	else:
@@ -1133,6 +1134,7 @@ def format_gaussian_input_from_xyz(xyz_file):
 
 	with open(xyz_file, 'rb') as r:
 		coords = r.readlines()[2:]
+	route="#N PM6D3 opt=(calcall, maxcyc=999,verytight, Int=Ultrafine) freq"
 
 	with open(xyz_file+".com", "wb") as w:
 		w.write(procs+"\n")
@@ -1144,7 +1146,9 @@ def format_gaussian_input_from_xyz(xyz_file):
 		w.writelines(coords)
 		w.write("\n")
 		# w.write("notatoms=1-{}\n".format(len(coords)-126))
-		w.write(freeze+"\n")
+# =============================================================================
+# 		w.write(freeze+"\n")
+# =============================================================================
 		w.write("\n")
 
 if __name__ == "__main__":
@@ -1197,10 +1201,8 @@ if __name__ == "__main__":
 # 				print f, a, s
 # 				align_xyz_from_file_to_file(f, a/np.pi, (s,0.0,0))
 # =============================================================================
-# =============================================================================
-# 	for f in glob.glob("/home/macenrola/Documents/XYLENE/inputs/SP-DONT-WORK/z_shift_x_0.*/*_docked.xyz"):
-# 		format_gaussian_input_from_xyz(f)
-# =============================================================================
+	for f in glob.glob("/home/macenrola/Documents/XYLENE/correlation_for_reaction/slow-reaction-MP-CB6/vibrational_analysis/other_coupling_candidates/opti_CB6_CB7/input_gaussian_tight/*.xyz"):
+		format_gaussian_input_from_xyz(f)
 # =============================================================================
 # 		align_xyz_from_file_to_file(f)
 # =============================================================================
@@ -1223,31 +1225,11 @@ if __name__ == "__main__":
 # 	rescale_velocities_from_input_file("/home/macenrola/Documents/XYLENE/correlation_for_reaction/slow-reaction-MP-CB6/vibrational_analysis/traj_from_mode_368/base_vib.inp", 1/545.678989048)
 # 	# flist = sorted(glob.glob('/home/macenrola/Desktop/intermediate/try-stepper-popping-ts/oxylene-cb6-neutral.xyz'))
 # =============================================================================
-	# make_gaussian_input_files_for_xyzgroup(flist)
-	# print flist
-
-	# flist = glob.glob('/home/macenrola/Documents/amberconvergedmols/top50/results/*_COMPLEX.com_OUT.out.sdf')
-	# print_centroid_distance(sorted(flist))
-
-	# flist = sorted(glob.glob('/home/macenrola/Desktop/prepareinputs/cp2kneb/raw-G16-Outputs/all-mins/m*.xyz'))
-	# make_min_script_cp2k_for_xyzlist(flist)
 
 
-	# flist =glob.glob('/home/macenrola/Documents/XYLENE/popping_guests/nwchem_hf/*0.pdb')
-	# for f in flist:
-	# 	make_neb_input_for_nwchem(f, f[:-5]+'9.pdb')
-	# 	make_neb_input_for_nwchem(f, f[:-4] + '_up.pdb')
-
-	# flist = glob.glob('/home/macenrola/Documents/XYLENE/popping_guests/popping-neutral-xyl/stepper-ts/oxylene-cb6-neutral.sdf')
-	# make_nw_paramfile(flist)
-
-
-	# reformat_avogadro_file_for_reaxff('/home/macenrola/Documents/XYLENE/reaxff-md/prot-xylene-bulk/mxylene/prot-mXylene.lmpdat')
-
-
-
-	# doc_pdb_in_cb6('/home/macenrola/Documents/XYLENE/neutral_cb6/CB6.pdb', glob.glob('/home/macenrola/Documents/XYLENE/neutral_cb6/*.pdbqt.pdb'))
-
-
-	for f in glob.glob('/home/macenrola/Documents/XYLENE/correlation_for_reaction/slow-reaction-MP-CB6/vibrational_analysis/other_coupling_candidates/opti_CB6_CB7/input_vib/*.xyz'):
-		xyz_to_cp2kinp(f, charge=0, patternfile="/home/macenrola/Documents/XYLENE/correlation_for_reaction/slow-reaction-MP-CB6/vibrational_analysis/other_coupling_candidates/base_vib.inp")
+# =============================================================================
+# 
+# 	for f in glob.glob('/home/macenrola/Documents/XYLENE/correlation_for_reaction/slow-reaction-MP-CB6/vibrational_analysis/other_coupling_candidates/opti_CB6_CB7/input_vib/*.xyz'):
+# 		xyz_to_cp2kinp(f, charge=0, patternfile="/home/macenrola/Documents/XYLENE/correlation_for_reaction/slow-reaction-MP-CB6/vibrational_analysis/other_coupling_candidates/base_vib.inp")
+# 
+# =============================================================================

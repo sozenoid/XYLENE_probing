@@ -1141,6 +1141,8 @@ def get_energies_pm6_stability(summary_file):
 					wf.write(k.strip().strip("=").strip(" ") +"\n")
 
 
+	with open(summary_file+"_numbers", "wb") as w:
+		w.writelines(["{}\t{}\n".format(str(y[1]), str(y[0])) for y in zip(sorted([(x+0.4340774664)*627.5 for x in energies])[9:], np.linspace(0,1, len(energies)) )])
 	plt.plot(sorted([(x+0.4340774664)*627.5 for x in energies])[9:])
 	plt.ylabel("Energy of MO TS in CB7 vs protonated xylene in CB7 [kcal/mol]")
 	plt.xlabel("index")
@@ -1164,9 +1166,7 @@ if __name__ == "__main__":
 	from mpl_toolkits.mplot3d import Axes3D
 
 
-# =============================================================================
-# 	get_energies_pm6_stability("/home/macenrola/Documents/XYLENE/inputs/SP-DONT-WORK/z_shift_full_hessian/full_hessian_pm6stabilityfull_hessian_pm6stability_MO_in_CB7")
-# =============================================================================
+	get_energies_pm6_stability("/home/macenrola/Documents/XYLENE/inputs/SP-DONT-WORK/z_shift_full_hessian/full_hessian_pm6stabilityfull_hessian_pm6stability_MO_in_CB7")
 	# process_z_matrix_trajectory('cb6.inp-pos-1-aligned.gzmat')
 	# for f in ['/home/macenrola/Documents/XYLENE/inputs/for-reaction-frozen-cb/MO-CB6.inp-pos-1-aligned-just-CB6.xyz',
 	# 			'/home/macenrola/Documents/XYLENE/inputs/for-reaction-frozen-cb/MO-CB7.inp-pos-1-aligned-just-CB6.xyz',
@@ -1296,7 +1296,7 @@ if __name__ == "__main__":
 # =============================================================================
 	
 #MAKE MTD TIME PLOT
-	make_mtd_time_plot("/home/macenrola/Documents/XYLENE/inputs/for-reaction-flexible-cb/DUMP_SLOW_REACT/summary_file_for_plot_few_high_T")
+	make_mtd_time_plot("/home/macenrola/Documents/XYLENE/images/DUMP_ISO/slow_summary_file")
 	
 	
 # =============================================================================

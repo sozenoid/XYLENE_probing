@@ -1,0 +1,15 @@
+#!/usr/bin/env python2
+# -*- coding: utf-8 -*-
+"""
+Created on Tue Jul 30 15:51:59 2019
+
+@author: macenrola
+"""
+
+def get_data_from_out():
+	return
+
+
+if __name__ == "__main__":
+	pass
+
