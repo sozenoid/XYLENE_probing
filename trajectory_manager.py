@@ -19,13 +19,44 @@ def launch_trajectory(traj_name):
 def print_trajectory(traj_name):
 	cmd = "/home/uccahcl/cp2k/exe/local/cp2k.sopt -i {0} -o {0}.out"
 	print cmd.format(traj_name)
+	
+def make_inputs(suffix_to_target, node_size=24):
+	"""
+	PRE: Will take a suffix, collect all the matching files and generate inputs files for this script
+	POSE: Will print a nfile/node_size files
+	"""
+	# This is the Thomas pattern
+	pattern="""#!/bin/bash -l 
+#$ -S /bin/bash
+#$ -l h_rt=10:0:00
+#$ -l mem=5G
+#$ -N mtd
+#$ -pe smp 24
+#$ -cwd
+#$ -P Free
+#$ -A UCL_chemM_Lee
+/home/uccahcl/XYLENE_probing/trajectory_manager.py {}
+"""
+	flist = glob.glob("*{}".format(suffix_to_target))
+	ftowrite = []
+	for i, f in enumerate(sorted(flist)):
+		ftowrite.append(f)
+		if i%node_size==0 or i==len(flist)-1:
+			with open("traj_launcher_{}.sh".format(i/node_size)) as w:
+				w.write(pattern.format(" ".join(ftowrite)))
+				ftowrite=[]
 
 if __name__ == '__main__':
 	pool = multiprocessing.Pool(None)
-	tasks = sys.argv[1:]
-	results = []
-	r = pool.map_async(print_trajectory, tasks, callback=results.append)
-	r.wait() # Wait on the results
-	print results
-	r = pool.map(launch_trajectory, tasks)
-	print r
+	if len(sys.argv)==1:
+		print "You need to provide arguments"
+	elif sys.argv[1]=="suffix" and len(sys.argv)==3:
+		make_inputs(sys.argv[2])
+	else:
+		tasks = sys.argv[1:]
+		results = []
+		r = pool.map_async(print_trajectory, tasks, callback=results.append)
+		r.wait() # Wait on the results
+		print results
+		r = pool.map(launch_trajectory, tasks)
+		print r
