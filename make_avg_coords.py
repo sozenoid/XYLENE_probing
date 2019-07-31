@@ -1166,7 +1166,6 @@ if __name__ == "__main__":
 	from mpl_toolkits.mplot3d import Axes3D
 
 
-	get_energies_pm6_stability("/home/macenrola/Documents/XYLENE/inputs/SP-DONT-WORK/z_shift_full_hessian/full_hessian_pm6stabilityfull_hessian_pm6stability_MO_in_CB7")
 	# process_z_matrix_trajectory('cb6.inp-pos-1-aligned.gzmat')
 	# for f in ['/home/macenrola/Documents/XYLENE/inputs/for-reaction-frozen-cb/MO-CB6.inp-pos-1-aligned-just-CB6.xyz',
 	# 			'/home/macenrola/Documents/XYLENE/inputs/for-reaction-frozen-cb/MO-CB7.inp-pos-1-aligned-just-CB6.xyz',
@@ -1294,11 +1293,24 @@ if __name__ == "__main__":
 # 	
 # 	
 # =============================================================================
+	# SLOW KS STACKED _ISOMERISATION
+	stack_ks_plots([
+			glob.glob("/home/macenrola/Documents/XYLENE/images/DUMP_ISO/DUMP_ALL-dump-MP-vac-*-KS"),
+			glob.glob("/home/macenrola/Documents/XYLENE/images/DUMP_ISO/DUMP_ALL-dump-MP-CB6-*-KS"),
+			glob.glob("/home/macenrola/Documents/XYLENE/images/DUMP_ISO/DUMP_ALL-dump-MP-CB7-*-KS"),
+			glob.glob("/home/macenrola/Documents/XYLENE/images/DUMP_ISO/DUMP_ALL-dump-MO-vac-*-KS"),
+			glob.glob("/home/macenrola/Documents/XYLENE/images/DUMP_ISO/DUMP_ALL-dump-MO-CB6-*-KS"),
+			glob.glob("/home/macenrola/Documents/XYLENE/images/DUMP_ISO/DUMP_ALL-dump-MO-CB7-*-KS")
+			])
 	
-#MAKE MTD TIME PLOT
-	make_mtd_time_plot("/home/macenrola/Documents/XYLENE/images/DUMP_ISO/slow_summary_file")
 	
-	
+# =============================================================================
+# 	
+# #MAKE MTD TIME PLOT
+# 	make_mtd_time_plot("/home/macenrola/Documents/XYLENE/images/DUMP_ISO/slow_summary_file_without_low_p")
+# 	
+# 	
+# =============================================================================
 # =============================================================================
 # =============================================================================
 # 	# PLOT STACKED SPECTRA
@@ -1309,6 +1321,15 @@ if __name__ == "__main__":
 # # PLOT EKIN
 # 	plot_E_kin("/home/macenrola/Documents/XYLENE/correlation_for_reaction/slow-reaction-MP-CB6/vibrational_analysis/traj_from_mode_368/sample_vel_coupling.xyz-small_frag.xyz-EKIN",  r'$m$-xylene', "-.")
 # 	plot_E_kin("/home/macenrola/Documents/XYLENE/correlation_for_reaction/slow-reaction-MP-CB6/vibrational_analysis/traj_from_mode_368/sample_vel_coupling.xyz-large_frag.xyz-EKIN", r'CB[6]', ':')
+# 
+# 
+# =============================================================================
+
+
+# =============================================================================
+# 	#ENERGY PM6 STABILITY
+# 	get_energies_pm6_stability("/home/macenrola/Documents/XYLENE/inputs/SP-DONT-WORK/z_shift_full_hessian/full_hessian_pm6stabilityfull_hessian_pm6stability_MO_in_CB7")
+# 
 # 
 # 
 # =============================================================================
