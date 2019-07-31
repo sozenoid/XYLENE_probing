@@ -27,6 +27,5 @@ if __name__ == '__main__':
 	r = pool.map_async(print_trajectory, tasks, callback=results.append)
 	r.wait() # Wait on the results
 	print results
-	r = pool.map_async(launch_trajectory, tasks, callback=results.append)
-	r.wait() # Wait on the results
-	print results
+	r = pool.map(launch_trajectory, tasks)
+	print r
