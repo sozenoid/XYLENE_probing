@@ -42,7 +42,7 @@ def make_inputs(suffix_to_target, node_size=24):
 	for i, f in enumerate(sorted(flist)):
 		ftowrite.append(f)
 		if i%node_size==0 or i==len(flist)-1:
-			with open("traj_launcher_{}.sh".format(i/node_size)) as w:
+			with open("traj_launcher_{}.sh".format(i/node_size), "r") as w:
 				w.write(pattern.format(" ".join(ftowrite)))
 				ftowrite=[]
 
