@@ -50,7 +50,7 @@ if __name__ == '__main__':
 	pool = multiprocessing.Pool(None)
 	if len(sys.argv)==1:
 		print """You need to provide arguments
-		Use `trajectory_manager.py suffix inp` to generate input files 
+		Use `trajectory_manager.py suffix inp` to generate input files for all files in the current directory that have the suffix "inp"
 		"""
 	elif sys.argv[1]=="suffix" and len(sys.argv)==3:
 		make_inputs(sys.argv[2])
