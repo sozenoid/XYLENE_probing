@@ -41,7 +41,7 @@ def make_inputs(suffix_to_target, node_size=24):
 	ftowrite = []
 	for i, f in enumerate(sorted(flist)):
 		ftowrite.append(f)
-		if i%node_size==0 or i==len(flist)-1:
+		if (i%node_size==0 or i==len(flist)-1) and i!=0:
 			with open("traj_launcher_{}.sh".format(i/node_size), "wt") as w:
 				w.write(pattern.format(" ".join(ftowrite)))
 				ftowrite=[]
@@ -49,7 +49,9 @@ def make_inputs(suffix_to_target, node_size=24):
 if __name__ == '__main__':
 	pool = multiprocessing.Pool(None)
 	if len(sys.argv)==1:
-		print "You need to provide arguments"
+		print """You need to provide arguments
+		Use `trajectory_manager.py suffix inp` to generate input files 
+		"""
 	elif sys.argv[1]=="suffix" and len(sys.argv)==3:
 		make_inputs(sys.argv[2])
 	else:
