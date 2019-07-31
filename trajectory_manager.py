@@ -13,7 +13,7 @@ import glob
 
 def launch_trajectory(traj_name):
 	cmd = "/home/uccahcl/cp2k/exe/local/cp2k.sopt -i {0} -o {0}.out"
-	return subprocess.call(cmd.format(traj_name), shell=False)
+	return subprocess.call(cmd.format(traj_name).split(), shell=False)
 
 
 def print_trajectory(traj_name):
