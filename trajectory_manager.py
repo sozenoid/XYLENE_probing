@@ -13,17 +13,17 @@ import glob
 
 def launch_trajectory(traj_name):
 	cmd = "/home/uccahcl/cp2k/exe/local/cp2k.sopt -i {0} -o {0}.out"
-    return subprocess.call(cmd.format(traj_name), shell=False)
+	return subprocess.call(cmd.format(traj_name), shell=False)
 
 
 def print_trajectory(traj_name):
 	cmd = "/home/uccahcl/cp2k/exe/local/cp2k.sopt -i {0} -o {0}.out"
-    print cmd.format(traj_name)
+	print cmd.format(traj_name)
 
 if __name__ == '__main__':
-    pool = multiprocessing.Pool(None)
-    tasks = sys.argv[1:]
-    results = []
-    r = pool.map_async(print_trajectory, tasks, callback=results.append)
-    r.wait() # Wait on the results
-    print results
+	pool = multiprocessing.Pool(None)
+	tasks = sys.argv[1:]
+	results = []
+	r = pool.map_async(print_trajectory, tasks, callback=results.append)
+	r.wait() # Wait on the results
+	print results
