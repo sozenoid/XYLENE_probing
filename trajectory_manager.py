@@ -42,10 +42,12 @@ def make_inputs(pattern_to_target, node_size=24):
 	for i, f in enumerate(sorted(flist)):
 		ftowrite.append(f)
 		if (i+1)%node_size==0 and i!=0:
-			print i 
 			with open("traj_launcher_{}.sh".format(i/node_size), "wt") as w:
 				w.write(pattern.format(" ".join(ftowrite)))
 				ftowrite=[]
+	if ftowrite!=[]:
+		with open("traj_launcher_{}.sh".format(i/node_size), "wt") as w:
+			w.write(pattern.format(" ".join(ftowrite)))
 
 if __name__ == '__main__':
 	# pool = multiprocessing.Pool(None)
