@@ -12,11 +12,14 @@ def format_gaussian_input_from_xyz(xyz_file):
 	POST: will produce a gaussian input file
 	"""
 	name=xyz_file.split("/")[-1]
-	route="#N wB97XD/6-31G* opt=(ts, noeigentest, calcfc, modredundant, maxcyc=999) freq"
+# =============================================================================
+# 	route="#N wB97XD/6-31G* opt=(ts, noeigentest, calcfc, modredundant, maxcyc=999) freq"
+# =============================================================================
+	route="#n PM6D3 Freq=(Anharmonic, PrintDerivatives, InternalModes, cubic, HPModes)"
 	freeze=" D       2       3       9      10 F"
 	checkpoint="%Chk={}.chk".format(name)
-	mem="%mem=110gb"
-	procs="%NProcShared=24"
+	mem="%mem=30gb"
+	procs="%NProcShared=8"
 
 # =============================================================================
 # 	Fine tuning the charge and multiplicity
@@ -55,7 +58,7 @@ def format_gaussian_input_from_xyz(xyz_file):
 		w.writelines(coords)
 		w.write("\n")
 		# w.write("notatoms=1-{}\n".format(len(coords)-126))
-		w.write(freeze+"\n")
+		#w.write(freeze+"\n")
 		w.write("\n")
 
 
