@@ -59,7 +59,21 @@ def get_data_from_out(outfile):
 	#print "".join(cubic_block)
 
 	return mode_dic, cubic_dic
+
+
+
 if __name__ == "__main__":
 	import numpy as np
-	get_data_from_out("/home/macenrola/Documents/XYLENE/inputs/cubic_coupling/OUTS/mxylene.com_OUT.out")
-
+	import glob
+	#for f in glob.glob('/Users/hugueslambert/Desktop/xylene/cubic_coupling/*out'):
+	#	print len(get_data_from_out(f)[0].keys())
+	mod_xyl, _ = get_data_from_out("/Users/hugueslambert/Desktop/xylene/cubic_coupling/mxylene.com_OUT.out.xyz.com_OUT.out.xyz.com_OUT.out")
+	
+	for f in glob.glob('/Users/hugueslambert/Desktop/xylene/cubic_coupling/*out'):
+		print f
+		mod,_ = get_data_from_out(f)
+		for k in sorted(mod)[:-1]: # avoid the order 
+			for j in sorted(mod_xyl)[:-1]: # leave out the last one to avoid the ORDER that contains the order of the atoms defining the modes, it's assumed they line up
+				corr= sum([float(x)*float(y) for x, y in zip(mod_xyl[j][1], mod[k][1][:len(mod_xyl[j][1])])])
+				if corr>0.5:
+					print k, j , corr
