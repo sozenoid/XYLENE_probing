@@ -31,7 +31,7 @@ def get_data_from_out(outfile):
 # 	print "".join(mode_block)
 # =============================================================================
 	# Then gets the mode numbers and positions in the block based on the "A" sequencies in the block
-	AA_indices = [i for i, j in enumerate(mode_block) if "    A         " in j]
+	AA_indices = [i-1 for i, j in enumerate(mode_block) if "Frequencies ---" in j]
 	spacing = AA_indices[1]-AA_indices[0]
 	mode_dic={}
 	for i in AA_indices:
@@ -60,20 +60,43 @@ def get_data_from_out(outfile):
 
 	return mode_dic, cubic_dic
 
-
+def procrustean_fit_for_xylene_part_of_eigenvectors(mod_xyl, mod_comp):
+	"""
+	PRE  : Provides the eigenvector as a dictionary as returned by get_data_from_out with the xylene part of the eigenvectors similarly ordered 
+	POST : will return the correlation coefficient and the aligned version of the modes 
+	"""
+	
+	# BUILD THE MATRICES FOR THE PROCUSTEAN TEST
+	mat_xyl = []
+	mat_comp = []
+	
+	for k in mod_xyl:
+		print k, mod_xyl[k]
 
 if __name__ == "__main__":
 	import numpy as np
 	import glob
 	#for f in glob.glob('/Users/hugueslambert/Desktop/xylene/cubic_coupling/*out'):
 	#	print len(get_data_from_out(f)[0].keys())
-	mod_xyl, _ = get_data_from_out("/Users/hugueslambert/Desktop/xylene/cubic_coupling/mxylene.com_OUT.out.xyz.com_OUT.out.xyz.com_OUT.out")
-	
-	for f in glob.glob('/Users/hugueslambert/Desktop/xylene/cubic_coupling/*out'):
+	path = '/home/macenrola/Documents/XYLENE/inputs/cubic_coupling/OUTS/cubic_coupling/'
+	#mod_xyl, _ = get_data_from_out("/Users/hugueslambert/Desktop/xylene/cubic_coupling/mxylene.com_OUT.out.xyz.com_OUT.out.xyz.com_OUT.out")
+	couples = [
+			'mxylene-h-single-CB6.com_OUT.out.xyz.com_OUT.out.xyz.com_OUT.out.xyz.com_OUT.out',
+			'mxylene-h-single-CB7.com_OUT.out.xyz.com_OUT.out.xyz.com_OUT.out.xyz.com_OUT.out',
+			'mxylene-protonated-CB6.com_OUT.out.xyz.com_OUT.out.xyz.com_OUT.out.xyz.com_OUT.out',
+			'mxylene-protonated-CB7.com_OUT.out.xyz.com_OUT.out.xyz.com_OUT.out.xyz.com_OUT.out',
+			'mxylene-CB6.com_OUT.out.xyz.com_OUT.out.xyz.com_OUT.out.xyz.com_OUT.out',
+			'mxylene-CB7.com_OUT.out.xyz.com_OUT.out.xyz.com_OUT.out.xyz.com_OUT.out',
+			]
+	for f in couples:
 		print f
-		mod,_ = get_data_from_out(f)
-		for k in sorted(mod)[:-1]: # avoid the order 
-			for j in sorted(mod_xyl)[:-1]: # leave out the last one to avoid the ORDER that contains the order of the atoms defining the modes, it's assumed they line up
-				corr= sum([float(x)*float(y) for x, y in zip(mod_xyl[j][1], mod[k][1][:len(mod_xyl[j][1])])])
-				if corr>0.5:
-					print k, j , corr
+		mod,_ = get_data_from_out(path+f)
+		mod_xyl, _ = get_data_from_out("{}xylenes/just_xyl-{}.xyz.com_OUT.out".format(path,f))
+		procrustean_fit_for_xylene_part_of_eigenvectors(mod_xyl, mod)
+# =============================================================================
+# 		for k in sorted(mod)[:-1]: # avoid the order 
+# 			for j in sorted(mod_xyl)[:-1]: # leave out the last one to avoid the ORDER that contains the order of the atoms defining the modes, it's assumed they line up
+# 				corr= sum([float(x)*float(y) for x, y in zip(mod_xyl[j][1], mod[k][1][:len(mod_xyl[j][1])])])
+# 				if corr>0.5:
+# 					print k, j , corr
+# =============================================================================

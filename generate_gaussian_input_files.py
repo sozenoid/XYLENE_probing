@@ -34,12 +34,10 @@ def format_gaussian_input_from_xyz(xyz_file):
 # =============================================================================
 # 	Fine tuning the route section
 # =============================================================================
-# =============================================================================
-# 	if 'TS' in name:
-# 		route="#n wB97XD/6-31G(d) opt=(ts, noeigentest, modredundant, calcfc, maxcyc=999) maxdisk=100GB freq"
-# 	else:
-# 		route="#n wB97XD/6-31G(d) opt=(modredundant, maxcyc=999) maxdisk=100GB freq"
-# =============================================================================
+	if 'TS' in name:
+		route="#n wB97XD/6-31G(d) opt=(ts, noeigentest, modredundant, calcfc, recalcfc=5, maxcyc=999) maxdisk=100GB freq"
+	else:
+		route="#n wB97XD/6-31G(d) opt=(modredundant, maxcyc=999) maxdisk=100GB freq"
 		
 	
 	if name[-4:]==".xyz":
@@ -58,7 +56,7 @@ def format_gaussian_input_from_xyz(xyz_file):
 		w.writelines(coords)
 		w.write("\n")
 		# w.write("notatoms=1-{}\n".format(len(coords)-126))
-		#w.write(freeze+"\n")
+		w.write(freeze+"\n")
 		w.write("\n")
 
 
