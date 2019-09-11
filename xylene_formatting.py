@@ -249,15 +249,15 @@ def get_CB_guest_atomxyz(rdkitmol):
 	from rdkit import Chem
 	from rdkit.Chem import AllChem
 	try:
-		complex, guest = Chem.GetMolFrags(rdkitmol, asMols=True)
-		if complex.GetNumAtoms()<guest.GetNumAtoms():
-			complex, guest = guest, complex
+		comp, guest = Chem.GetMolFrags(rdkitmol, asMols=True)
+		if comp.GetNumAtoms()<guest.GetNumAtoms():
+			comp, guest = guest, comp
 
 		#### Get poits for the the hull convex
 		hull_points = []
-		complexc = complex.GetConformer(-1)
+		complexc = comp.GetConformer(-1)
 		for i in range(complexc.GetNumAtoms()):
-			cc = [complex.GetAtomWithIdx(i).GetSymbol()]
+			cc = [comp.GetAtomWithIdx(i).GetSymbol()]
 			cc.extend(list(complexc.GetAtomPosition(i)))
 			hull_points.append(cc)
 			# print cc
@@ -500,22 +500,22 @@ mpirun -np $NSLOTS -machinefile $TMPDIR/machines nwchem {}\n\
 		w.write(shstring.format(genname, genname+'.nw',genname+'_LOGOUT'))
 
 
-def make_gaussian_input_files_for_molgroup(list_of_pdbs):
+def make_gaussian_input_files_for_molgroup(list_of_mols):
 	"""
-	:param list_of_pdbs: take in a list of sdf files located into the very same directory
+	:param list_of_mols: take in a list of sdf files located into the very same directory
 	:return: produce a com file for each of the pdb files, a paramfile and a sh file to launch gaussian
 	"""
-	path = '/'.join(list_of_pdbs[0].split('/')[:-1]) + '/'
+	path = '/'.join(list_of_mols[0].split('/')[:-1]) + '/'
 	genname = 'COMPLEX'
 	paramfile = path + '{}paramfile'.format(genname)
-	nproc = 16
+	nproc = 4
 	memperproc = 2
 	shfile = path + '{}.sh'.format(genname)
 	comstring = "\
 %Chk={0}.chk\n\
 %NProcShared={1}\n\
 %mem={2}gb\n\
-#n wB97XD/3-21G Opt\n\
+#n PM6D3 Opt\n\
 \n\
 {0}\n\
 \n\
@@ -544,11 +544,11 @@ time g16 < $g16infile > $g16outfile\n\
 	print paramfile
 	with open(paramfile, 'wb') as w: pass
 	with open(paramfile, 'ab') as a:
-		for i, fname in enumerate(sorted(list_of_pdbs)):
+		for i, fname in enumerate(sorted(list_of_mols)):
 			comname = fname[:-4] + '.com'
 			a.write('{0:04d}\t{1}\n'.format(i+1, comname.split('/')[-1]))
 
-			cmol = Chem.MolFromPDBFile(fname, removeHs=False)
+			cmol = Chem.MolFromMolFile(fname, removeHs=False)
 			ccomplex, cguest = get_CB_guest_atomxyz(cmol)
 			ccomstring = comstring.format(fname.split('/')[-1][:-4], nproc, nproc*memperproc)
 			for coord in ccomplex+cguest:
@@ -1162,6 +1162,8 @@ if __name__ == "__main__":
 	import sys
 	
 	
+	make_gaussian_input_files_for_molgroup(glob.glob("/home/macenrola/Documents/H-S-compensation/sdfs/*.sdf"))
+	
 # =============================================================================
 # 	flist= [
 # 		("/home/macenrola/Documents/XYLENE/correlation_for_reaction/slow-reaction-MP-CB6/vibrational_analysis/other_coupling_candidates/single_mode_trajectory/6734.xyz_a_0.0_s_0.0_0.0_docked.xyz-VIBRATIONS-1.mol",416),
@@ -1201,8 +1203,10 @@ if __name__ == "__main__":
 # 				print f, a, s
 # 				align_xyz_from_file_to_file(f, a/np.pi, (s,0.0,0))
 # =============================================================================
-	for f in glob.glob("/home/macenrola/Documents/XYLENE/correlation_for_reaction/slow-reaction-MP-CB6/vibrational_analysis/other_coupling_candidates/opti_CB6_CB7/input_gaussian_tight/*.xyz"):
-		format_gaussian_input_from_xyz(f)
+# =============================================================================
+# 	for f in glob.glob("/home/macenrola/Documents/XYLENE/correlation_for_reaction/slow-reaction-MP-CB6/vibrational_analysis/other_coupling_candidates/opti_CB6_CB7/input_gaussian_tight/*.xyz"):
+# 		format_gaussian_input_from_xyz(f)
+# =============================================================================
 # =============================================================================
 # 		align_xyz_from_file_to_file(f)
 # =============================================================================

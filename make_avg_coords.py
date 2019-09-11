@@ -1164,8 +1164,12 @@ if __name__ == "__main__":
 	import cPickle
 	from matplotlib import pyplot as plt
 	from mpl_toolkits.mplot3d import Axes3D
-
-
+	import random
+	with open("/home/macenrola/Documents/H-S-compensation/PUBCHEM_ONLY_C_only_19_atoms", "rb") as r:
+		lines = r.readlines()
+		elems = random.sample(lines, k =230)
+	with open("/home/macenrola/Documents/H-S-compensation/C19_sample_200.can", "wb") as w:
+		w.writelines(elems) 
 	# process_z_matrix_trajectory('cb6.inp-pos-1-aligned.gzmat')
 	# for f in ['/home/macenrola/Documents/XYLENE/inputs/for-reaction-frozen-cb/MO-CB6.inp-pos-1-aligned-just-CB6.xyz',
 	# 			'/home/macenrola/Documents/XYLENE/inputs/for-reaction-frozen-cb/MO-CB7.inp-pos-1-aligned-just-CB6.xyz',
@@ -1293,17 +1297,19 @@ if __name__ == "__main__":
 # 	
 # 	
 # =============================================================================
-	# SLOW KS STACKED _ISOMERISATION
-	stack_ks_plots([
-			glob.glob("/home/macenrola/Documents/XYLENE/images/DUMP_ISO/DUMP_ALL-dump-MP-vac-*-KS"),
-			glob.glob("/home/macenrola/Documents/XYLENE/images/DUMP_ISO/DUMP_ALL-dump-MP-CB6-*-KS"),
-			glob.glob("/home/macenrola/Documents/XYLENE/images/DUMP_ISO/DUMP_ALL-dump-MP-CB7-*-KS"),
-			glob.glob("/home/macenrola/Documents/XYLENE/images/DUMP_ISO/DUMP_ALL-dump-MO-vac-*-KS"),
-			glob.glob("/home/macenrola/Documents/XYLENE/images/DUMP_ISO/DUMP_ALL-dump-MO-CB6-*-KS"),
-			glob.glob("/home/macenrola/Documents/XYLENE/images/DUMP_ISO/DUMP_ALL-dump-MO-CB7-*-KS")
-			])
-	
-	
+# =============================================================================
+# 	# SLOW KS STACKED _ISOMERISATION
+# 	stack_ks_plots([
+# 			glob.glob("/home/macenrola/Documents/XYLENE/images/DUMP_ISO/DUMP_ALL-dump-MP-vac-*-KS"),
+# 			glob.glob("/home/macenrola/Documents/XYLENE/images/DUMP_ISO/DUMP_ALL-dump-MP-CB6-*-KS"),
+# 			glob.glob("/home/macenrola/Documents/XYLENE/images/DUMP_ISO/DUMP_ALL-dump-MP-CB7-*-KS"),
+# 			glob.glob("/home/macenrola/Documents/XYLENE/images/DUMP_ISO/DUMP_ALL-dump-MO-vac-*-KS"),
+# 			glob.glob("/home/macenrola/Documents/XYLENE/images/DUMP_ISO/DUMP_ALL-dump-MO-CB6-*-KS"),
+# 			glob.glob("/home/macenrola/Documents/XYLENE/images/DUMP_ISO/DUMP_ALL-dump-MO-CB7-*-KS")
+# 			])
+# 	
+# 	
+# =============================================================================
 # =============================================================================
 # 	
 # #MAKE MTD TIME PLOT
