@@ -149,9 +149,12 @@ def reformat_all_dump(time_dist_dump_file):
 	      the third column is the MTD time and the last the real time
 	POST: will produce  different files named after the temperature and system and containing only the real time
 	"""
-	system_markers=['MO-CB6', 'MO-CB7', 'MP-CB6', 'MP-CB7', 'MO-vac', 'MP-vac',
-	'oxylene-cb6', 'pxylene-cb6', 'mxylene-cb6', 'oxylene-cb7', 'pxylene-cb7', 'mxylene-cb7',
-	'adamantanol_cb7']
+# =============================================================================
+# 	system_markers=['MO-CB6', 'MO-CB7', 'MP-CB6', 'MP-CB7', 'MO-vac', 'MP-vac',
+# 	'oxylene-cb6', 'pxylene-cb6', 'mxylene-cb6', 'oxylene-cb7', 'pxylene-cb7', 'mxylene-cb7',
+# 	'adamantanol_cb7']
+# =============================================================================
+	system_markers=['oxylene-prot-cb6', 'mxylene-prot-cb6', 'pxylene-prot-cb6', 'oxylene-prot-cb7', 'mxylene-prot-cb7', 'pxylene-prot-cb7']
 	systems = dict()
 	with open(time_dist_dump_file, 'rb') as r: lines = [x.strip().split() for x in r.readlines()]
 	#
@@ -278,14 +281,14 @@ pwd = {}""".format(cwd)
 			print name
 			T=float(f.split('/')[0])
 			with open(dumpfile,'ab') as a:
-				ctime,atime=compute_time(f,thres=[0.3, 0.7], T=T)
+				ctime,atime=compute_time(f,thres=[15], T=T)
 				if ctime > 300:
 					a.write("{}\t{}\t{}\t{}\n".format(T,name,ctime, atime))
 					timedist.append(atime)
 				else:
 					print "accelerated time out of bounds ({})".format(ctime)
 		if name[-2:]=="KS":
-			with open(f, 'rb') as r: lines=sorted([float(x.strip()) for x in r.readlines()])[:]
+			with open(f, 'rb') as r: lines=sorted([float(x.strip()) for x in r.readlines()])[:-5]
 			# print lines
 			#scale=float(name.split('-')[-2])
 			try:
