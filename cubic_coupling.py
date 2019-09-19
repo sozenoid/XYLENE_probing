@@ -151,11 +151,6 @@ def compute_decay_rates_fujisaki(cubic_dic, mode_dic, mode_nbr, xyl_mode_list, C
  : K  =  Cubic Force Const.[Hartree*amu(-3/2)*Bohr(-3)] :
  :......................................................:
 	"""
-	h = 6.62607015e-34# Js
-	kb = 1.380649e-23 # J/K
-	T = 200 # K
-	amu = 1.66054e-27 # kg
-	c = 29979245800# cm/s
 	WXX, WCC, WCX, WXM, WCM, WMM = 0,0,0,0,0,0 # cumulative decay rate for xylene xylene denominated frequencies (WXX), CB and CB (WCC), CB and Xylene (WCX), Mixed and Mixed (WMM), Xylene and Mixed (WXM), CB and Mixed (WCM)
 	cWXX, cWCC, cWCX, cWXM, cWCM, cWMM = 0,0,0,0,0,0 # associated counters
 	mode_nbr = str(mode_nbr)
@@ -176,7 +171,7 @@ def compute_decay_rates_fujisaki(cubic_dic, mode_dic, mode_nbr, xyl_mode_list, C
 # =============================================================================
 			#cwdecay = h/16./fcmode*(float(cubic_dic[k][1])*1e-18*amu**(-3/2.0)*1e-10**(-3))**2*masses[0]*masses[1]*masses[2]/freqs[0]/freqs[1]*(1+occ_num(freqs[0], h, kb,T)+ occ_num(freqs[1],h, kb,T))*delta(fcmode-freqs[0]-freqs[1])
 			#cwdecay = h/16/fcmode.*(float(cubic_dic[k][1])*1e-18*amu**(-3./2.0)*(1e-10)**(-3))**2 /freqs[0]/freqs[1]*(1+occ_num(freqs[0], h, kb,T) + occ_num(freqs[1],h, kb,T))*delta(fcmode-freqs[0]-freqs[1],c)
-			cwdecay = (float(cubic_dic[k][0]))**2 *(1+occ_num(freqs[0], h, kb,T) + occ_num(freqs[1],h, kb,T))*delta(fcmode-freqs[0]-freqs[1],1)
+			cwdecay = (float(cubic_dic[k][0]))**2 *(1+occ_num(freqs[0]) + occ_num(freqs[1]))*delta(fcmode-freqs[0]-freqs[1],1)
 # =============================================================================
 # 			cwdecay = C_FUJISAKI(fcmode, h, kb, T) * h**2/2 * (float(cubic_dic[k][1])*1e-18*amu**(-3/2.0)*1e-10**(-3))**2/freqs[0]/freqs[1] * (
 # 									(1+occ_num(freqs[0], h, kb,T) + occ_num(freqs[1],h, kb,T) + 2*occ_num(freqs[1],h, kb,T)*occ_num(freqs[0],h, kb,T))*(delta(fcmode+freqs[0]+freqs[1])+delta(-fcmode+freqs[0]+freqs[1])) + (
@@ -212,6 +207,11 @@ def compute_decay_rates_fujisaki(cubic_dic, mode_dic, mode_nbr, xyl_mode_list, C
 	return [x for x in [WXX, WCC, WCX, WXM, WCM, WMM]]
 	
 
+def compute_decay_rates_fujisaki(cubic_dic, mode_dic, mode_nbr, xyl_mode_list, CB_mode_list):
+	"""
+	PRE  : 
+	POST :
+	"""
 
 def get_lambda(mode_nbrs, mod, cub):
 	"""
@@ -219,227 +219,140 @@ def get_lambda(mode_nbrs, mod, cub):
 	POST: Returns the lambda_ijk value accordking to buttrin. It is assumed that the cm-1 format can yield an energy through *c*h which then can give lamdaijk as energy once divided by kb*T
 	"""	
 	cubic_fluctuation = 0
-	temp_cub_dic = {}
 	mode_nbrs = [str(x) for x in mode_nbrs]
-	for i in sorted(cub):
-		nums = i.split('-')
-		for els in mode_nbrs:
-			if nums.count(els) == 2:
-				nums.remove(els)
-				nums.remove(els)
-				if int(nums[0]) not in temp_cub_dic:
-					temp_cub_dic[int(nums[0])] = [(i, cub[i])]
-				else:
-					temp_cub_dic[int(nums[0])].append((i, cub[i]))
-	for k in sorted(temp_cub_dic):
-		fi = -1
-		if len(temp_cub_dic[k])==3:
-			for i, els in enumerate(temp_cub_dic[k]):
-				parts=els[0].split('-')
-				if parts.count(mode_nbrs[0]) == 2:
-					parts.remove(mode_nbrs[0])
-					parts.remove(mode_nbrs[0])
-					fi=i
-					break
-			index = [0,1,2]
-			index.remove(fi)
-			cubic_fluctuation += ((float(temp_cub_dic[k][fi][1][0])-float(temp_cub_dic[k][index[0]][1][0])-float(temp_cub_dic[k][index[1]][1][0]))*c*h)**2*occ_num(float(mod[parts[0]][0][0])*c,h, kb,T)
-	return .25*cubic_fluctuation/T/kb
+	for it in [str(x+1) for x in range(len(mod)-1)]:
+		if it not in mode_nbrs: 
+			try:
+				cubic_fluctuation += occ_num(float(mod[it][0][0]))*(float(cub["{0}-{1}-{1}".format(it, mode_nbrs[0])][0]) - float(cub["{0}-{1}-{1}".format(it, mode_nbrs[1])][0]) -float(cub["{0}-{1}-{1}".format(it, mode_nbrs[2])][0]))**2
+			except:
 # =============================================================================
-# 		if i not in mode_nbrs:
-# 			try:
-# 				temp_flux = []
-# 				for els in mode_nbrs:
-# 					temp_flux.append(float(cub['{}-{}-{}'.format(i, els,els)][0]))
-# 				for els in mode_nbrs:
-# 					print '{}-{}-{}'.format(i, els,els)
-# 				cubic_fluctuation+= ((temp_flux[0]-temp_flux[1]-temp_flux[2])*c*h)**2*occ_num(float(mod[i][0][1])*c,h, kb,T)
-# 			except:
-# 				continue
-# 		else: 
-# 			continue
-# 	print .25*cubic_fluctuation/kb/T/h/c
+# 				print "{0}-{1}-{1}".format(it, mode_nbrs[0]), "{0}-{1}-{1}".format(it, mode_nbrs[1]), "{0}-{1}-{1}".format(it, mode_nbrs[2]), "not going through"
 # =============================================================================
+				pass
+	return cubic_fluctuation/4./2/kbtcm # returns the value in J (/2/kb/T*(h*c)**2) or cm-1 (/2/kb/T*(h*c))
+
 def get_lambda_array(mod, cub):
 	"""
 	PRE : takes the frequency and cubic information
-	POST: Will build a three dimentional array of lambdas for future use
+	POST: Will build a three dimentional array of lambdas for future use, the numbering starts at 0 not 1 like the mode numbers
 	"""
 	dim = len(mod)-1
-	lambda_array = np.empty([dim, dim, dim])
+	lambda_array = np.zeros([dim, dim, dim])
 	for i in range(dim):
-		print i
+		print i 
 		for j in range(dim):
 			for k in range(dim):
-				lambda_array[i][j][k] = get_lambda([i,j,k], mod, cub)
+				lambda_array[i][j][k] = get_lambda([i+1,j+1,k+1], mod, cub)
 	return lambda_array
 
-def kijk(i,j,k):
+def kijk(i,j,k, vijk, tauijk, lambdaijk, mod):
 	"""
 	PRE: Given the Tauijk 
 	POST: Returns the kijk
 	"""
-	Vijktilde = vijk_array[i,j,k]/(1+(j==k))
-	hbar = h/math.pi/2
-	return (2*math.pi) /hbar * (Vijktilde)**2 *1/8/(4*math.pi * kb * T* lambda_array[i,j,k])**.5 *1/(
-			1+ (4*math.pi*Vijktilde**2*tau_array[i,j,k])/(8*hbar*lambda_array[i,j,k]))
+	Vijktilde = vijk[i][j][k]/(1+(j==k))
+	hbar = h
+# =============================================================================
+# 	res = (2*math.pi) /hbar * (Vijktilde*h*c)**2 *1./8/(4*math.pi *kb*T*h*c* lambdaijk)**.5 *1/(
+# 			1+ (4*math.pi*(h*c*Vijktilde)**2*tauijk)/(8*hbar*h*c*lambdaijk))
+# =============================================================================
+# =============================================================================
+# 	res = c* (Vijktilde)**2 *1./8/(4*math.pi * kbtcm* lambdaijk)**.5 *1/(
+# 			1+ (c*4*math.pi*Vijktilde**2*tauijk)/(8*lambdaijk))
+# =============================================================================
+# =============================================================================
+# 	res = c* (Vijktilde)**2 *1/(4* kbtcm* lambdaijk)**.5 *1/(
+# 			1+ (c*4*Vijktilde**2*tauijk)/(lambdaijk))
+# =============================================================================
+	acc = 0
+	for z in range(len(mod)-1):
+		fr = float(mod[str(z+1)][0][0])
+		acc +=fr**2 * (vijk[i][i][z] - vijk[j][j][z] -vijk[k][k][z])**2/kbtcm/2/math.sinh(fr/2/kbtcm)
+	kna = c*Vijktilde**2*(math.pi/lambdaijk/kbtcm)**.5
+	ka = c/2/math.pi * (1/lambdaijk * acc)**.5
+	res = kna*ka/(kna+ka)
 
-def make_kijk_array():
-	"""
-	PRE  : takes in the vijk array, the lambdaijk array and the tauijk array 
-	POST : Returns the kijk array
-	"""
-	k_array = np.empty([dim, dim, dim])
-	for i in range(dim):
-		for j in range(dim):
-			for k in range(dim):
-				k_array[i][j][k]=kijk(i,j,k)			
+	return res
+			
 				
-def wijk(mod, i,j,k,lambdaijk,kijk):
+def wijk(freqs,lambdaijk,kijk):
 	"""
 	PRE: Given the kijk
 	POST: Returns the wijk
 	"""
-	deltaijk = h/math.pi/2*(-mod[i][0][0]+mod[j][0][0]+mod[k][0][0])*c
-	return kijk*math.exp(-(deltaijk+lambdaijk)**2/4/lambdaijk/kb/T)
+	deltaijk = (-float(freqs[0])+float(freqs[1])+float(freqs[2]))
+	return kijk*math.exp(-(deltaijk+lambdaijk)**2/4/lambdaijk/kbtcm)
 	
 
-def wjki(mod,i,j,k,lambdaijk,kijk):
+def wjki(freqs,lambdaijk,kijk):
 	"""
 	PRE: Given the kijk
 	POST: Returns the wjki
 	"""
-	deltaijk = h/math.pi/2*(-mod[i][0][0]+mod[j][0][0]+mod[k][0][0])*c
-	return kijk*math.exp(-(-deltaijk+lambdaijk)**2/4/lambdaijk/kb/T)
+	deltaijk = (-float(freqs[0])+float(freqs[1])+float(freqs[2]))
+	return kijk*math.exp(-(-deltaijk+lambdaijk)**2/4/lambdaijk/kbtcm)
 
-def rlij(mod, l, i, j, Vijk):
+def rlij(wi_jl, wjl_i, wij_l, wl_ij, l, i, j):
 	"""
 	PRE : Given the wijk and wjki
 	POST: Returns the rlij
 	"""
-# =============================================================================
-# 	lambdaijl = get_lambda([i,j,l], mod, cub)
-# 	tauijl = tauijk([i,j,l], lambdaijl)
-# 	kijl = kijk(i,j,l, Vijk, lambdaijl, tauijl)
-# 	lambdajli = get_lambda([j,l,i], mod, cub)
-# 	taujli = tauijk([j,l,i], lambdajli)
-# 	kjli = kijk(j,l,i, lambdajli, taujli)
-# 	lambdaijl = get_lambda([i,j,l], mod, cub)
-# 	tauijl = tauijk([i,j,l], lambdaijl)
-# 	kijl = kijk(i,j,l, lambdaijl, tauijl)
-# 	lambdalij = get_lambda([l,i,j], mod, cub)
-# 	taulij = tauijk([l,i,j], lambdalij)
-# 	klij = kijk(l,i,j, lambdalij, taulij)
-# =============================================================================
-	
-	return (1+l==j)**3*(
-			wijk(mod, i, j, l, lambdaijl, kijl) * (1+occ_num(float(mod[i][0][0])*c,h, kb,T)) * occ_num(float(mod[j][0][0])*c,h, kb,T) - (
-					wjki(mod, j, l, i, lambdajli, kjli) * (occ_num(float(mod[i][0][0])*c,h, kb,T))*(1+occ_num(float(mod[j][0][0])*c,h, kb,T))
+	res = (1+l==j)**3*(
+			wi_jl * (1+occ_num(float(mod[str(i+1)][0][0]))) * occ_num(float(mod[str(j+1)][0][0])) - (
+					wjl_i * (occ_num(float(mod[str(i+1)][0][0])))*(1+occ_num(float(mod[str(j+1)][0][0])))
 					)
 	) + (1+i==j)*(
-			wjki(mod, i, j, l, lambdaijl, kijl)*(1+occ_num(float(mod[i][0][0])*c,h, kb,T))*(1+occ_num(float(mod[j][0][0])*c,h, kb,T)) - (
-					wijk(mod, l,i,j, lambdalij, klij)*occ_num(float(mod[i][0][0])*c,h, kb,T)*occ_num(float(mod[j][0][0])*c,h, kb,T)
+			wij_l*(1+occ_num(float(mod[str(i+1)][0][0])))*(1+occ_num(float(mod[str(j+1)][0][0]))) - (
+					wl_ij*occ_num(float(mod[str(i+1)][0][0]))*occ_num(float(mod[str(j+1)][0][0]))
 					)
 			)
-			
+	return res
 
-def taulint(l):
+def taulint(l, rijkarray):
 	"""
-	PRE  : Given rlij
+	PRE  : Given rlij, l is a mode number starting a 0
 	POST : Returns taulint
 	"""
 	acc=0
 	for i in range(len(mod)-1):
 		for j in range(len(mod)-1):
-# =============================================================================
-# 			try:
-# =============================================================================
-			vijk = float(cub["{}-{}-{}".format(*sorted([l,i+1,j+1])[::-1])][0])*c*h
-			temp = rlij(mod, l, i+1, j+1, vijk )
-			print temp 
-			acc+=temp
-# =============================================================================
-# 			except:
-# 				pass
-# =============================================================================
-	return acc
+			acc+= rijkarray[l][i][j]
 
-def taul(l):
+	return 1./acc
+
+def taul(tlint):
 	"""
 	PRE: Given taulint
 	POST: Returns taul
 	"""
-	return (1/10e-12 + 1/taulint(l))**-1
 # =============================================================================
-# 	return 50e-12
+# 	return tlint
 # =============================================================================
+	return (1./50e-12 + 1/tlint)**-1
 
-def tauijk(mode_nbrs, lambdaijk, taull):
+
+def tauijk(mode_nbrs, mod, lambdaijk, taull, vijk):
 	"""
-	PRE  : Given taul
+	PRE  : Given taul array and lambda ijk and cubic coefficient array the mode numbers will start at 0
 	POST : Returns tauijk
 	"""
 	acc=0 
-	temp_cub_dic = {}
-	for i in range(len(mod)-1):
-		if i+1 in mode_nbrs:
-			continue
-		else:
-			temp_cub_dic[i+1] = []
-			for els in mode_nbrs:
-				try:
-					key = "{}-{}-{}".format(*sorted([i+1, els, els])[::-1])
-					temp_cub_dic[i+1].append((key, cub[key]))
-				except:
-					pass
 
+	i,j,k = mode_nbrs[0], mode_nbrs[1], mode_nbrs[2]
+	if lambdaijk[i][j][k] < 0 :
+		print "lambda is negative"
+	for l in range(len(taull)):
+		if l not in mode_nbrs:
+			acc+= (vijk[l][i][i]- vijk[l][j][j] - vijk[l][k][k])**2/8/kbtcm/taull[l] * occ_num(float(mod[str(l+1)][0][0]))
+			if taull[l]<0:
+				pass
 # =============================================================================
-# 	for i in sorted(cub):
-# 		nums = i.split('-')
-# 		for els in mode_nbrs:
-# 			if nums.count(els) == 2:
-# 				nums.remove(els)
-# 				nums.remove(els)
-# 				if int(nums[0]) not in temp_cub_dic:
-# 					temp_cub_dic[int(nums[0])] = [(i, cub[i])]
-# 				else:
-# 					temp_cub_dic[int(nums[0])].append((i, cub[i]))
+# 				print "a-cc is negative"
 # =============================================================================
-# =============================================================================
-# 	print temp_cub_dic
-# =============================================================================
-	mode_nbrs = [str(x) for x in mode_nbrs]
-	for k in sorted(temp_cub_dic):
-		fi = -1
-# =============================================================================
-# 		print k, temp_cub_dic[k]
-# =============================================================================
-		if len(temp_cub_dic[k])==3:
-			for i, els in enumerate(temp_cub_dic[k]):
-				parts=els[0].split('-')
-				if parts.count(mode_nbrs[0]) == 2:
-					parts.remove(mode_nbrs[0])
-					parts.remove(mode_nbrs[0])
-					fi=i
-					break
-			index = [0,1,2]
-			index.remove(fi)
-			acc += ((float(temp_cub_dic[k][fi][1][0])-float(temp_cub_dic[k][index[0]][1][0])-float(temp_cub_dic[k][index[1]][1][0]))*c*h)**2*occ_num(float(mod[parts[0]][0][0])*c,h, kb,T)/taull[k]
-	return (1/lambdaijk*acc/8/T/kb)**-1
+	res= (1/lambdaijk[i][j][k]*acc)**-1
+	return res
 
-def make_tau_array(lambda_array, taull):
-	"""
-	PRE : Takes in lambda array and taul
-	POST: Will return a tau ijk array
-	"""
-	dim = len(mod)-1
-	tauarray = np.empty([dim, dim, dim])
-	for i in range(dim):
-		print i
-		for j in range(dim):
-			for k in range(dim):
-				tauarray[i][j][k] = tauijk([i,j,k], lambda_array[i,j,k], taull)
-	return tauarray
+
 
 def compute_decay_rates_burin(cubic_dic, mode_dic, mode_nbr, xyl_mode_list, CB_mode_list):
 	"""
@@ -471,7 +384,24 @@ def make_vijk_array(cub):
 		cubarray[parts[0]-1][parts[1]-1][parts[2]-1] = float(cub[keys][0])
 	return cubarray
 
-
+def rescale_vijk_array(vijk, mod):
+	"""
+	PRE : Takes in the vijk array and rescale it according to the paper of tesar
+	"""
+	dim = len(mod)-1
+	vijk_new = np.zeros([dim, dim, dim])
+	for i in range(dim):
+		for j in range(dim):
+			for k in range(dim):
+				acc = 0 		
+				for z in range(dim):
+					fr = float(mod[str(z+1)][0][0])
+					acc += (vijk[i][i][z] - vijk[j][j][z] - vijk[k][k][z])**2 / 2 /fr**2 * math.tanh(fr/4/kbtcm) * (1-((fr)/(4*kbtcm*math.sinh(fr/kbtcm)))**2)
+					
+					
+				tmp = vijk[i][j][k]*math.exp(-acc)
+				vijk_new[i][j][k] = tmp
+	return vijk_new
 def occ_num(omega):
 	"""
 	PRE: Takes in an angular frequency in cm-1 and a temperature in K
@@ -515,15 +445,17 @@ def get_decay_k(gammak, k, cubdic, omega0, omegas, gammas):
 	POST: Will return the correction to omega_k
 	"""
 	acc = 0
+	print "task {}".format(k)
 	for i in range(len(omegas)):
 		for j in range(len(omegas)):
+			if i == k or j == k: continue
 			omegai, omegaj, omegak, gammai, gammaj, gammak = omegas[i],omegas[j],omegas[k],gammas[i],gammas[j],gammak
 			ni = occ_num(omegai)
 			nj = occ_num(omegaj)
 			key = "{}-{}-{}".format(i+1, j+1, k+1)
 			
 			try:
-				if float(cubdic[key][0])**2<1e5: # If the anharmonicities are too big, the computation just crashes
+				if float(cubdic[key][0])**2<1e15: # If the anharmonicities are too big, the computation just crashes
 					acc += float(cubdic[key][0])**2 * (
 							(ni+nj+1)*(llike(gammai, gammaj, gammak, omegai, omegaj, -omegak, gammai, gammaj, gammak)) + 
 							(ni+nj+1)*(llike(gammai, gammaj, gammak, omegai, omegaj, omegak, gammai, gammaj, gammak)) +
@@ -545,61 +477,11 @@ if __name__ == "__main__":
 	from multiprocessing import Pool
 	h = 6.62607015e-34 # Js
 	kb = 1.380649e-23 # J/K
-	T = 20 # K
+	T = 300 # K
 	c = 29979245800# cm/s
 	amu = 1.66054e-27 # kg
+	kbtcm = kb*T/h/c
 	
-
-# =============================================================================
-# 	#for f in glob.glob('/Users/hugueslambert/Desktop/xylene/cubic_coupling/*out'):
-# 	#	print len(get_data_from_out(f)[0].keys())
-# 	path = '/home/macenrola/Documents/XYLENE/inputs/cubic_coupling/OUTS/freqs_from_tight_geom/'
-# 	#mod_xyl, _ = get_data_from_out("/Users/hugueslambert/Desktop/xylene/cubic_coupling/mxylene.com_OUT.out.xyz.com_OUT.out.xyz.com_OUT.out")
-# 	couples = [
-# 			'mxylene-h-single-CB6.com_OUT.out.xyz.com_OUT.out.xyz.com_OUT.out.xyz.com_OUT.out',
-# 			'mxylene-h-single-CB7.com_OUT.out.xyz.com_OUT.out.xyz.com_OUT.out.xyz.com_OUT.out',
-# 			'mxylene-protonated-CB6.com_OUT.out.xyz.com_OUT.out.xyz.com_OUT.out.xyz.com_OUT.out',
-# 			'mxylene-protonated-CB7.com_OUT.out.xyz.com_OUT.out.xyz.com_OUT.out.xyz.com_OUT.out',
-# 			'mxylene-CB6.com_OUT.out.xyz.com_OUT.out.xyz.com_OUT.out.xyz.com_OUT.out',
-# 			'mxylene-CB7.com_OUT.out.xyz.com_OUT.out.xyz.com_OUT.out.xyz.com_OUT.out',
-# 			]
-# 	for f in couples[0:1]:
-# 		print f
-# 		mod, cub= get_data_from_out(path+f)
-# 		mod_xyl, _ = get_data_from_out("{}just_xylenes/just_xyl-{}.xyz.com_OUT.out".format(path,f))
-# 		i=0
-# 
-# 		xyl_localised_modes=get_mode_localisation_on_xylene(mod, len(mod_xyl['1'][1]))
-# 		for i,k in enumerate(xyl_localised_modes):
-# 			print k[0], k[1], i
-# 		lim_xyl=121 # 121 limit for 10% on xylene, 90% on xylene is 28 and 99 % is 16
-# 		start_cb=210 # 210 limit for 99% on CB, 122 limit of 90% CB
-# 		WXX, WCC, WCX, WXM, WCM, WMM = 0,0,0,0,0,0
-# 		for els in  [x[1] for x in xyl_localised_modes[-start_cb:]]:
-# 			print els
-# 			tWXX, tWCC, tWCX, tWXM, tWCM, tWMM = compute_decay_rates(cub, mod, els, [x[1] for x in xyl_localised_modes[:lim_xyl]],  [x[1] for x in xyl_localised_modes[start_cb:]])
-# 			WXX+=tWXX
-# 			WCC+=tWCC
-# 			WCX+=tWCX
-# 			WXM+=tWXM
-# 			WCM+=tWCM
-# 			WMM+=tWMM
-# 			
-# 			
-# 		print "cumulated values are: ",WXX, WCC, WCX, WXM, WCM, WMM
-# =============================================================================
-	mod, cub = get_data_from_out('/home/macenrola/AcPhCN.com_OUT.out')
-# =============================================================================
-# 	mod, cub = get_data_from_out('/home/macenrola/Documents/XYLENE/inputs/cubic_coupling/OUTS/cubic_coupling/mxylene-CB6.com_OUT.out.xyz.com_OUT.out.xyz.com_OUT.out.xyz.com_OUT.out')
-# =============================================================================
-	freqs0 = sorted([float(mod[x][0][0]) for x in sorted(mod.keys())[:-1]])
-	print freqs0
-	gammas0 = [15.]*len(freqs0)
-	cub = make_permutations(cub)
-	k=30
-	
-	temp_omega = freqs0
-	temp_gamma = gammas0
 
 	
 # =============================================================================
@@ -633,38 +515,75 @@ if __name__ == "__main__":
 # 	print "final gamma", temp_gamma
 # 	
 # =============================================================================
-	convo, convg = 0, 1e10
-	for z in range(100):
-		if (convo+convg) < 0.001: break
-		print "iteration {}, total residues {}".format(z, convo+convg)
+	
 # =============================================================================
-# 		comega = []
+# 	mod, cub = get_data_from_out('/home/macenrola/AcPhCN.com_OUT.out')
 # =============================================================================
-		cgamma =[]
+	flist = glob.glob("/home/macenrola/Documents/XYLENE/inputs/cubic_coupling/OUTS/cubic_coupling/*.out")
 # =============================================================================
-# 		for k in range(len(freqs0)):
-# 			res = scipy.optimize.brentq(get_omega_k, 0, 5000, args=(k,cub,freqs0,temp_omega,temp_gamma))
-# 			print z, k, res
-# 			comega.append(res)
-# 		convo = sum([(x-y)**2 for x,y in zip(comega, temp_omega)])
-# 		print "it:{}, difference in omega {}".format(z, convo), ["{0:3.3f}".format(x-y) for x,y in zip(comega, temp_omega)]
+# 	flist = ["/home/macenrola/Documents/XYLENE/inputs/cubic_coupling/OUTS/cubic_coupling/xylenes/just_xyl-mxylene-protonated-CB7.com_OUT.out.xyz.com_OUT.out.xyz.com_OUT.out.xyz.com_OUT.out.xyz.com_OUT.out"]
 # =============================================================================
-
-		for k in range(len(freqs0)):
-			res = scipy.optimize.brentq(get_decay_k, 0, 500, args=(k,cub,freqs0,freqs0,temp_gamma))
-			print z, k, res
-			cgamma.append(res)	
-		convg = sum([(x-y)**2 for x,y in zip(cgamma, temp_gamma)])
-		print "it:{}, difference in gamma {}".format(z, convg), ["{0:3.3f}".format(x-y) for x,y in zip(cgamma, temp_gamma)]
-
-		temp_gamma = cgamma
 # =============================================================================
-# 		temp_omega = comega
+# 	flist = glob.glob("/home/macenrola/Documents/XYLENE/inputs/cubic_coupling/OUTS/cubic_coupling/xylenes/*.out")
 # =============================================================================
-	print "final omega", temp_omega
-	print "final gamma", [x for x in temp_gamma]
+	for f in flist: 
+		try:
+			mod, cub = get_data_from_out(f)
+			freqs0 = sorted([float(mod[x][0][0]) for x in sorted(mod.keys())[:-1]])
+			print freqs0
+			gammas0 = [15.]*len(freqs0)
+			cub = make_permutations(cub)
+			dim = len(mod)-1
 		
+		
+		# ALL SCF 
+			temp_omega = freqs0
+			temp_gamma = gammas0
+			convo, convg = 0, 1e10
+			for z in range(100):
+				if (convo+convg) < 0.001: break
+				print "iteration {}, total residues {}".format(z, convo+convg)
+		# =============================================================================
+		# 		comega = []
+		# =============================================================================
+				cgamma =[]
+		# =============================================================================
+		# 		for k in range(len(freqs0)):
+		# 			res = scipy.optimize.brentq(get_omega_k, 0, 5000, args=(k,cub,freqs0,temp_omega,temp_gamma))
+		# 			print z, k, res
+		# 			comega.append(res)
+		# 		convo = sum([(x-y)**2 for x,y in zip(comega, temp_omega)])
+		# 		print "it:{}, difference in omega {}".format(z, convo), ["{0:3.3f}".format(x-y) for x,y in zip(comega, temp_omega)]
+		# =============================================================================
+				def get_res(k0):
+					return scipy.optimize.brentq(get_decay_k, 0, 5000, args=(k0,cub,freqs0,freqs0,temp_gamma))
+				p = Pool(8)
+				cgamma = p.map(get_res, range(len(freqs0)))
 # =============================================================================
+# 				for k in range(len(freqs0)):
+# 					res = scipy.optimize.brentq(get_decay_k, 0, 5000, args=(k,cub,freqs0,freqs0,temp_gamma))
+# 					print z, k, res
+# 					cgamma.append(res)	
+# =============================================================================
+				convg = sum([(x-y)**2 for x,y in zip(cgamma, temp_gamma)])
+				print "it:{}, difference in gamma {}".format(z, convg), ["{0:3.3f}".format(x-y) for x,y in zip(cgamma, temp_gamma)]
+		
+				temp_gamma = cgamma
+		# =============================================================================
+		# 		temp_omega = comega
+		# =============================================================================
+		# =============================================================================
+		# 	print "final omega", temp_omega
+		# =============================================================================
+			print "final gamma", [x for x in temp_gamma]
+			with open(f+"_GAMMAS", "wb") as w:
+				w.writelines(["{}\n".format(x) for x in temp_gamma])
+		except:
+			pass
+		
+	
+# =============================================================================
+# 	
 # 	WXX, WCC, WCX, WXM, WCM, WMM = 0,0,0,0,0,0
 # 	for i in sorted([int(x) for x in mod.keys()[:-1]]):
 # 		print i, "Freq is: {}".format(mod[str(i)][0][0])
@@ -676,23 +595,78 @@ if __name__ == "__main__":
 # 		WCM+=tWCM
 # 		WMM+=tWMM
 # 	print "cumulated values are: ", WXX, WCC, WCX, WXM, WCM, WMM
+# 	
 # =============================================================================
-	
-	# GET QUNATITIES THAT DONT CHANGE VIJK AND LAMBDA IJK
 # =============================================================================
+# 	# GET QUNATITIES THAT DONT CHANGE AND LAMBDA IJK
 # 	mod, cub = get_data_from_out('/home/macenrola/AcPhCN.com_OUT.out')
 # 	dim = len(mod)-1
-# 	vijk_array = make_vijk_array(cub)
+# 	cub = make_permutations(cub)
+# 	vijk = make_vijk_array(cub)
+# 	print "rescaling vijk"
+# 	vijk = rescale_vijk_array(vijk, mod)
+# 	print "rescaling done"
 # 	fl = "/home/macenrola/Desktop/lambda_array"
 # 	ft = "/home/macenrola/Desktop/tau_array"
 #  	r = open(fl, 'rb')
 # 	lambda_array = np.load(r)
+# 	
+# 	rijk0 = np.ones([dim, dim, dim])*1e10
+# 	rlijarr = rijk0
+# 	t0 = []
+# 	for z in range(dim):
+# 		t0.append(taulint(z, rlijarr))
+# 
+# 	for _ in range(10):
+# 		tint = []
+# 		tl = []
+# 		for z in range(dim):
+# 			tint.append(taulint(z, rlijarr))
+# 		for z in range(dim):
+# 			tl.append(taul(tint[z]))
+# 		print sum([(x-y)**2 for x, y in zip(tint, t0)])
+# 		print tl
+# 		t0=tint
+# 		kijkarr = np.zeros([dim, dim, dim])
+# 		print "kijk"
+# 		for i in range(dim):
+# 			for j in range(dim):
+# 				for k in range(dim):
+# 					kijkarr[i][j][k] = kijk(i,j,k, vijk, tauijk([i,j,k], mod, lambda_array, tl, vijk), lambda_array[i][j][k], mod) 
+# 		print "wijk"
+# 		wijkarr = np.zeros([dim, dim, dim])
+# 		for i in range(dim):
+# 			for j in range(dim):
+# 				for k in range(dim):
+# 					wijkarr[i][j][k] = wijk([mod[str(i+1)][0][0], mod[str(j+1)][0][0], mod[str(k+1)][0][0]],lambda_array[i][j][k], kijkarr[i][j][k])
+# 		print "wjki"
+# 		wjkiarr = np.zeros([dim, dim, dim])
+# 		for i in range(dim):
+# 			for j in range(dim):
+# 				for k in range(dim):
+# 					wjkiarr[i][j][k] = wjki([mod[str(i+1)][0][0], mod[str(j+1)][0][0], mod[str(k+1)][0][0]],lambda_array[i][j][k], kijkarr[i][j][k])
+# 		print "rlij"
+# 		rlijarr = np.zeros([dim, dim, dim])
+# 		for i in range(dim):
+# 			for j in range(dim):
+# 				for l in range(dim):
+# 					rlijarr[l][i][j] = rlij(wijkarr[i][j][l], wjkiarr[j][l][i], wjkiarr[i][j][l], wijkarr[l][i][j], l, i, j)
+# 	
+# 
 # =============================================================================
 # =============================================================================
 # 	larray = get_lambda_array(mod, cub)
-# 	w = open(f, 'wb')
+# 	w = open(fl, 'wb')
 # 	np.save(w, larray)
+# 	for i in range(dim):
+# 		for j in range(dim):
+# 			for k in range(dim):
+# 				print larray[i][j][k]
+# =============================================================================
+# =============================================================================
 # 	r = open(fl, 'rb')
+# =============================================================================
+# =============================================================================
 # 	tau_array = np.load(r)
 # =============================================================================
 # =============================================================================

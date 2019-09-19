@@ -288,7 +288,7 @@ pwd = {}""".format(cwd)
 				else:
 					print "accelerated time out of bounds ({})".format(ctime)
 		if name[-2:]=="KS":
-			with open(f, 'rb') as r: lines=sorted([float(x.strip()) for x in r.readlines()])[:-5]
+			with open(f, 'rb') as r: lines=sorted([float(x.strip()) for x in r.readlines()])[:]
 			# print lines
 			#scale=float(name.split('-')[-2])
 			try:

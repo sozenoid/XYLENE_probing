@@ -754,6 +754,7 @@ def make_mtd_time_plot(time_plot_file):
 # 	PLOTS IT
 # =============================================================================
 	fig, ax = plt.subplots(2, 1, sharex='col', sharey='row')
+	T=[300, 400, 500, 600, 700]
 	for (i,k),s in zip(enumerate(res_dic), line_styles()):
 		print i,k,s
 		xtrend = np.linspace(0.001,0.004,100)
@@ -768,6 +769,7 @@ def make_mtd_time_plot(time_plot_file):
 			ax[1].legend(loc='lower left')
 			ax[1].grid(True, alpha=0.2)
 			print k, slope, intercept, -slope*R, (intercept-lnkkb_h)*R
+			print '&'.join([str((x*np.exp(slope/x + intercept))**-1) for x in T])
 		elif "vac" in k:
 			ax[0].scatter(plottable[0], plottable[1], marker=i, label=k)
 			slope, intercept, r_value, p_value, std_err = scipy.stats.linregress(plottable)
@@ -776,6 +778,7 @@ def make_mtd_time_plot(time_plot_file):
 			ax[0].legend(loc='lower left')
 			ax[0].grid(True, alpha=0.2)
 			print k, slope, intercept, -slope*R, (intercept-lnkkb_h)*R
+			print '&'.join([str((x*np.exp(slope/x + intercept))**-1) for x in T])
 	plt.xlabel(r"1/T [K$^{-1}$]")
 	plt.tight_layout()
 	plt.show()
@@ -796,7 +799,10 @@ def make_mtd_popping_rate_plot(time_plot_file):
 	res_dic = {}
 	for el in split_res:
 		if el==['']: continue
-		id_system = el[0][-19:-1]
+# =============================================================================
+# 		id_system = el[0][-19:-1]
+# =============================================================================
+		id_system = el[0][-23:-1]
 		key = '-'.join(id_system.split("-")[:-1])
 		if key[0]=='-': key=key[1:]
 		print el, key, id_system
@@ -828,6 +834,9 @@ def make_mtd_popping_rate_plot(time_plot_file):
 		ax[j].grid(True, alpha=0.2)
 		ax[1].set_xlim((0.001,0.004))
 		print k, slope, intercept, -slope*R, (intercept-lnkkb_h)*R
+		T=700
+		print (T*np.exp(slope/T + intercept))**-1
+
 	plt.xlabel(r"1/T [K$^{-1}$]")
 	plt.tight_layout()
 	plt.show()
@@ -1147,6 +1156,91 @@ def get_energies_pm6_stability(summary_file):
 	plt.ylabel("Energy of MO TS in CB7 vs protonated xylene in CB7 [kcal/mol]")
 	plt.xlabel("index")
 	
+def compute_coordination_number_xyz(fname):
+	"""
+	PRE  : Takes in an xyz trajectory with an atom index and coordiation parameters 
+	POST : Will return the coordination number as described in https://www.cp2k.org/exercises:2015_cecam_tutorial:mtd1
+	"""
+	r0, nn, nd = 1.5, 8., 14.
+	atm_list, snapshot_array= return_list_of_snapshots_and_atom_list(fname)
+	if len(atm_list) == 127:
+		xylenelist = range(18)
+		cblist = range(18, 127)
+		atomindex = 18
+	else:
+		xylenelist = range(126, 144)
+		atomindex = 144
+		cblist = range(126)
+# =============================================================================
+# 	print [atm_list[x] for x in xylenelist]
+# =============================================================================
+	coords = []
+	centroiddist = []
+	for j, snap in enumerate(snapshot_array):
+		coordnumber = 0
+		for i in xylenelist:
+			if i == atomindex:
+				continue
+			distsquared = sum([(x-y)**2 for x,y in zip(snap[i], snap[atomindex])])**.5
+			coordnumber += (1-(distsquared/r0)**nn)/(1-(distsquared/r0)**nd)
+		coords.append(coordnumber)
+		xylcentroid, cbcentroid = [],[]
+		for k, p in enumerate(snap):
+			if k in xylenelist:
+				xylcentroid.append(p)
+			else:
+				cbcentroid.append(p)
+# =============================================================================
+# 		print np.mean(np.array(xylcentroid), 0)
+# 		print np.mean(cbcentroid, 0)
+# =============================================================================
+		centroiddist.append(sum([(x-y)**2 for x,y in zip(np.mean(xylcentroid, 0), np.mean(cbcentroid, 0))])**.5)
+# =============================================================================
+# 		print j, centroiddist[-1], coords[-1]
+# =============================================================================
+
+	try:
+		out = [x>10 for x in centroiddist].index(True)
+		n = [x>0.5 for x in coords[:out]].count(True)
+		print out, coords[out], centroiddist[out], sum(coords[:out]), sum(coords), n, float(n)/out
+		return sum(coords), float(n)/out
+	except:
+		return 0,0
+	
+def clearthedump(dumpfile, listofcrits, thresh):
+	"""
+	PRE  : Takes in a dump file and list of files with criteria
+	POST : Will create a dump file without the files that don't pass the criteria
+	"""
+	critdic = {}
+	for f in listofcrits:
+		with open(f, "rb") as r:
+			for line in r:
+				parts = line.strip().split()
+				if float(parts[2])>thresh:
+					print "skipping", line
+					continue
+				else:
+					fname = parts[0].split("/")
+					fname = "{}-{}".format(fname[-2], fname[-1][:-14])
+					critdic[fname] = parts
+					
+	with open(dumpfile+"-curated-dump", "wb"): pass
+		
+	with open(dumpfile, "rb") as r:
+		for line in r:
+			parts = line.split()[1]
+			if parts[:32] in critdic:
+# =============================================================================
+# 			if float(line.strip().split()[-1])>1e-4:
+# =============================================================================
+				with open(dumpfile+"-curated-dump", "ab") as a: 
+# =============================================================================
+# 					a.write("{}\t{}\t{}".format( critdic[parts[:32]][1], critdic[parts[:32]][2], line))
+# =============================================================================
+					a.write(line)
+			else: 
+				continue
 	
 if __name__ == "__main__":
 	import rdkit
@@ -1165,11 +1259,32 @@ if __name__ == "__main__":
 	from matplotlib import pyplot as plt
 	from mpl_toolkits.mplot3d import Axes3D
 	import random
-	with open("/home/macenrola/Documents/H-S-compensation/PUBCHEM_ONLY_C_only_19_atoms", "rb") as r:
-		lines = r.readlines()
-		elems = random.sample(lines, k =230)
-	with open("/home/macenrola/Documents/H-S-compensation/C19_sample_200.can", "wb") as w:
-		w.writelines(elems) 
+	
+# =============================================================================
+# 	compute_coordination_number_xyz("/home/macenrola/Documents/XYLENE/inputs/popping-from-cb/SLOW_POPPING_W_TARGET/XYZ_sanity/300/101-mxylene-prot-cb7-H-single.inp-pos-1.xyz")
+# =============================================================================
+# =============================================================================
+# ## COMPUTE THE COORDINATIONS
+# 	record = "/home/macenrola/Documents/XYLENE/inputs/popping-from-cb/SLOW_POPPING_W_TARGET/OUTS/600-CB-RES"
+# 	with open(record, "wb"): pass
+# 	for f in sorted(glob.glob("/home/macenrola/Documents/XYLENE/inputs/popping-from-cb/SLOW_POPPING_W_TARGET/XYZ_sanity/600/*-cb*-H-single.inp-pos-1.xyz")):
+# 		print f
+# 		res = compute_coordination_number_xyz(f)
+# 		with open(record, 'ab') as a:
+# 			a.write("{}\t{}\t{}\n".format(f, res[0], res[1]))
+# =============================================================================
+# =============================================================================
+# # CLEARING THE DUMP
+# 	clearthedump("/home/macenrola/Documents/XYLENE/inputs/popping-from-cb/SLOW_POPPING_W_TARGET/OUTS/DUMP_MTS-dump", glob.glob("/home/macenrola/Documents/XYLENE/inputs/popping-from-cb/SLOW_POPPING_W_TARGET/OUTS/*00-CB-RES"), 0.2)
+# 
+# =============================================================================
+# =============================================================================
+# 	with open("/home/macenrola/Documents/H-S-compensation/PUBCHEM_ONLY_C_only_19_atoms", "rb") as r:
+# 		lines = r.readlines()
+# 		elems = random.sample(lines, k =230)
+# 	with open("/home/macenrola/Documents/H-S-compensation/C19_sample_200.can", "wb") as w:
+# 		w.writelines(elems) 
+# =============================================================================
 	# process_z_matrix_trajectory('cb6.inp-pos-1-aligned.gzmat')
 	# for f in ['/home/macenrola/Documents/XYLENE/inputs/for-reaction-frozen-cb/MO-CB6.inp-pos-1-aligned-just-CB6.xyz',
 	# 			'/home/macenrola/Documents/XYLENE/inputs/for-reaction-frozen-cb/MO-CB7.inp-pos-1-aligned-just-CB6.xyz',
@@ -1267,7 +1382,7 @@ if __name__ == "__main__":
 # 
 # # =============================================================================
 # =============================================================================
-# 	# KS STACKED POPPING
+# 	# KS STACKED POPPING OLD
 # 	stack_ks_plots([
 # 			glob.glob("/home/macenrola/Documents/XYLENE/inputs/for-reaction-flexible-cb/outputs/popping/DUMP_MTS-dump-oxylene-cb6-*KS"),
 # 			glob.glob("/home/macenrola/Documents/XYLENE/inputs/for-reaction-flexible-cb/outputs/popping/DUMP_MTS-dump-oxylene-cb7-*KS"),
@@ -1279,10 +1394,23 @@ if __name__ == "__main__":
 # 	
 # =============================================================================
 # =============================================================================
+# 
+# 	# KS STACKED POPPING NEW BUT UGLY
+# 	stack_ks_plots([
+# 			glob.glob("/home/macenrola/Documents/XYLENE/inputs/popping-from-cb/SLOW_POPPING_W_TARGET/OUTS/DUMP_MTS-dump-curated-dump-oxylene-prot-cb6-*.0-KS"),
+# 			glob.glob("/home/macenrola/Documents/XYLENE/inputs/popping-from-cb/SLOW_POPPING_W_TARGET/OUTS/DUMP_MTS-dump-curated-dump-oxylene-prot-cb7-*.0-KS"),
+# 			glob.glob("/home/macenrola/Documents/XYLENE/inputs/popping-from-cb/SLOW_POPPING_W_TARGET/OUTS/DUMP_MTS-dump-curated-dump-mxylene-prot-cb6-*.0-KS"),
+# 			glob.glob("/home/macenrola/Documents/XYLENE/inputs/popping-from-cb/SLOW_POPPING_W_TARGET/OUTS/DUMP_MTS-dump-curated-dump-mxylene-prot-cb7-*.0-KS"),
+# 			glob.glob("/home/macenrola/Documents/XYLENE/inputs/popping-from-cb/SLOW_POPPING_W_TARGET/OUTS/DUMP_MTS-dump-curated-dump-pxylene-prot-cb6-*.0-KS"),
+# 			glob.glob("/home/macenrola/Documents/XYLENE/inputs/popping-from-cb/SLOW_POPPING_W_TARGET/OUTS/DUMP_MTS-dump-curated-dump-pxylene-prot-cb7-*.0-KS"),
+# 			])
+# 	
+# =============================================================================
+# =============================================================================
 # 	
 # 	# POPPING RATE
-# 	make_mtd_popping_rate_plot(glob.glob("/home/macenrola/Documents/XYLENE/inputs/for-reaction-flexible-cb/outputs/popping/popping_times")[0])
-# 	
+# 	#make_mtd_popping_rate_plot(glob.glob("/home/macenrola/Documents/XYLENE/inputs/for-reaction-flexible-cb/outputs/popping/popping_times")[0])
+# 	make_mtd_popping_rate_plot(glob.glob("/home/macenrola/Documents/XYLENE/inputs/popping-from-cb/SLOW_POPPING_W_TARGET/OUTS/popping_times")[0])
 # =============================================================================
 # =============================================================================
 # 	# KS STACKED _ISOMERISATION
@@ -1310,13 +1438,11 @@ if __name__ == "__main__":
 # 	
 # 	
 # =============================================================================
-# =============================================================================
-# 	
-# #MAKE MTD TIME PLOT
-# 	make_mtd_time_plot("/home/macenrola/Documents/XYLENE/images/DUMP_ISO/slow_summary_file_without_low_p")
-# 	
-# 	
-# =============================================================================
+	
+#MAKE MTD TIME PLOT
+	make_mtd_time_plot("/home/macenrola/Documents/XYLENE/images/DUMP_ISO/slow_summary_file_without_low_p")
+	
+	
 # =============================================================================
 # =============================================================================
 # 	# PLOT STACKED SPECTRA
