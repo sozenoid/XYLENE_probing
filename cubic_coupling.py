@@ -107,9 +107,9 @@ def get_mode_localisation_on_xylene(mode, mode_xyl_atoms):
 	xyl_localised_modes=[]
 	for k in sorted(mode)[:-1]: # to avoid the order 
 		LOC_ON_XYL_COEFF=sum([float(x)**2 for x in mod[k][1][:mode_xyl_atoms*3-1]])
-		xyl_localised_modes.append((LOC_ON_XYL_COEFF, k, mod[k][0][0]))
-
-	return sorted(xyl_localised_modes)[::-1]
+		xyl_localised_modes.append((LOC_ON_XYL_COEFF, int(k), mod[k][0][0]))
+		
+	return sorted(xyl_localised_modes, key=lambda x: x[1])
 	
 
 
@@ -446,6 +446,7 @@ def get_decay_k(gammak, k, cubdic, omega0, omegas, gammas):
 	POST: Will return the correction to gamma_k
 	"""
 	acc = 0
+	print "step {}".format(k)
 	for i in range(len(omegas)):
 		for j in range(len(omegas)):
 			if i == k or j == k: continue
@@ -456,74 +457,76 @@ def get_decay_k(gammak, k, cubdic, omega0, omegas, gammas):
 			
 			try:
 				if float(cubdic[key][0])**2<1e15: # If the anharmonicities are too big, the computation just crashes
-					acc += float(cubdic[key][0])**2 * (
+					temp = float(cubdic[key][0])**2 * (
 							(ni+nj+1)*(llike(gammai, gammaj, gammak, omegai, omegaj, -omegak, gammai, gammaj, gammak)) + 
 							(ni+nj+1)*(llike(gammai, gammaj, gammak, omegai, omegaj, omegak, gammai, gammaj, gammak)) +
 							(nj-ni)*(llike(gammai, gammaj, gammak, omegai, -omegaj, -omegak, gammai, gammaj, gammak)) +
 							(ni-nj)*(llike(gammai, gammaj, gammak, omegai, -omegaj, -omegak, gammai, gammaj, gammak))
 							)
+					acc+=temp
 			except:
 				continue
 	return acc/16 - gammak
 
-
-
-def get_decays(f):
+def breadown_decay_by_mode(k, cubdic, omegas, gammas, xyl_mode_list, CB_mode_list):
 	"""
-	PRE: Takes in a file
-	POST: Returns the gamma after self consistent field approach
+	PRE: Takes in pre optimized gammas
+	POST: Returns a list with index i correponds to the ith mode contribution to decay (probs times 2)
 	"""
-
-	mod, cub = get_data_from_out(f)
-	freqs0 = sorted([float(mod[x][0][0]) for x in sorted(mod.keys())[:-1]])
-	print freqs0
-	gammas0 = [15.]*len(freqs0)
-	with open(f+"_GAMMAS_seq", "rb") as r:
-		gammas0 = [float(x.strip()) for x in r.readlines()]
-	print gammas0
-	cub = make_permutations(cub)
-	dim = len(mod)-1
-
-
-	# ALL SCF 
-	temp_omega = freqs0
-	temp_gamma = gammas0
-	convo, convg = 1e10, 1e10
-	for z in range(100):
-		if (convo+convg) < 0.001: break
-		print "iteration {}, total residues {}".format(z, convo+convg)
-		comega = []
-		cgamma =[]
-		p = Pool(None)
-		comega = p.map(get_reso, range(len(freqs0)))
-		convo = sum([(x-y)**2 for x,y in zip(comega, temp_omega)])
- 		print "it:{}, difference in omega {}".format(z, convo), ["{0:3.3f}".format(x-y) for x,y in zip(comega, temp_omega)]
-
+	kthdecay_breakdown = [0]*len(omegas)
+	WXX, WCC, WCX, WXM, WCM, WMM = 0,0,0,0,0,0 # cumulative decay rate for xylene xylene denominated frequencies (WXX), CB and CB (WCC), CB and Xylene (WCX), Mixed and Mixed (WMM), Xylene and Mixed (WXM), CB and Mixed (WCM)
+	cWXX, cWCC, cWCX, cWXM, cWCM, cWMM = 0,0,0,0,0,0 # associated counters
+	acc = 0
+	for i in range(len(omegas)):
+		for j in range(len(omegas)):
+			if i == k or j == k: continue
+			nums = [i,j]
+			omegai, omegaj, omegak, gammai, gammaj, gammak = omegas[i],omegas[j],omegas[k],gammas[i],gammas[j],gammas[k]
+			ni = occ_num(omegai)
+			nj = occ_num(omegaj)
+			key = "{}-{}-{}".format(i+1, j+1, k+1)
+			
+			try:
+				if float(cubdic[key][0])**2<1e15: # If the anharmonicities are too big, the computation just crashes
+					temp = 1./16*float(cubdic[key][0])**2 * (
+							(ni+nj+1)*(llike(gammai, gammaj, gammak, omegai, omegaj, -omegak, gammai, gammaj, gammak)) + 
+							(ni+nj+1)*(llike(gammai, gammaj, gammak, omegai, omegaj, omegak, gammai, gammaj, gammak)) +
+							(nj-ni)*(llike(gammai, gammaj, gammak, omegai, -omegaj, -omegak, gammai, gammaj, gammak)) +
+							(ni-nj)*(llike(gammai, gammaj, gammak, omegai, -omegaj, -omegak, gammai, gammaj, gammak))
+							)
+					kthdecay_breakdown[i]+=temp
+					kthdecay_breakdown[j]+=temp
+				
+					if all([x in xyl_mode_list for x in nums]):
+						WXX+=temp
+						cWXX+=1
+					elif all([x in CB_mode_list for x in nums]):
+						WCC+=temp
+						cWCC+=1
+					elif any([x in xyl_mode_list for x in nums]) and any([x in CB_mode_list for x in nums]): 
+						WCX+=temp
+						cWCX+=1
+					elif any([x in xyl_mode_list for x in nums]):
+						WXM+=temp
+						cWXM+=1
+					elif any([x in CB_mode_list for x in nums]):
+						WCM+=temp
+						cWCM+=1
+					else:
+						WMM+=temp
+						cWMM+=1
+					acc+=temp
+			except:
 # =============================================================================
-# 		for k in range(len(freqs0)):
-# 			res = scipy.optimize.brentq(get_omega_k, 0, 5000, args=(k,cub,freqs0,temp_omega,temp_gamma))
-# 			print z, k, res
-# 			comega.append(res)
-# 		convo = sum([(x-y)**2 for x,y in zip(comega, temp_omega)])
-# 		print "it:{}, difference in omega {}".format(z, convo), ["{0:3.3f}".format(x-y) for x,y in zip(comega, temp_omega)]
+# 				print(traceback.format_exc())
 # =============================================================================
-		cgamma = p.map(get_resg, range(len(freqs0)))
-# =============================================================================
-# 				for k in range(len(freqs0)):
-# 					res = scipy.optimize.brentq(get_decay_k, 0, 5000, args=(k,cub,freqs0,freqs0,temp_gamma))
-# 					print z, k, res
-# 					cgamma.append(res)	
-# =============================================================================
-		convg = sum([(x-y)**2 for x,y in zip(cgamma, temp_gamma)])
-		print "it:{}, difference in gamma {}".format(z, convg), ["{0:3.3f}".format(x-y) for x,y in zip(cgamma, temp_gamma)]
+				continue
+	print "Mode freq: ", omegas[k], "overall: ", sum([WXX, WCC, WCX, WXM, WCM, WMM]), acc
+	print "counts: ", cWXX, cWCC, cWCX, cWXM, cWCM, cWMM
+	#print "avg rate contribution: ",W1/cw1, W2/cw2, W3/cw3
+	print "Overall rates: ", zip(['WXX', 'WCC', 'WCX', 'WXM', 'WCM', 'WMM'], [WXX, WCC, WCX, WXM, WCM, WMM])
+	return zip(['WXX', 'WCC', 'WCX', 'WXM', 'WCM', 'WMM'], [WXX, WCC, WCX, WXM, WCM, WMM])
 
-		temp_gamma = cgamma
-		temp_omega = comega
-	print freqs0	
-	print "final omega", temp_omega
-	print "final gamma", [x for x in temp_gamma]
-	with open(f+"_GAMMAS", "wb") as w:
-		w.writelines(["{}\n".format(x) for x in temp_gamma])
 if __name__ == "__main__":
 	import numpy as np
 	import glob
@@ -532,7 +535,9 @@ if __name__ == "__main__":
 	import cPickle
 	import scipy
 	import scipy.optimize
+	import traceback
 	from multiprocessing import Pool
+	import matplotlib.pyplot as plt
 	h = 6.62607015e-34 # Js
 	kb = 1.380649e-23 # J/K
 	T = 300 # K
@@ -541,23 +546,22 @@ if __name__ == "__main__":
 	kbtcm = kb*T/h/c
 	
 
-	
-	flist = ["/home/macenrola/Documents/XYLENE/inputs/cubic_coupling/OUTS/cubic_coupling/mxylene.com_OUT.out.xyz.com_OUT.out.xyz.com_OUT.out"]
-
-
-	
-
+	flist = sorted(glob.glob("/home/macenrola/Documents/XYLENE/inputs/cubic_coupling/OUTS/cubic_coupling/*CB7*.out"))
+# GAMMA OPTI WITH SCF
+	p = Pool(None)
 	for f in flist:
+		print f
 		mod, cub = get_data_from_out(f)
 		freqs0 = sorted([float(mod[x][0][0]) for x in sorted(mod.keys())[:-1]])
-		print freqs0
-		gammas0 = [15.]*len(freqs0)
-		with open(f+"_GAMMAS_seq", "rb") as r:
-			gammas0 = [float(x.strip()) for x in r.readlines()]
+		try:
+			with open(f+"_GAMMAS_seq", "rb") as r:
+				gammas0 = [float(x.strip()) for x in r.readlines()]
+		except:
+			gammas0 = [150.]*len(freqs0)
+
 		print gammas0
 		cub = make_permutations(cub)
 		dim = len(mod)-1
-		
 		
 		# ALL SCF 
 		temp_omega = freqs0
@@ -565,49 +569,52 @@ if __name__ == "__main__":
 		convo, convg = 0e10, 1e10
 		for z in range(100):
 			def get_resg(k0):
-				return scipy.optimize.brentq(get_decay_k, 0, 5000, args=(k0,cub,freqs0,freqs0,temp_gamma))
-			pooo = Pool(None)
+				return scipy.optimize.brentq(get_decay_k, -10, 20000, args=(k0,cub,freqs0,freqs0,temp_gamma))
 			if (convo+convg) < 0.001: break
 			print "iteration {}, total residues {}".format(z, convo+convg)
-			comega = []
 			cgamma =[]
-	
-		
-	# =============================================================================
-	# 		def get_reso(k0):
-	# 			return scipy.optimize.brentq(get_omega_k, 0, 5000, args=(k0,cub,freqs0,temp_omega,temp_gamma))
-	# 		comega = p.map(get_reso, range(len(freqs0)))
-	# 		convo = sum([(x-y)**2 for x,y in zip(comega, temp_omega)])
-	# =============================================================================
-		# =============================================================================
-		# 		for k in range(len(freqs0)):
-		# 			res = scipy.optimize.brentq(get_omega_k, 0, 5000, args=(k,cub,freqs0,temp_omega,temp_gamma))
-		# 			print z, k, res
-		# 			comega.append(res)
-		# 		convo = sum([(x-y)**2 for x,y in zip(comega, temp_omega)])
-		# 		print "it:{}, difference in omega {}".format(z, convo), ["{0:3.3f}".format(x-y) for x,y in zip(comega, temp_omega)]
-		# =============================================================================
-
-			cgamma = pooo.map(get_resg, range(len(freqs0)))
-	
-		# =============================================================================
-		# 				for k in range(len(freqs0)):
-		# 					res = scipy.optimize.brentq(get_decay_k, 0, 5000, args=(k,cub,freqs0,freqs0,temp_gamma))
-		# 					print z, k, res
-		# 					cgamma.append(res)	
-		# =============================================================================
+			print "POOL IS STARTING"
+			cgamma = p.map(get_resg, range(len(freqs0)))
+			print "POOL IS OVER"
 			convg = sum([(x-y)**2 for x,y in zip(cgamma, temp_gamma)])
 			print "it:{}, difference in gamma {}".format(z, convg), ["{0:3.3f}".format(x-y) for x,y in zip(cgamma, temp_gamma)]
-		
 			temp_gamma = cgamma
-# =============================================================================
-# 			temp_omega = comega
-# =============================================================================
+
 		print freqs0	
 		print "final omega", temp_omega
-		print "final gamma", [x for x in temp_gamma]
+		print "final gamma", [x/1e12*c for x in temp_gamma]
 		with open(f+"_GAMMAS", "wb") as w:
 			w.writelines(["{}\n".format(x) for x in temp_gamma])
+	
+	
+	
+# =============================================================================
+# ## ASSIGNAMTIONS OF THE GAMMAS	
+# 	mod, cub = get_data_from_out(flist[0])
+# 	cub = make_permutations(cub)
+# 	xyl_mod = get_mode_localisation_on_xylene(mod, 18)
+# 	print xyl_mod
+# 	with open(flist[0]+"_GAMMAS", "rb") as r:
+# 		gammas0 = [float(x.strip()) for x in r.readlines()]
+# 	freqs0 = sorted([float(mod[x][0][0]) for x in sorted(mod.keys())[:-1]])
+# 
+# 	plottable_xyl_loc = [] # as tuples (xylene localisation number, decay to xylene, total decay, mode number, mode frequency, mode number as defined by xylene localistaion )
+# 
+# 	for k in range(len(freqs0)):
+# 		breakdown = breadown_decay_by_mode(k, cub, freqs0, gammas0, [y-1 for x,y,_ in xyl_mod if x>0.90], [y-1 for x,y,_ in xyl_mod if x<0.01] )
+# 		plottable_xyl_loc.append((xyl_mod[k][0], breakdown[0][1]+breakdown[2][1]+breakdown[3][1], sum([x[1] for x in breakdown]), k, float(xyl_mod[k][2]), sorted(xyl_mod, key= lambda x: x[0]).index(xyl_mod[k])))
+# 	print plottable_xyl_loc
+# # =============================================================================
+# # 	l = sorted(plottable_xyl_loc)[::-1]
+# # =============================================================================
+# 	l = sorted(plottable_xyl_loc)[::-1]
+# 	plt.plot([x[0] for x in l])
+# 	plt.plot([x[1]/max([x[2] for x in l]) for x in l])
+# 	plt.plot([x[2]/max([x[2] for x in l]) for x in l])
+# 	
+# 	plt.show()
+# 	
+# =============================================================================
 	
 # =============================================================================
 # 	mod, cub = get_data_from_out('/home/macenrola/AcPhCN.com_OUT.out')
