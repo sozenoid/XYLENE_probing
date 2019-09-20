@@ -544,10 +544,20 @@ if __name__ == "__main__":
 	c = 29979245800# cm/s
 	amu = 1.66054e-27 # kg
 	kbtcm = kb*T/h/c
-	
 
 	flist = sorted(glob.glob("/home/macenrola/Documents/XYLENE/inputs/cubic_coupling/OUTS/cubic_coupling/*CB7*.out"))
+	flist = ["/home/macenrola/Documents/XYLENE/inputs/cubic_coupling/OUTS/cubic_coupling/mxylene-h-single-CB7.com_OUT.out.xyz.com_OUT.out.xyz.com_OUT.out.xyz.com_OUT.out"]
+# =============================================================================
+# 	flist = ["/home/macenrola/Documents/XYLENE/inputs/cubic_coupling/OUTS/cubic_coupling/mxylene.com_OUT.out.xyz.com_OUT.out.xyz.com_OUT.out"]
+# =============================================================================
 # GAMMA OPTI WITH SCF
+	def get_resg(k0, CUB_O0_O_G):
+		cub, freqs0, temp_omega, temp_gamma = CUB_O0_O_G
+		return scipy.optimize.brentq(get_decay_k, -10, 20000, args=(k0,cub,freqs0,temp_omega,temp_gamma))
+	
+	def star_get_resg(k0_other_args):
+		return get_resg(*k0_other_args)
+	
 	p = Pool(None)
 	for f in flist:
 		print f
@@ -568,13 +578,13 @@ if __name__ == "__main__":
 		temp_gamma = gammas0
 		convo, convg = 0e10, 1e10
 		for z in range(100):
-			def get_resg(k0):
-				return scipy.optimize.brentq(get_decay_k, -10, 20000, args=(k0,cub,freqs0,freqs0,temp_gamma))
 			if (convo+convg) < 0.001: break
 			print "iteration {}, total residues {}".format(z, convo+convg)
 			cgamma =[]
 			print "POOL IS STARTING"
-			cgamma = p.map(get_resg, range(len(freqs0)))
+			gamma_num = range(len(freqs0))
+			second_arg = [cub, freqs0, freqs0, temp_gamma]
+			cgamma = p.map(star_get_resg,  itertools.izip(gamma_num, itertools.repeat(second_arg)))
 			print "POOL IS OVER"
 			convg = sum([(x-y)**2 for x,y in zip(cgamma, temp_gamma)])
 			print "it:{}, difference in gamma {}".format(z, convg), ["{0:3.3f}".format(x-y) for x,y in zip(cgamma, temp_gamma)]
