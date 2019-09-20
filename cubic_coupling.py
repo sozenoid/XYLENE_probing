@@ -551,6 +551,7 @@ if __name__ == "__main__":
 # 	flist = ["/home/macenrola/Documents/XYLENE/inputs/cubic_coupling/OUTS/cubic_coupling/mxylene.com_OUT.out.xyz.com_OUT.out.xyz.com_OUT.out"]
 # =============================================================================
 # GAMMA OPTI WITH SCF
+	p = Pool(None)
 	def get_resg(k0, CUB_O0_O_G):
 		cub, freqs0, temp_omega, temp_gamma = CUB_O0_O_G
 		return scipy.optimize.brentq(get_decay_k, -10, 20000, args=(k0,cub,freqs0,temp_omega,temp_gamma))
@@ -558,7 +559,6 @@ if __name__ == "__main__":
 	def star_get_resg(k0_other_args):
 		return get_resg(*k0_other_args)
 	
-	p = Pool(None)
 	for f in flist:
 		print f
 		mod, cub = get_data_from_out(f)
