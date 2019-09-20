@@ -105,9 +105,9 @@ def get_mode_localisation_on_xylene(mode, mode_xyl_atoms):
 	62.4629103182
 	"""
 	xyl_localised_modes=[]
-	for k in sorted(mode)[:-1]:
-		LOC_ON_XYL_COEFF=sum([float(x)**2 for x in mod[k][1][:mode_xyl_atoms]])
-		xyl_localised_modes.append((LOC_ON_XYL_COEFF, k))
+	for k in sorted(mode)[:-1]: # to avoid the order 
+		LOC_ON_XYL_COEFF=sum([float(x)**2 for x in mod[k][1][:mode_xyl_atoms*3-1]])
+		xyl_localised_modes.append((LOC_ON_XYL_COEFF, k, mod[k][0][0]))
 
 	return sorted(xyl_localised_modes)[::-1]
 	
@@ -420,13 +420,14 @@ def get_omega_k(omegak, k, cubdic, omega0, omegas, gammas):
 	acc = 0
 	for i in range(len(omegas)):
 		for j in range(len(omegas)):
+			if i == k or j == k: continue
 			omegai, omegaj, omegak, gammai, gammaj, gammak = omegas[i],omegas[j],omegak,gammas[i],gammas[j],gammas[k]
 			ni = occ_num(omegai)
 			nj = occ_num(omegaj)
 			key = "{}-{}-{}".format(i+1, j+1, k+1)
 			
 			try:
-				if float(cubdic[key][0])**2<1e2: # If the anharmonicities are too big, the computation just crashes
+				if float(cubdic[key][0])**2<1e15: # If the anharmonicities are too big, the computation just crashes
 					acc += float(cubdic[key][0])**2 * (
 							(ni+nj+1)*(llike(omegai, omegaj, -omegak, omegai, omegaj, -omegak, gammai, gammaj, gammak)) + 
 							(ni+nj+1)*(llike(omegai, omegaj, omegak, omegai, omegaj, omegak, gammai, gammaj, gammak)) +
@@ -442,10 +443,9 @@ def get_omega_k(omegak, k, cubdic, omega0, omegas, gammas):
 def get_decay_k(gammak, k, cubdic, omega0, omegas, gammas):
 	"""
 	PRE: Starting from the initial frequencies and the corrected frequencies and the decay rate
-	POST: Will return the correction to omega_k
+	POST: Will return the correction to gamma_k
 	"""
 	acc = 0
-	print "task {}".format(k)
 	for i in range(len(omegas)):
 		for j in range(len(omegas)):
 			if i == k or j == k: continue
@@ -466,6 +466,64 @@ def get_decay_k(gammak, k, cubdic, omega0, omegas, gammas):
 				continue
 	return acc/16 - gammak
 
+
+
+def get_decays(f):
+	"""
+	PRE: Takes in a file
+	POST: Returns the gamma after self consistent field approach
+	"""
+
+	mod, cub = get_data_from_out(f)
+	freqs0 = sorted([float(mod[x][0][0]) for x in sorted(mod.keys())[:-1]])
+	print freqs0
+	gammas0 = [15.]*len(freqs0)
+	with open(f+"_GAMMAS_seq", "rb") as r:
+		gammas0 = [float(x.strip()) for x in r.readlines()]
+	print gammas0
+	cub = make_permutations(cub)
+	dim = len(mod)-1
+
+
+	# ALL SCF 
+	temp_omega = freqs0
+	temp_gamma = gammas0
+	convo, convg = 1e10, 1e10
+	for z in range(100):
+		if (convo+convg) < 0.001: break
+		print "iteration {}, total residues {}".format(z, convo+convg)
+		comega = []
+		cgamma =[]
+		p = Pool(None)
+		comega = p.map(get_reso, range(len(freqs0)))
+		convo = sum([(x-y)**2 for x,y in zip(comega, temp_omega)])
+ 		print "it:{}, difference in omega {}".format(z, convo), ["{0:3.3f}".format(x-y) for x,y in zip(comega, temp_omega)]
+
+# =============================================================================
+# 		for k in range(len(freqs0)):
+# 			res = scipy.optimize.brentq(get_omega_k, 0, 5000, args=(k,cub,freqs0,temp_omega,temp_gamma))
+# 			print z, k, res
+# 			comega.append(res)
+# 		convo = sum([(x-y)**2 for x,y in zip(comega, temp_omega)])
+# 		print "it:{}, difference in omega {}".format(z, convo), ["{0:3.3f}".format(x-y) for x,y in zip(comega, temp_omega)]
+# =============================================================================
+		cgamma = p.map(get_resg, range(len(freqs0)))
+# =============================================================================
+# 				for k in range(len(freqs0)):
+# 					res = scipy.optimize.brentq(get_decay_k, 0, 5000, args=(k,cub,freqs0,freqs0,temp_gamma))
+# 					print z, k, res
+# 					cgamma.append(res)	
+# =============================================================================
+		convg = sum([(x-y)**2 for x,y in zip(cgamma, temp_gamma)])
+		print "it:{}, difference in gamma {}".format(z, convg), ["{0:3.3f}".format(x-y) for x,y in zip(cgamma, temp_gamma)]
+
+		temp_gamma = cgamma
+		temp_omega = comega
+	print freqs0	
+	print "final omega", temp_omega
+	print "final gamma", [x for x in temp_gamma]
+	with open(f+"_GAMMAS", "wb") as w:
+		w.writelines(["{}\n".format(x) for x in temp_gamma])
 if __name__ == "__main__":
 	import numpy as np
 	import glob
@@ -484,69 +542,43 @@ if __name__ == "__main__":
 	
 
 	
-# =============================================================================
-# 	print scipy.optimize.bisect(get_decay_k, 0, 100, args=(k,cub,freqs0,temp_omega,temp_gamma))
-# =============================================================================
-# =============================================================================
-# 	# SEQUENTIAL SCF
-# 	for z in range(30):
-# 		print "iteration {}".format(z)
-# 		convo = 1e10
-# 		for duplo in range(10):
-# 			if convo<1e-5: break
-# 			comega = []
-# 			for k in range(len(freqs0)):
-# 				res = scipy.optimize.brentq(get_omega_k, -1, 10000, args=(k,cub,freqs0,temp_omega,temp_gamma))
-# 				comega.append(res)
-# 			convo = sum([(x-y)**2 for x,y in zip(comega, temp_omega)])
-# 			print "it:{}, round:{}, difference in omega {}".format(z, duplo, convo), ["{0:3.3f}".format(x-y) for x,y in zip(comega, temp_omega)]
-# 			temp_omega = comega
-# 		convg = 1e10
-# 		for duplg in range(10):
-# 			if convg<1e-5: break
-# 			cgamma =[]
-# 			for k in range(len(freqs0)):
-# 				res = scipy.optimize.brentq(get_decay_k, 0, 200, args=(k,cub,freqs0,temp_omega,temp_gamma))
-# 				cgamma.append(res)	
-# 			convg = sum([(x-y)**2 for x,y in zip(cgamma, temp_gamma)])
-# 			print "it:{}, round:{}, difference in gamma {}".format(z, duplg, convg), ["{0:3.3f}".format(x-y) for x,y in zip(cgamma, temp_gamma)]
-# 			temp_gamma = cgamma
-# 	print "final omega", temp_omega
-# 	print "final gamma", temp_gamma
-# 	
-# =============================================================================
+	flist = ["/home/macenrola/Documents/XYLENE/inputs/cubic_coupling/OUTS/cubic_coupling/mxylene.com_OUT.out.xyz.com_OUT.out.xyz.com_OUT.out"]
+
+
 	
-# =============================================================================
-# 	mod, cub = get_data_from_out('/home/macenrola/AcPhCN.com_OUT.out')
-# =============================================================================
-	flist = glob.glob("/home/macenrola/Documents/XYLENE/inputs/cubic_coupling/OUTS/cubic_coupling/*.out")
-# =============================================================================
-# 	flist = ["/home/macenrola/Documents/XYLENE/inputs/cubic_coupling/OUTS/cubic_coupling/xylenes/just_xyl-mxylene-protonated-CB7.com_OUT.out.xyz.com_OUT.out.xyz.com_OUT.out.xyz.com_OUT.out.xyz.com_OUT.out"]
-# =============================================================================
-# =============================================================================
-# 	flist = glob.glob("/home/macenrola/Documents/XYLENE/inputs/cubic_coupling/OUTS/cubic_coupling/xylenes/*.out")
-# =============================================================================
-	for f in flist: 
-		try:
-			mod, cub = get_data_from_out(f)
-			freqs0 = sorted([float(mod[x][0][0]) for x in sorted(mod.keys())[:-1]])
-			print freqs0
-			gammas0 = [15.]*len(freqs0)
-			cub = make_permutations(cub)
-			dim = len(mod)-1
+
+	for f in flist:
+		mod, cub = get_data_from_out(f)
+		freqs0 = sorted([float(mod[x][0][0]) for x in sorted(mod.keys())[:-1]])
+		print freqs0
+		gammas0 = [15.]*len(freqs0)
+		with open(f+"_GAMMAS_seq", "rb") as r:
+			gammas0 = [float(x.strip()) for x in r.readlines()]
+		print gammas0
+		cub = make_permutations(cub)
+		dim = len(mod)-1
 		
 		
 		# ALL SCF 
-			temp_omega = freqs0
-			temp_gamma = gammas0
-			convo, convg = 0, 1e10
-			for z in range(100):
-				if (convo+convg) < 0.001: break
-				print "iteration {}, total residues {}".format(z, convo+convg)
-		# =============================================================================
-		# 		comega = []
-		# =============================================================================
-				cgamma =[]
+		temp_omega = freqs0
+		temp_gamma = gammas0
+		convo, convg = 0e10, 1e10
+		for z in range(100):
+			def get_resg(k0):
+				return scipy.optimize.brentq(get_decay_k, 0, 5000, args=(k0,cub,freqs0,freqs0,temp_gamma))
+			pooo = Pool(None)
+			if (convo+convg) < 0.001: break
+			print "iteration {}, total residues {}".format(z, convo+convg)
+			comega = []
+			cgamma =[]
+	
+		
+	# =============================================================================
+	# 		def get_reso(k0):
+	# 			return scipy.optimize.brentq(get_omega_k, 0, 5000, args=(k0,cub,freqs0,temp_omega,temp_gamma))
+	# 		comega = p.map(get_reso, range(len(freqs0)))
+	# 		convo = sum([(x-y)**2 for x,y in zip(comega, temp_omega)])
+	# =============================================================================
 		# =============================================================================
 		# 		for k in range(len(freqs0)):
 		# 			res = scipy.optimize.brentq(get_omega_k, 0, 5000, args=(k,cub,freqs0,temp_omega,temp_gamma))
@@ -555,145 +587,48 @@ if __name__ == "__main__":
 		# 		convo = sum([(x-y)**2 for x,y in zip(comega, temp_omega)])
 		# 		print "it:{}, difference in omega {}".format(z, convo), ["{0:3.3f}".format(x-y) for x,y in zip(comega, temp_omega)]
 		# =============================================================================
-				def get_res(k0):
-					return scipy.optimize.brentq(get_decay_k, 0, 5000, args=(k0,cub,freqs0,freqs0,temp_gamma))
-				p = Pool(8)
-				cgamma = p.map(get_res, range(len(freqs0)))
-# =============================================================================
-# 				for k in range(len(freqs0)):
-# 					res = scipy.optimize.brentq(get_decay_k, 0, 5000, args=(k,cub,freqs0,freqs0,temp_gamma))
-# 					print z, k, res
-# 					cgamma.append(res)	
-# =============================================================================
-				convg = sum([(x-y)**2 for x,y in zip(cgamma, temp_gamma)])
-				print "it:{}, difference in gamma {}".format(z, convg), ["{0:3.3f}".format(x-y) for x,y in zip(cgamma, temp_gamma)]
+
+			cgamma = pooo.map(get_resg, range(len(freqs0)))
+	
+		# =============================================================================
+		# 				for k in range(len(freqs0)):
+		# 					res = scipy.optimize.brentq(get_decay_k, 0, 5000, args=(k,cub,freqs0,freqs0,temp_gamma))
+		# 					print z, k, res
+		# 					cgamma.append(res)	
+		# =============================================================================
+			convg = sum([(x-y)**2 for x,y in zip(cgamma, temp_gamma)])
+			print "it:{}, difference in gamma {}".format(z, convg), ["{0:3.3f}".format(x-y) for x,y in zip(cgamma, temp_gamma)]
 		
-				temp_gamma = cgamma
-		# =============================================================================
-		# 		temp_omega = comega
-		# =============================================================================
-		# =============================================================================
-		# 	print "final omega", temp_omega
-		# =============================================================================
-			print "final gamma", [x for x in temp_gamma]
-			with open(f+"_GAMMAS", "wb") as w:
-				w.writelines(["{}\n".format(x) for x in temp_gamma])
-		except:
-			pass
-		
+			temp_gamma = cgamma
+# =============================================================================
+# 			temp_omega = comega
+# =============================================================================
+		print freqs0	
+		print "final omega", temp_omega
+		print "final gamma", [x for x in temp_gamma]
+		with open(f+"_GAMMAS", "wb") as w:
+			w.writelines(["{}\n".format(x) for x in temp_gamma])
 	
 # =============================================================================
-# 	
-# 	WXX, WCC, WCX, WXM, WCM, WMM = 0,0,0,0,0,0
-# 	for i in sorted([int(x) for x in mod.keys()[:-1]]):
-# 		print i, "Freq is: {}".format(mod[str(i)][0][0])
-# 		tWXX, tWCC, tWCX, tWXM, tWCM, tWMM = compute_decay_rates_fujisaki(cub, mod, i, sorted(mod.keys())[:-1],  sorted(mod.keys())[:-1])
-# 		WXX+=tWXX
-# 		WCC+=tWCC
-# 		WCX+=tWCX
-# 		WXM+=tWXM
-# 		WCM+=tWCM
-# 		WMM+=tWMM
-# 	print "cumulated values are: ", WXX, WCC, WCX, WXM, WCM, WMM
-# 	
-# =============================================================================
-# =============================================================================
-# 	# GET QUNATITIES THAT DONT CHANGE AND LAMBDA IJK
 # 	mod, cub = get_data_from_out('/home/macenrola/AcPhCN.com_OUT.out')
-# 	dim = len(mod)-1
-# 	cub = make_permutations(cub)
-# 	vijk = make_vijk_array(cub)
-# 	print "rescaling vijk"
-# 	vijk = rescale_vijk_array(vijk, mod)
-# 	print "rescaling done"
-# 	fl = "/home/macenrola/Desktop/lambda_array"
-# 	ft = "/home/macenrola/Desktop/tau_array"
-#  	r = open(fl, 'rb')
-# 	lambda_array = np.load(r)
-# 	
-# 	rijk0 = np.ones([dim, dim, dim])*1e10
-# 	rlijarr = rijk0
-# 	t0 = []
-# 	for z in range(dim):
-# 		t0.append(taulint(z, rlijarr))
-# 
-# 	for _ in range(10):
-# 		tint = []
-# 		tl = []
-# 		for z in range(dim):
-# 			tint.append(taulint(z, rlijarr))
-# 		for z in range(dim):
-# 			tl.append(taul(tint[z]))
-# 		print sum([(x-y)**2 for x, y in zip(tint, t0)])
-# 		print tl
-# 		t0=tint
-# 		kijkarr = np.zeros([dim, dim, dim])
-# 		print "kijk"
-# 		for i in range(dim):
-# 			for j in range(dim):
-# 				for k in range(dim):
-# 					kijkarr[i][j][k] = kijk(i,j,k, vijk, tauijk([i,j,k], mod, lambda_array, tl, vijk), lambda_array[i][j][k], mod) 
-# 		print "wijk"
-# 		wijkarr = np.zeros([dim, dim, dim])
-# 		for i in range(dim):
-# 			for j in range(dim):
-# 				for k in range(dim):
-# 					wijkarr[i][j][k] = wijk([mod[str(i+1)][0][0], mod[str(j+1)][0][0], mod[str(k+1)][0][0]],lambda_array[i][j][k], kijkarr[i][j][k])
-# 		print "wjki"
-# 		wjkiarr = np.zeros([dim, dim, dim])
-# 		for i in range(dim):
-# 			for j in range(dim):
-# 				for k in range(dim):
-# 					wjkiarr[i][j][k] = wjki([mod[str(i+1)][0][0], mod[str(j+1)][0][0], mod[str(k+1)][0][0]],lambda_array[i][j][k], kijkarr[i][j][k])
-# 		print "rlij"
-# 		rlijarr = np.zeros([dim, dim, dim])
-# 		for i in range(dim):
-# 			for j in range(dim):
-# 				for l in range(dim):
-# 					rlijarr[l][i][j] = rlij(wijkarr[i][j][l], wjkiarr[j][l][i], wjkiarr[i][j][l], wijkarr[l][i][j], l, i, j)
-# 	
-# 
 # =============================================================================
 # =============================================================================
-# 	larray = get_lambda_array(mod, cub)
-# 	w = open(fl, 'wb')
-# 	np.save(w, larray)
-# 	for i in range(dim):
-# 		for j in range(dim):
-# 			for k in range(dim):
-# 				print larray[i][j][k]
+# 	flist = glob.glob("/home/macenrola/Documents/XYLENE/inputs/cubic_coupling/OUTS/cubic_coupling/*.out")
 # =============================================================================
 # =============================================================================
-# 	r = open(fl, 'rb')
+# 	flist = ["/home/macenrola/Documents/XYLENE/inputs/cubic_coupling/OUTS/cubic_coupling/mxylene-CB6.com_OUT.out.xyz.com_OUT.out.xyz.com_OUT.out.xyz.com_OUT.out"]
+# =============================================================================
+
+# =============================================================================
+# 	flist = glob.glob("/home/macenrola/Documents/XYLENE/inputs/cubic_coupling/OUTS/cubic_coupling/xylenes/*.out")
 # =============================================================================
 # =============================================================================
-# 	tau_array = np.load(r)
+# 	mod, cub = get_data_from_out(flist[0])
+# 	print mod.keys()
+# 	for k, i in enumerate(["{}\t{}\t{}".format(x, y, z) for x, y, z in get_mode_localisation_on_xylene(mod, 18)]):
+# 		print k,i
 # =============================================================================
-# =============================================================================
-# 	# GET TAUIJK 
-# 	taulinit = [10e-12]*48
-# 	print tauijk([47,0,0], lambda_array[47,0,0], taulinit)
-# =============================================================================
-# =============================================================================
-# 	tau_array = make_tau_array(lambda_array, taulinit)
-# 	w = open(ft, 'wb')
-# 	np.save(w, larray)
-# 	
-# 	# GET Kijk
-# 	
-# 	k_array = make_kijk_array()
-# =============================================================================
+
+		
 	
-	
-	# Get Rijk
-	
-	
-	
-	# Get Tau int
-	
-	
-	# Get Tau L
-	
-	
-	# Get Tauijk_array
 
