@@ -468,11 +468,13 @@ def get_decay_k(gammak, k, cubdic, omega0, omegas, gammas):
 				continue
 	return acc/16 - gammak
 
-def breadown_decay_by_mode(k, cubdic, omegas, gammas, xyl_mode_list, CB_mode_list):
+def breakdown_decay_by_mode(k, ARG_LIST):
 	"""
-	PRE: Takes in pre optimized gammas
+	PRE: Takes in pre optimized gammas as ARG_LIST = cubdic, omegas, gammas, xyl_mode_list, CB_mode_list
 	POST: Returns a list with index i correponds to the ith mode contribution to decay (probs times 2)
 	"""
+	print k
+	cubdic, omegas, gammas, xyl_mode_list, CB_mode_list = ARG_LIST
 	kthdecay_breakdown = [0]*len(omegas)
 	WXX, WCC, WCX, WXM, WCM, WMM = 0,0,0,0,0,0 # cumulative decay rate for xylene xylene denominated frequencies (WXX), CB and CB (WCC), CB and Xylene (WCX), Mixed and Mixed (WMM), Xylene and Mixed (WXM), CB and Mixed (WCM)
 	cWXX, cWCC, cWCX, cWXM, cWCM, cWMM = 0,0,0,0,0,0 # associated counters
@@ -521,10 +523,10 @@ def breadown_decay_by_mode(k, cubdic, omegas, gammas, xyl_mode_list, CB_mode_lis
 # 				print(traceback.format_exc())
 # =============================================================================
 				continue
-	print "Mode freq: ", omegas[k], "overall: ", sum([WXX, WCC, WCX, WXM, WCM, WMM]), acc
-	print "counts: ", cWXX, cWCC, cWCX, cWXM, cWCM, cWMM
+#	print "Mode freq: ", omegas[k], "overall: ", sum([WXX, WCC, WCX, WXM, WCM, WMM]), acc
+#	print "counts: ", cWXX, cWCC, cWCX, cWXM, cWCM, cWMM
 	#print "avg rate contribution: ",W1/cw1, W2/cw2, W3/cw3
-	print "Overall rates: ", zip(['WXX', 'WCC', 'WCX', 'WXM', 'WCM', 'WMM'], [WXX, WCC, WCX, WXM, WCM, WMM])
+#	print "Overall rates: ", zip(['WXX', 'WCC', 'WCX', 'WXM', 'WCM', 'WMM'], [WXX, WCC, WCX, WXM, WCM, WMM])
 	return zip(['WXX', 'WCC', 'WCX', 'WXM', 'WCM', 'WMM'], [WXX, WCC, WCX, WXM, WCM, WMM])
 
 if __name__ == "__main__":
@@ -545,85 +547,93 @@ if __name__ == "__main__":
 	amu = 1.66054e-27 # kg
 	kbtcm = kb*T/h/c
 
-	flist = sorted(glob.glob("/home/macenrola/Documents/XYLENE/inputs/cubic_coupling/OUTS/cubic_coupling/*CB7*.out"))
-	flist = ["/home/macenrola/Documents/XYLENE/inputs/cubic_coupling/OUTS/cubic_coupling/mxylene-h-single-CB7.com_OUT.out.xyz.com_OUT.out.xyz.com_OUT.out.xyz.com_OUT.out"]
+	flist = sorted(glob.glob("/Users/hugueslambert/Desktop/xylene/cubic_coupling/mxylene-protonated-CB*.com_OUT.out.xyz.com_OUT.out.xyz.com_OUT.out.xyz.com_OUT.out"))
+	print flist
+#	flist = ["/Users/hugueslambert/Desktop/xylene/cubic_coupling/mxylene.com_OUT.out.xyz.com_OUT.out.xyz.com_OUT.out"]
 # =============================================================================
 # 	flist = ["/home/macenrola/Documents/XYLENE/inputs/cubic_coupling/OUTS/cubic_coupling/mxylene.com_OUT.out.xyz.com_OUT.out.xyz.com_OUT.out"]
 # =============================================================================
-# GAMMA OPTI WITH SCF
-	def get_resg(k0, CUB_O0_O_G):
-		cub, freqs0, temp_omega, temp_gamma = CUB_O0_O_G
-		return scipy.optimize.brentq(get_decay_k, -10, 20000, args=(k0,cub,freqs0,temp_omega,temp_gamma))
-	
-	def star_get_resg(k0_other_args):
-		return get_resg(*k0_other_args)
-	p = Pool(None)
-
-	for f in flist:
-		print f
-		mod, cub = get_data_from_out(f)
-		freqs0 = sorted([float(mod[x][0][0]) for x in sorted(mod.keys())[:-1]])
-		try:
-			with open(f+"_GAMMAS_seqo", "rb") as r:
-				gammas0 = [float(x.strip()) for x in r.readlines()]
-		except:
-			gammas0 = [150.]*len(freqs0)
-
-		print gammas0
-		cub = make_permutations(cub)
-		dim = len(mod)-1
-		
-		# ALL SCF 
-		temp_omega = freqs0
-		temp_gamma = gammas0
-		convo, convg = 0e10, 1e10
-		for z in range(100):
-			if (convo+convg) < 0.001: break
-			print "iteration {}, total residues {}".format(z, convo+convg)
-			cgamma =[]
-			print "POOL IS STARTING"
-			gamma_num = range(len(freqs0))
-			second_arg = [cub, freqs0, freqs0, temp_gamma]
-			cgamma = p.map(star_get_resg,  itertools.izip(gamma_num, itertools.repeat(second_arg)))
-			print "POOL IS OVER"
-			convg = sum([(x-y)**2 for x,y in zip(cgamma, temp_gamma)])
-			print "it:{}, difference in gamma {}".format(z, convg), ["{0:3.3f}".format(x-y) for x,y in zip(cgamma, temp_gamma)]
-			temp_gamma = cgamma
-
-		print freqs0	
-		print "final omega", temp_omega
-		print "final gamma", [x/1e12*c for x in temp_gamma]
-		with open(f+"_GAMMAS", "wb") as w:
-			w.writelines(["{}\n".format(x) for x in temp_gamma])
+## GAMMA OPTI WITH SCF
+#	def get_resg(k0, CUB_O0_O_G):
+#		cub, freqs0, temp_omega, temp_gamma = CUB_O0_O_G
+#		return scipy.optimize.brentq(get_decay_k, -10, 20000, args=(k0,cub,freqs0,temp_omega,temp_gamma))
+#	
+#	def star_get_resg(k0_other_args):
+#		return get_resg(*k0_other_args)
+#	p = Pool(None)
+#
+#	for f in flist:
+#		print f
+#		mod, cub = get_data_from_out(f)
+#		freqs0 = sorted([float(mod[x][0][0]) for x in sorted(mod.keys())[:-1]])
+#		try:
+#			with open(f+"_GAMMAS_seqo", "rb") as r:
+#				gammas0 = [float(x.strip()) for x in r.readlines()]
+#		except:
+#			gammas0 = [150.]*len(freqs0)
+#
+#		print gammas0
+#		cub = make_permutations(cub)
+#		dim = len(mod)-1
+#		
+#		# ALL SCF 
+#		temp_omega = freqs0
+#		temp_gamma = gammas0
+#		convo, convg = 0e10, 1e10
+#		for z in range(100):
+#			if (convo+convg) < 0.001: break
+#			print "iteration {}, total residues {}".format(z, convo+convg)
+#			cgamma =[]
+#			print "POOL IS STARTING"
+#			gamma_num = range(len(freqs0))
+#			second_arg = [cub, freqs0, freqs0, temp_gamma]
+#			cgamma = p.map(star_get_resg,  itertools.izip(gamma_num, itertools.repeat(second_arg)))
+#			print "POOL IS OVER"
+#			convg = sum([(x-y)**2 for x,y in zip(cgamma, temp_gamma)])
+#			print "it:{}, difference in gamma {}".format(z, convg), ["{0:3.3f}".format(x-y) for x,y in zip(cgamma, temp_gamma)]
+#			temp_gamma = cgamma
+#
+#		print freqs0	
+#		print "final omega", temp_omega
+#		print "final gamma", [x/1e12*c for x in temp_gamma]
+#		with open(f+"_GAMMAS", "wb") as w:
+#			w.writelines(["{}\n".format(x) for x in temp_gamma])
 	
 	
 	
 # =============================================================================
-# ## ASSIGNAMTIONS OF THE GAMMAS	
-# 	mod, cub = get_data_from_out(flist[0])
-# 	cub = make_permutations(cub)
-# 	xyl_mod = get_mode_localisation_on_xylene(mod, 18)
-# 	print xyl_mod
-# 	with open(flist[0]+"_GAMMAS", "rb") as r:
-# 		gammas0 = [float(x.strip()) for x in r.readlines()]
-# 	freqs0 = sorted([float(mod[x][0][0]) for x in sorted(mod.keys())[:-1]])
-# 
-# 	plottable_xyl_loc = [] # as tuples (xylene localisation number, decay to xylene, total decay, mode number, mode frequency, mode number as defined by xylene localistaion )
-# 
-# 	for k in range(len(freqs0)):
-# 		breakdown = breadown_decay_by_mode(k, cub, freqs0, gammas0, [y-1 for x,y,_ in xyl_mod if x>0.90], [y-1 for x,y,_ in xyl_mod if x<0.01] )
-# 		plottable_xyl_loc.append((xyl_mod[k][0], breakdown[0][1]+breakdown[2][1]+breakdown[3][1], sum([x[1] for x in breakdown]), k, float(xyl_mod[k][2]), sorted(xyl_mod, key= lambda x: x[0]).index(xyl_mod[k])))
-# 	print plottable_xyl_loc
-# # =============================================================================
-# # 	l = sorted(plottable_xyl_loc)[::-1]
-# # =============================================================================
-# 	l = sorted(plottable_xyl_loc)[::-1]
-# 	plt.plot([x[0] for x in l])
-# 	plt.plot([x[1]/max([x[2] for x in l]) for x in l])
-# 	plt.plot([x[2]/max([x[2] for x in l]) for x in l])
-# 	
-# 	plt.show()
-# 	
+ ## ASSIGNAMTIONS OF THE GAMMAS	
+	def star_breakdown_decay_by_mode(ALL_ARGS):
+		return breakdown_decay_by_mode(*ALL_ARGS)
+	for f in flist[:]:
+		mod, cub = get_data_from_out(f)
+	 	cub = make_permutations(cub)
+	 	xyl_mod = get_mode_localisation_on_xylene(mod, 19)
+	 	print xyl_mod
+	 	with open(f + "_GAMMAS", "rb") as r:
+	 		gammas0 = [float(x.strip()) for x in r.readlines()]
+			print len(gammas0)
+	 	freqs0 = sorted([float(mod[x][0][0]) for x in sorted(mod.keys())[:-1]])
+		print len(freqs0)
+		plottable_xyl_loc = [] # as tuples (xylene localisation number, decay to xylene, total decay, mode number, mode frequency, mode number as defined by xylene localistaion )
+		p = Pool(4)
+		second_arg = [cub, freqs0, gammas0, [y-1 for x,y,_ in xyl_mod if x>0.90], [y-1 for x,y,_ in xyl_mod if x<0.1]]
+		breakdowns = p.map_async(star_breakdown_decay_by_mode,  itertools.izip(range(len(freqs0)), itertools.repeat(second_arg)))
+		p.close()
+	 	for k in range(len(freqs0)):
+#	 		breakdown = breadown_decay_by_mode(k, cub, freqs0, gammas0, [y-1 for x,y,_ in xyl_mod if x>0.90], [y-1 for x,y,_ in xyl_mod if x<0.1] )
+			plottable_xyl_loc.append((xyl_mod[k][0], breakdowns[k][0][1]+breakdowns[k][2][1]+breakdowns[k][3][1], sum([x[1] for x in breakdowns[k]]), k, float(xyl_mod[k][2]), sorted(xyl_mod, key= lambda x: x[0]).index(xyl_mod[k])))
+	 	print plottable_xyl_loc
+	# # =============================================================================
+	# # 	l = sorted(plottable_xyl_loc)[::-1]
+	# # =============================================================================
+	 	l = sorted(plottable_xyl_loc)[::-1]
+	 	plt.plot([x[0] for x in l])
+	 	plt.plot([x[1]/max([x[2] for x in l]) for x in l])
+	 	plt.plot([x[2]/max([x[2] for x in l]) for x in l])
+	 	
+	 	plt.show()
+		cPickle.dump(l, open(f+'_graph_dump', 'wb'))
 # =============================================================================
 	
 # =============================================================================
