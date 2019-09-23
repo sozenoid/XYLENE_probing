@@ -474,6 +474,7 @@ def breakdown_decay_by_mode(k, ARG_LIST):
 	POST: Returns a list with index i correponds to the ith mode contribution to decay (probs times 2)
 	"""
 	print k
+	biggest_list = []
 	cubdic, omegas, gammas, xyl_mode_list, CB_mode_list = ARG_LIST
 	kthdecay_breakdown = [0]*len(omegas)
 	WXX, WCC, WCX, WXM, WCM, WMM = 0,0,0,0,0,0 # cumulative decay rate for xylene xylene denominated frequencies (WXX), CB and CB (WCC), CB and Xylene (WCX), Mixed and Mixed (WMM), Xylene and Mixed (WXM), CB and Mixed (WCM)
@@ -518,15 +519,19 @@ def breakdown_decay_by_mode(k, ARG_LIST):
 						WMM+=temp
 						cWMM+=1
 					acc+=temp
+#						print "{}\t{}\t{}\t{}\t{}\t{}\t{}".format(k, i, j, omegak, omegai, omegaj, temp)
+					biggest_list.append((k, i, j, omegak, omegai, omegaj, temp))
 			except:
 # =============================================================================
 # 				print(traceback.format_exc())
 # =============================================================================
 				continue
-#	print "Mode freq: ", omegas[k], "overall: ", sum([WXX, WCC, WCX, WXM, WCM, WMM]), acc
-#	print "counts: ", cWXX, cWCC, cWCX, cWXM, cWCM, cWMM
-	#print "avg rate contribution: ",W1/cw1, W2/cw2, W3/cw3
-#	print "Overall rates: ", zip(['WXX', 'WCC', 'WCX', 'WXM', 'WCM', 'WMM'], [WXX, WCC, WCX, WXM, WCM, WMM])
+	for w in sorted(biggest_list, key = lambda x: x[-1], reverse=True)[:20]:
+		print w
+	print "Mode freq: ", omegas[k], "overall: ", sum([WXX, WCC, WCX, WXM, WCM, WMM]), acc
+	print "counts: ", cWXX, cWCC, cWCX, cWXM, cWCM, cWMM
+#	print "avg rate contribution: ",W1/cw1, W2/cw2, W3cw3
+	print "Overall rates: ", zip(['WXX', 'WCC', 'WCX', 'WXM', 'WCM', 'WMM'], [WXX, WCC, WCX, WXM, WCM, WMM])
 	return zip(['WXX', 'WCC', 'WCX', 'WXM', 'WCM', 'WMM'], [WXX, WCC, WCX, WXM, WCM, WMM])
 
 if __name__ == "__main__":
@@ -547,7 +552,13 @@ if __name__ == "__main__":
 	amu = 1.66054e-27 # kg
 	kbtcm = kb*T/h/c
 
-	flist = sorted(glob.glob("/Users/hugueslambert/Desktop/xylene/cubic_coupling/mxylene-protonated-CB*.com_OUT.out.xyz.com_OUT.out.xyz.com_OUT.out.xyz.com_OUT.out"))
+	flist = ["/Users/hugueslambert/Desktop/xylene/cubic_coupling/{}".format(x) for x in [
+			"mxylene.com_OUT.out.xyz.com_OUT.out.xyz.com_OUT.out",
+			"mxylene-CB6.com_OUT.out.xyz.com_OUT.out.xyz.com_OUT.out.xyz.com_OUT.out",
+			"mxylene-CB7.com_OUT.out.xyz.com_OUT.out.xyz.com_OUT.out.xyz.com_OUT.out",
+			"mxylene-protonated-CB6.com_OUT.out.xyz.com_OUT.out.xyz.com_OUT.out.xyz.com_OUT.out",
+			"mxylene-protonated-CB7.com_OUT.out.xyz.com_OUT.out.xyz.com_OUT.out.xyz.com_OUT.out"]]
+#	flist = sorted(glob.glob("/Users/hugueslambert/Desktop/xylene/cubic_coupling/mxylene-CB7.com_OUT.out.xyz.com_OUT.out.xyz.com_OUT.out.xyz.com_OUT.out"))
 	print flist
 #	flist = ["/Users/hugueslambert/Desktop/xylene/cubic_coupling/mxylene.com_OUT.out.xyz.com_OUT.out.xyz.com_OUT.out"]
 # =============================================================================
@@ -602,40 +613,48 @@ if __name__ == "__main__":
 	
 	
 # =============================================================================
- ## ASSIGNAMTIONS OF THE GAMMAS	
+# ## ASSIGNAMTIONS OF THE GAMMAS	
 	def star_breakdown_decay_by_mode(ALL_ARGS):
 		return breakdown_decay_by_mode(*ALL_ARGS)
-	for f in flist[:]:
+	for f in flist[:3]:
 		mod, cub = get_data_from_out(f)
 	 	cub = make_permutations(cub)
-	 	xyl_mod = get_mode_localisation_on_xylene(mod, 19)
-	 	print xyl_mod
+	 	xyl_mod = get_mode_localisation_on_xylene(mod, 18)
+	 	for w in sorted(xyl_mod):
+			 print w
 	 	with open(f + "_GAMMAS", "rb") as r:
 	 		gammas0 = [float(x.strip()) for x in r.readlines()]
 			print len(gammas0)
 	 	freqs0 = sorted([float(mod[x][0][0]) for x in sorted(mod.keys())[:-1]])
 		print len(freqs0)
 		plottable_xyl_loc = [] # as tuples (xylene localisation number, decay to xylene, total decay, mode number, mode frequency, mode number as defined by xylene localistaion )
-		p = Pool(4)
-		second_arg = [cub, freqs0, gammas0, [y-1 for x,y,_ in xyl_mod if x>0.90], [y-1 for x,y,_ in xyl_mod if x<0.1]]
-		breakdowns = p.map_async(star_breakdown_decay_by_mode,  itertools.izip(range(len(freqs0)), itertools.repeat(second_arg)))
-		p.close()
-	 	for k in range(len(freqs0)):
-#	 		breakdown = breadown_decay_by_mode(k, cub, freqs0, gammas0, [y-1 for x,y,_ in xyl_mod if x>0.90], [y-1 for x,y,_ in xyl_mod if x<0.1] )
-			plottable_xyl_loc.append((xyl_mod[k][0], breakdowns[k][0][1]+breakdowns[k][2][1]+breakdowns[k][3][1], sum([x[1] for x in breakdowns[k]]), k, float(xyl_mod[k][2]), sorted(xyl_mod, key= lambda x: x[0]).index(xyl_mod[k])))
+#		p = Pool(4)
+#		second_arg = [cub, freqs0, gammas0, [y-1 for x,y,_ in xyl_mod if x>0.90], [y-1 for x,y,_ in xyl_mod if x<0.1]]
+#		breakdowns = p.map_async(star_breakdown_decay_by_mode,  itertools.izip(range(len(freqs0)), itertools.repeat(second_arg)))
+#		p.close()
+	 	for k in range(len(freqs0)):#[302]:#range(359,375):#[317,318]:##[365]:
+#		k = 361
+			breakdown = breakdown_decay_by_mode(k, [cub, freqs0, gammas0, [y-1 for x,y,_ in xyl_mod if x>0.90], [y-1 for x,y,_ in xyl_mod if x<0.1] ])
+			plottable_xyl_loc.append((xyl_mod[k][0], breakdown[0][1]+breakdown[2][1]+breakdown[3][1], sum([x[1] for x in breakdown]), k, float(xyl_mod[k][2]), sorted(xyl_mod, key= lambda x: x[0]).index(xyl_mod[k])))
 	 	print plottable_xyl_loc
 	# # =============================================================================
 	# # 	l = sorted(plottable_xyl_loc)[::-1]
 	# # =============================================================================
 	 	l = sorted(plottable_xyl_loc)[::-1]
-	 	plt.plot([x[0] for x in l])
-	 	plt.plot([x[1]/max([x[2] for x in l]) for x in l])
-	 	plt.plot([x[2]/max([x[2] for x in l]) for x in l])
-	 	
-	 	plt.show()
+#	 	plt.plot([x[0] for x in l])
+#	 	plt.plot([x[1]/max([x[2] for x in l]) for x in l])
+#	 	plt.plot([x[2]/max([x[2] for x in l]) for x in l])
+#	 	
+#	 	plt.show()
 		cPickle.dump(l, open(f+'_graph_dump', 'wb'))
 # =============================================================================
-	
+#	for ls in glob.glob("/Users/hugueslambert/Desktop/xylene/cubic_coupling/*graph_dump")[-1:]:
+#		l= cPickle.load(open(ls, 'rb'))
+#	 	plt.plot([x[0] for x in l])
+#	 	plt.plot([x[1]/max([x[2] for x in l]) for x in l])
+#	 	plt.plot([x[2]/max([x[2] for x in l]) for x in l])
+# 	
+#	 	plt.show()
 # =============================================================================
 # 	mod, cub = get_data_from_out('/home/macenrola/AcPhCN.com_OUT.out')
 # =============================================================================
