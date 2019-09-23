@@ -526,14 +526,67 @@ def breakdown_decay_by_mode(k, ARG_LIST):
 # 				print(traceback.format_exc())
 # =============================================================================
 				continue
-	for w in sorted(biggest_list, key = lambda x: x[-1], reverse=True)[:20]:
-		print w
+	for w in sorted(biggest_list, key = lambda x: x[-1], reverse=True)[:20:2]:
+		ps = w[-1]*c/1e12
+		print "{0:d}&{1:d}&{2:d}".format(*[b+1 for b in w[:3]]), "&{0:4.2f}&{1:4.2f}&{2:4.2f}".format(*w[3:]), "&{0:4.3f}\\\\".format(ps)
 	print "Mode freq: ", omegas[k], "overall: ", sum([WXX, WCC, WCX, WXM, WCM, WMM]), acc
 	print "counts: ", cWXX, cWCC, cWCX, cWXM, cWCM, cWMM
 #	print "avg rate contribution: ",W1/cw1, W2/cw2, W3cw3
 	print "Overall rates: ", zip(['WXX', 'WCC', 'WCX', 'WXM', 'WCM', 'WMM'], [WXX, WCC, WCX, WXM, WCM, WMM])
 	return zip(['WXX', 'WCC', 'WCX', 'WXM', 'WCM', 'WMM'], [WXX, WCC, WCX, WXM, WCM, WMM])
 
+
+def plot_a_dump(cb6neutral, cb7neutral, cb6prot, cb7prot):
+	"""
+	PRE  : Takes in a dump file
+	POST : Will plot it 
+	"""
+
+	with open(cb6neutral, 'rb') as r:
+		cb6neutral_data = cPickle.load(r)
+		print cb6neutral_data
+	with open(cb7neutral, 'rb') as r:
+		cb7neutral_data = cPickle.load(r)
+	with open(cb6prot, 'rb') as r:
+		cb6prot_data = cPickle.load(r)
+	with open(cb7prot, 'rb') as r:
+		cb7prot_data = cPickle.load(r)
+	lw=0.5
+	fig, axes = plt.subplots(2,2, sharex='col', sharey='row')
+	for dtset, label, ax in zip([cb6neutral_data, cb7neutral_data, cb6prot_data,cb7prot_data], [r'$m$-xylene@CB6',r'$m$-xylene@CB7',r'[$m$-xylene+H]$^+$@CB6',r'[$m$-xylene+H]$^+$@CB7'], axes.flat):
+# =============================================================================
+# 		ax.plot([x[0] for x in dtset], linewidth=lw, label=label)
+# 		ax.plot([x[1]/max([x[2] for x in dtset]) for x in dtset], linewidth=lw, linestyle='-')
+# 		ax.plot([x[2]/max([x[2] for x in dtset]) for x in dtset], linewidth=lw, linestyle='-.')
+# =============================================================================
+		ax.plot([x[1]*c/1e12 for x in sorted(dtset,  key= lambda x: x[3])], linewidth=lw, linestyle='-')
+		ax.plot([x[2]*c/1e12 for x in sorted(dtset, key= lambda x: x[3])], linewidth=lw, linestyle='-.')
+		ax.set_ylabel(r"$\gamma_k$ [ps$^{-1}$]")
+		ax.set_xlabel(r"Mode number")
+		ax.set_ylim([0, 50])
+		ax.text(50, 40, label, fontsize=10)
+		ax.grid(alpha=0.2)
+		plt.tight_layout()
+	
+	ebindax=axes.flat[-1]
+# =============================================================================
+# 	ebindax.plot(guestdatasorted[0],[-(x[0]-x[1]-x[2])*627.5 for x in zip(complexdata[1], cbdatasorted[1], guestdatasorted[1])],linewidth=lw)
+# 	ebindax.set_ylabel(r"$E_{bind}$ [kcal/mol]")
+# 	ebindax.set_xlabel(r"Time [ps]")
+# =============================================================================
+	
+	ebindax.grid(alpha=0.2)
+	
+# =============================================================================
+# 	plt.plot([x[0] for x in l], '-')
+#  	plt.plot([x[1]/max([x[2] for x in l]) for x in l], '--')
+#  	plt.plot([x[2]/max([x[2] for x in l]) for x in l], '-.')
+# 	plt.xlabel("Mode number, as sorted by xylene localisation")
+# 	plt.ylabel("Xylene loc, normed decay rate")
+#  	plt.show()
+# =============================================================================
+	
+	
 if __name__ == "__main__":
 	import numpy as np
 	import glob
@@ -544,6 +597,7 @@ if __name__ == "__main__":
 	import scipy.optimize
 	import traceback
 	from multiprocessing import Pool
+	import sys
 	import matplotlib.pyplot as plt
 	h = 6.62607015e-34 # Js
 	kb = 1.380649e-23 # J/K
@@ -552,14 +606,23 @@ if __name__ == "__main__":
 	amu = 1.66054e-27 # kg
 	kbtcm = kb*T/h/c
 
-	flist = ["/Users/hugueslambert/Desktop/xylene/cubic_coupling/{}".format(x) for x in [
-			"mxylene.com_OUT.out.xyz.com_OUT.out.xyz.com_OUT.out",
-			"mxylene-CB6.com_OUT.out.xyz.com_OUT.out.xyz.com_OUT.out.xyz.com_OUT.out",
-			"mxylene-CB7.com_OUT.out.xyz.com_OUT.out.xyz.com_OUT.out.xyz.com_OUT.out",
-			"mxylene-protonated-CB6.com_OUT.out.xyz.com_OUT.out.xyz.com_OUT.out.xyz.com_OUT.out",
-			"mxylene-protonated-CB7.com_OUT.out.xyz.com_OUT.out.xyz.com_OUT.out.xyz.com_OUT.out"]]
+# =============================================================================
+# 	flist = ["/Users/hugueslambert/Desktop/xylene/cubic_coupling/{}".format(x) for x in [
+# 			"mxylene.com_OUT.out.xyz.com_OUT.out.xyz.com_OUT.out",
+# 			"mxylene-CB6.com_OUT.out.xyz.com_OUT.out.xyz.com_OUT.out.xyz.com_OUT.out",
+# 			"mxylene-CB7.com_OUT.out.xyz.com_OUT.out.xyz.com_OUT.out.xyz.com_OUT.out",
+# 			"mxylene-protonated-CB6.com_OUT.out.xyz.com_OUT.out.xyz.com_OUT.out.xyz.com_OUT.out",
+# 			"mxylene-protonated-CB7.com_OUT.out.xyz.com_OUT.out.xyz.com_OUT.out.xyz.com_OUT.out"]]
+# =============================================================================
 #	flist = sorted(glob.glob("/Users/hugueslambert/Desktop/xylene/cubic_coupling/mxylene-CB7.com_OUT.out.xyz.com_OUT.out.xyz.com_OUT.out.xyz.com_OUT.out"))
-	print flist
+# =============================================================================
+# PLOT THE DUMP
+# 	plot_a_dump("/home/macenrola/Documents/XYLENE/inputs/cubic_coupling/OUTS/cubic_coupling/mxylene-CB6.com_OUT.out.xyz.com_OUT.out.xyz.com_OUT.out.xyz.com_OUT.out_graph_dump",
+# 			 "/home/macenrola/Documents/XYLENE/inputs/cubic_coupling/OUTS/cubic_coupling/mxylene-CB7.com_OUT.out.xyz.com_OUT.out.xyz.com_OUT.out.xyz.com_OUT.out_graph_dump",
+# 			 "/home/macenrola/Documents/XYLENE/inputs/cubic_coupling/OUTS/cubic_coupling/mxylene-protonated-CB6.com_OUT.out.xyz.com_OUT.out.xyz.com_OUT.out.xyz.com_OUT.out_graph_dump",
+# 			 "/home/macenrola/Documents/XYLENE/inputs/cubic_coupling/OUTS/cubic_coupling/mxylene-protonated-CB7.com_OUT.out.xyz.com_OUT.out.xyz.com_OUT.out.xyz.com_OUT.out_graph_dump")
+# =============================================================================
+
 #	flist = ["/Users/hugueslambert/Desktop/xylene/cubic_coupling/mxylene.com_OUT.out.xyz.com_OUT.out.xyz.com_OUT.out"]
 # =============================================================================
 # 	flist = ["/home/macenrola/Documents/XYLENE/inputs/cubic_coupling/OUTS/cubic_coupling/mxylene.com_OUT.out.xyz.com_OUT.out.xyz.com_OUT.out"]
@@ -614,39 +677,38 @@ if __name__ == "__main__":
 	
 # =============================================================================
 # ## ASSIGNAMTIONS OF THE GAMMAS	
-	def star_breakdown_decay_by_mode(ALL_ARGS):
-		return breakdown_decay_by_mode(*ALL_ARGS)
-	for f in flist[:3]:
-		mod, cub = get_data_from_out(f)
-	 	cub = make_permutations(cub)
-	 	xyl_mod = get_mode_localisation_on_xylene(mod, 18)
-	 	for w in sorted(xyl_mod):
-			 print w
-	 	with open(f + "_GAMMAS", "rb") as r:
-	 		gammas0 = [float(x.strip()) for x in r.readlines()]
-			print len(gammas0)
-	 	freqs0 = sorted([float(mod[x][0][0]) for x in sorted(mod.keys())[:-1]])
-		print len(freqs0)
-		plottable_xyl_loc = [] # as tuples (xylene localisation number, decay to xylene, total decay, mode number, mode frequency, mode number as defined by xylene localistaion )
-#		p = Pool(4)
-#		second_arg = [cub, freqs0, gammas0, [y-1 for x,y,_ in xyl_mod if x>0.90], [y-1 for x,y,_ in xyl_mod if x<0.1]]
-#		breakdowns = p.map_async(star_breakdown_decay_by_mode,  itertools.izip(range(len(freqs0)), itertools.repeat(second_arg)))
-#		p.close()
-	 	for k in range(len(freqs0)):#[302]:#range(359,375):#[317,318]:##[365]:
-#		k = 361
-			breakdown = breakdown_decay_by_mode(k, [cub, freqs0, gammas0, [y-1 for x,y,_ in xyl_mod if x>0.90], [y-1 for x,y,_ in xyl_mod if x<0.1] ])
-			plottable_xyl_loc.append((xyl_mod[k][0], breakdown[0][1]+breakdown[2][1]+breakdown[3][1], sum([x[1] for x in breakdown]), k, float(xyl_mod[k][2]), sorted(xyl_mod, key= lambda x: x[0]).index(xyl_mod[k])))
-	 	print plottable_xyl_loc
-	# # =============================================================================
-	# # 	l = sorted(plottable_xyl_loc)[::-1]
-	# # =============================================================================
-	 	l = sorted(plottable_xyl_loc)[::-1]
-#	 	plt.plot([x[0] for x in l])
-#	 	plt.plot([x[1]/max([x[2] for x in l]) for x in l])
-#	 	plt.plot([x[2]/max([x[2] for x in l]) for x in l])
-#	 	
-#	 	plt.show()
-		cPickle.dump(l, open(f+'_graph_dump', 'wb'))
+# =============================================================================
+# =============================================================================
+# 	f= sys.argv[1]
+# 	n = int(sys.argv[2])
+# =============================================================================
+# PRODUCE THE GAMMA ASSIGNATION AND PRODUCE THE TABLES OF DECAY
+	flist = sorted(glob.glob("/home/macenrola/Documents/XYLENE/inputs/cubic_coupling/OUTS/cubic_coupling/mxylene-protonated-CB6.com_OUT.out.xyz.com_OUT.out.xyz.com_OUT.out.xyz.com_OUT.out"))
+	n=19
+	f=flist[0]
+	mod, cub = get_data_from_out(f)
+ 	cub = make_permutations(cub)
+ 	xyl_mod = get_mode_localisation_on_xylene(mod, n)
+ 	for w in sorted(xyl_mod):
+		 print w
+ 	with open(f + "_GAMMAS", "rb") as r:
+ 		gammas0 = [float(x.strip()) for x in r.readlines()]
+		print len(gammas0)
+ 	freqs0 = sorted([float(mod[x][0][0]) for x in sorted(mod.keys())[:-1]])
+	print len(freqs0)
+	plottable_xyl_loc = [] # as tuples (xylene localisation number, decay to xylene, total decay, mode number, mode frequency, mode number as defined by xylene localistaion )
+# =============================================================================
+#  	for k in range(len(freqs0)):#[302]:#range(359,375):#[317,318]:##[365]:
+# =============================================================================
+	k = 0
+	breakdown = breakdown_decay_by_mode(k, [cub, freqs0, gammas0, [y-1 for x,y,_ in xyl_mod if x>0.90], [y-1 for x,y,_ in xyl_mod if x<0.1] ])
+	plottable_xyl_loc.append((xyl_mod[k][0], breakdown[0][1]+breakdown[2][1]+breakdown[3][1], sum([x[1] for x in breakdown]), k, float(xyl_mod[k][2]), sorted(xyl_mod, key= lambda x: x[0]).index(xyl_mod[k])))
+ 	print plottable_xyl_loc
+# =============================================================================
+# 
+#  	l = sorted(plottable_xyl_loc)[::-1]
+# 	cPickle.dump(l, open(f+'_graph_dump', 'wb'))
+# =============================================================================
 # =============================================================================
 #	for ls in glob.glob("/Users/hugueslambert/Desktop/xylene/cubic_coupling/*graph_dump")[-1:]:
 #		l= cPickle.load(open(ls, 'rb'))

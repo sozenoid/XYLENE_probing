@@ -693,23 +693,25 @@ def plot_three_stacked_spectra(fname, indices, fname_10):
 	"""
 	maglist=cPickle.load(open(fname, "rb"))
 	yticks = [10**x for x in range(-16,1)]
+	xticks = range(0,6000, 500)
 	nplots=len(indices)+1
-	freqs = np.linspace(-1e15/2.9979e10/2, 1e15/2.9979e10/2, len(maglist[-1]))
+	freqs = np.linspace(0, 1e15/2.9979e10/2, len(maglist[-1])/2)
 	fig, ax = plt.subplots(nplots, 1, sharex='col', sharey='row')
 	for i in range(nplots):
 		if i==0: 
 			maglistsmall=cPickle.load(open(fname_10, "rb"))
-			freqsmall = np.linspace(-1e15/2.9979e10/2, 1e15/2.9979e10/2, len(maglistsmall[0]))
+			freqsmall = np.linspace(0, 1e15/2.9979e10/2, len(maglistsmall[0])/2)
 			ekin = np.max(maglistsmall[0])	
-			ax[0].semilogy(freqsmall, [x/ekin for x in maglistsmall[0]], label="{}-{} ps".format(0, 10), linewidth=0.4)
+			ax[0].semilogy(freqsmall, [x/ekin for x in maglistsmall[0][len(maglistsmall[0])/2+1:]], label="{}-{} ps".format(0, 10), linewidth=0.4)
 		else:
 			ekin = np.max(maglist[indices[i-1]])	
-			ax[i].semilogy(freqs, [x/ekin for x in maglist[indices[i-1]]], label="{}-{} ps".format(indices[i-1]*100, (indices[i-1]+1)*100), linewidth=0.4)
+			ax[i].semilogy(freqs, [x/ekin for x in maglist[indices[i-1]][len(maglist[indices[i-1]])/2+1:]], label="{}-{} ps".format(indices[i-1]*100, (indices[i-1]+1)*100), linewidth=0.4)
 
 		ax[i].get_yaxis().set_minor_formatter(plt.NullFormatter())
 		ax[i].set_ylim((10**-16,1.2e1))
-		ax[i].set_xlim((-6e3,6e3))
+		ax[i].set_xlim((0,6e3))
 		ax[i].set_yticks(yticks[::4])
+		ax[i].set_xticks(xticks)
 		ax[i].set_yticks(yticks[::2], minor=True)
 		ax[i].grid(which='minor')
 		ax[i].legend(loc='east')
@@ -1439,15 +1441,15 @@ if __name__ == "__main__":
 # 	
 # =============================================================================
 	
-#MAKE MTD TIME PLOT
-	make_mtd_time_plot("/home/macenrola/Documents/XYLENE/images/DUMP_ISO/slow_summary_file_without_low_p")
+# =============================================================================
+# #MAKE MTD TIME PLOT
+# 	make_mtd_time_plot("/home/macenrola/Documents/XYLENE/images/DUMP_ISO/slow_summary_file_without_low_p")
+# 	
+# =============================================================================
 	
-	
 # =============================================================================
-# =============================================================================
-# 	# PLOT STACKED SPECTRA
-#  	plot_three_stacked_spectra("/home/macenrola/Documents/XYLENE/correlation_for_reaction/slow-reaction-MP-CB6/vibrational_analysis/traj_from_mode_368/ALL_100k/sample_vel_coupling.xyz-MAG", [0,1,2,5,9], "/home/macenrola/Documents/XYLENE/correlation_for_reaction/slow-reaction-MP-CB6/vibrational_analysis/traj_from_mode_368/ALL_FREQS/sample_vel_coupling.xyz-MAG")
-# =============================================================================
+	# PLOT STACKED SPECTRA
+ 	plot_three_stacked_spectra("/home/macenrola/Documents/XYLENE/correlation_for_reaction/slow-reaction-MP-CB6/vibrational_analysis/traj_from_mode_368/ALL_100k/sample_vel_coupling.xyz-MAG", [0,1,2,5,9], "/home/macenrola/Documents/XYLENE/correlation_for_reaction/slow-reaction-MP-CB6/vibrational_analysis/traj_from_mode_368/ALL_FREQS/sample_vel_coupling.xyz-MAG")
 # =============================================================================
 # =============================================================================
 # # PLOT EKIN
