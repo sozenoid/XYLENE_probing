@@ -394,7 +394,7 @@ def make_mass_matrix_from_atom_list(atom_list):
 	POST: Will return the mass matrix associated with it
 	the matrix is square and has 3n*3n elements and is diagonal for n atoms, the square root of the matrix is also returned
 	"""
-	dic_weights={'C':12,'H':1,'N':14, 'O':16}
+	dic_weights={'C':12,'H':1,'N':14, 'O':16, "Cl":35}
 	diag=[]
 	for ats in atom_list:
 		diag.extend([dic_weights[ats]*1.660540e-27]*3) # those masses are atomic masses so the factor 1.66e-27
@@ -439,6 +439,35 @@ def make_covariance_matrix(xyzfile):
 	get_energy_from_frequency_list(frequencies[6-negeigcount:], k, T, hbar)
 
 
+def get_frequencies_quasiharmonic(xyzfile):
+	"""
+	PRE: Takes an xyz file with units in Angstrom, spaced by 1 fs 
+	POST: Will compute the frequencies using the approach described by 
+	Strachan, Alejandro. "Normal modes and frequencies from covariances in molecular dynamics or Monte Carlo simulations." The Journal of chemical physics 120.1 (2004): 1-4.
+	"""
+	c = 2.99e10
+	print xyzfile
+	atm_list, snapshot_array= return_list_of_snapshots_and_atom_list(xyzfile)
+	reshaped_snapshots = [np.reshape(x, len(atm_list)*3) for x in list(snapshot_array)]
+	mass_matrix, sqrt_mass_matrix= make_mass_matrix_from_atom_list(atm_list)
+	snapshot_array=np.array(reshaped_snapshots).T
+	snapshot_speed = np.diff(snapshot_array)*1e-10/1e-15
+	snapshot_acc = np.diff(snapshot_array, 2)*1e-10/(1e-15)**2
+
+	mass_rescaled_speed = [x*(y/2)**.5 for x, y in zip(snapshot_speed, np.diag(mass_matrix))]
+	mass_rescaled_acceleration = [x*(y/2)**.5 for x, y in zip(snapshot_acc, np.diag(mass_matrix))]
+	
+	covmat_speed = np.cov(mass_rescaled_speed)
+	covmat_acc = np.cov(mass_rescaled_acceleration)
+
+	eigenvalues_speed, eigenvectors_speed = scipy.linalg.eig(covmat_speed)
+	eigenvalues_acc, eigenvectors_acc = scipy.linalg.eig(covmat_acc)
+	
+	print eigenvalues_speed
+	print eigenvalues_acc
+	print sorted([(x/y)**.5/2/3.1415 /c for x,y in zip((eigenvalues_acc), (eigenvalues_speed))])
+
+	
 def get_entropy_from_frequency_list(frequency_list, k,T, hbar ):
 	"""
 	PRE  : Takes in a list in frequencies in hertz
@@ -1244,6 +1273,40 @@ def clearthedump(dumpfile, listofcrits, thresh):
 			else: 
 				continue
 	
+	
+def make_average_energies(guest_list, ref):
+	"""
+	PRE  : Takes in a list of guest and a reference binding site, here cb8-mv+ 
+	POST : Will print the average energy after the first 10 ps of equlibration 
+	"""
+	with open(ref, "rb") as r:
+		lines = r.readlines()
+	EREF = [float(x.strip().split()[4]) for x in lines[1000:]]
+	
+ 	for f in guest_list:
+		name = f.split("/")[-1].split(".")[0]
+		try:
+			comp_f = glob.glob(f.split(".")[0].replace(name, "MV1_CB8_{}*".format(name[1:]))+"*")[0]
+		except:
+			try:
+				comp_f = glob.glob(f.split(".")[0].replace(name, "MV1_CB8_{}*".format(name[:]))+"*")[0]
+			except:
+				try:
+					comp_f = glob.glob(f.split(".")[0].replace(name, "MV1_CB8_{}*".format(name[3:5]+name[:3]+name[-4:]))+"*")[0]
+				except:
+					print f, "not working"
+					continue
+		print f
+		with open(f, "rb") as r:
+			lines = r.readlines()
+			EMOL = [float(x.strip().split()[4]) for x in lines[1000:]]
+
+		print comp_f
+		with open(comp_f, "rb") as r:
+			lines = r.readlines()
+			ECOMP = [float(x.strip().split()[4]) for x in lines[1000:]]		
+		
+		print "ENERGY DIFFERENCE:", (sum(ECOMP)/len(ECOMP)-sum(EMOL)/len(EMOL)-sum(EREF)/len(EREF))*627.5
 if __name__ == "__main__":
 	import rdkit
 	from rdkit import Chem
@@ -1261,6 +1324,27 @@ if __name__ == "__main__":
 	from matplotlib import pyplot as plt
 	from mpl_toolkits.mplot3d import Axes3D
 	import random
+	import operator
+	
+	get_frequencies_quasiharmonic("/home/macenrola/Documents/CB8-electrochemistry/get_entropy_quasiharmonic/A2CP_sol.out.xyz-pos-1.xyz")
+# =============================================================================
+# ASSIGNING THE PAIRS OF COMPLEXES
+# 	print "GETTING THE G2"
+# 	flist = glob.glob("/home/macenrola/Documents/CB8-electrochemistry/ENERS/tolaunch_vac*/*.ener")
+# 	for f in sorted(flist):
+# 		if "_CB8_" in f:
+# 			print "removing", f
+# 			flist.remove(f)
+# 
+# 	print "PRINTING G2"
+# 	for f in sorted(flist):
+# 		print f
+# 	
+# 	print "PAIRING G2 and COMPLEX G2"
+# 	make_average_energies(flist,
+# 					   "/home/macenrola/Documents/CB8-electrochemistry/ENERS/tolaunch_vacuum/MV1_CB8_sol.com_OUT.out.xyz-1.ener")
+# 	
+# =============================================================================
 	
 # =============================================================================
 # 	compute_coordination_number_xyz("/home/macenrola/Documents/XYLENE/inputs/popping-from-cb/SLOW_POPPING_W_TARGET/XYZ_sanity/300/101-mxylene-prot-cb7-H-single.inp-pos-1.xyz")
@@ -1448,8 +1532,10 @@ if __name__ == "__main__":
 # =============================================================================
 	
 # =============================================================================
-	# PLOT STACKED SPECTRA
- 	plot_three_stacked_spectra("/home/macenrola/Documents/XYLENE/correlation_for_reaction/slow-reaction-MP-CB6/vibrational_analysis/traj_from_mode_368/ALL_100k/sample_vel_coupling.xyz-MAG", [0,1,2,5,9], "/home/macenrola/Documents/XYLENE/correlation_for_reaction/slow-reaction-MP-CB6/vibrational_analysis/traj_from_mode_368/ALL_FREQS/sample_vel_coupling.xyz-MAG")
+# =============================================================================
+# 	# PLOT STACKED SPECTRA
+#  	plot_three_stacked_spectra("/home/macenrola/Documents/XYLENE/correlation_for_reaction/slow-reaction-MP-CB6/vibrational_analysis/traj_from_mode_368/ALL_100k/sample_vel_coupling.xyz-MAG", [0,1,2,5,9], "/home/macenrola/Documents/XYLENE/correlation_for_reaction/slow-reaction-MP-CB6/vibrational_analysis/traj_from_mode_368/ALL_FREQS/sample_vel_coupling.xyz-MAG")
+# =============================================================================
 # =============================================================================
 # =============================================================================
 # # PLOT EKIN

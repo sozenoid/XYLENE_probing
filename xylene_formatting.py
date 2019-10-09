@@ -893,7 +893,7 @@ def print_centroid_distance(list_of_sdf_complex):
 
 
 
-def xyz_to_cp2kinp(xyzfile, charge=0, patternfile="/home/macenrola/Documents/XYLENE/correlation_for_reaction/slow-reaction-MP-CB6/vibrational_analysis/other_coupling_candidates/normal_trajectory/base_traj.inp"):
+def xyz_to_cp2kinp(xyzfile, charge=0, multiplicity=0, patternfile="/home/macenrola/Documents/CB8-electrochemistry/base_traj.inp"):
 	"""
 	PRE:  Takes in an xyz file and a cp2k input file with three {} symbols, the first gives the project name, the second the charge and the last the xyz block string
 	POST: Will return a input file named after the xyz file based on the input file.
@@ -906,7 +906,7 @@ def xyz_to_cp2kinp(xyzfile, charge=0, patternfile="/home/macenrola/Documents/XYL
 		editable_file = ''.join(r.readlines())
 
 
-	edited_file = editable_file.format(name, charge, xyzblock)
+	edited_file = editable_file.format(name, charge, multiplicity, xyzblock)
 
 	with open(xyzfile+"_inp", "wb") as  w:
 		w.write(edited_file)
@@ -1162,8 +1162,19 @@ if __name__ == "__main__":
 	import sys
 	
 	
-	make_gaussian_input_files_for_molgroup(glob.glob("/home/macenrola/Documents/H-S-compensation/sdfs/*.sdf"))
-	
+# =============================================================================
+# 	make_gaussian_input_files_for_molgroup(glob.glob("/home/macenrola/Documents/H-S-compensation/sdfs/*.sdf"))
+# =============================================================================
+	flist = glob.glob("/home/macenrola/Documents/CB8-electrochemistry/Water solvent out/vacuum_2+/*.xyz")
+	for f in flist:
+		print f
+		xyz_to_cp2kinp(f, 2,1,"/home/macenrola/Documents/CB8-electrochemistry/base_traj.inp")
+# =============================================================================
+# 	
+# 	flist = glob.glob("/home/macenrola/Documents/Thermal_energy_collector/50_best_from_CB_screening/*.xyz")
+# 	for f in flist:
+# 		xyz_to_cp2kinp(f, 0, "/home/macenrola/Documents/Thermal_energy_collector/base_traj.inp")
+# =============================================================================
 # =============================================================================
 # 	flist= [
 # 		("/home/macenrola/Documents/XYLENE/correlation_for_reaction/slow-reaction-MP-CB6/vibrational_analysis/other_coupling_candidates/single_mode_trajectory/6734.xyz_a_0.0_s_0.0_0.0_docked.xyz-VIBRATIONS-1.mol",416),

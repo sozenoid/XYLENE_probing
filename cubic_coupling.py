@@ -532,7 +532,7 @@ def breakdown_decay_by_mode(k, ARG_LIST):
 	print "Mode freq: ", omegas[k], "overall: ", sum([WXX, WCC, WCX, WXM, WCM, WMM]), acc
 	print "counts: ", cWXX, cWCC, cWCX, cWXM, cWCM, cWMM
 #	print "avg rate contribution: ",W1/cw1, W2/cw2, W3cw3
-	print "Overall rates: ", zip(['WXX', 'WCC', 'WCX', 'WXM', 'WCM', 'WMM'], [WXX, WCC, WCX, WXM, WCM, WMM])
+	print "Overall rates: ", zip(['WXX', 'WCC', 'WCX', 'WXM', 'WCM', 'WMM'], [x*c/1e12 for x in [WXX, WCC, WCX, WXM, WCM, WMM]])
 	return zip(['WXX', 'WCC', 'WCX', 'WXM', 'WCM', 'WMM'], [WXX, WCC, WCX, WXM, WCM, WMM])
 
 
@@ -691,19 +691,17 @@ if __name__ == "__main__":
  	xyl_mod = get_mode_localisation_on_xylene(mod, n)
  	for w in sorted(xyl_mod):
 		 print w
+	print sum([x[0]<0.9 and x[0]>0.1 for x in xyl_mod])
  	with open(f + "_GAMMAS", "rb") as r:
  		gammas0 = [float(x.strip()) for x in r.readlines()]
 		print len(gammas0)
  	freqs0 = sorted([float(mod[x][0][0]) for x in sorted(mod.keys())[:-1]])
 	print len(freqs0)
 	plottable_xyl_loc = [] # as tuples (xylene localisation number, decay to xylene, total decay, mode number, mode frequency, mode number as defined by xylene localistaion )
-# =============================================================================
-#  	for k in range(len(freqs0)):#[302]:#range(359,375):#[317,318]:##[365]:
-# =============================================================================
-	k = 0
-	breakdown = breakdown_decay_by_mode(k, [cub, freqs0, gammas0, [y-1 for x,y,_ in xyl_mod if x>0.90], [y-1 for x,y,_ in xyl_mod if x<0.1] ])
-	plottable_xyl_loc.append((xyl_mod[k][0], breakdown[0][1]+breakdown[2][1]+breakdown[3][1], sum([x[1] for x in breakdown]), k, float(xyl_mod[k][2]), sorted(xyl_mod, key= lambda x: x[0]).index(xyl_mod[k])))
- 	print plottable_xyl_loc
+ 	for k in [367]:#[302]:#range(359,375):#[317,318]:##[365]:
+		breakdown = breakdown_decay_by_mode(k, [cub, freqs0, gammas0, [y-1 for x,y,_ in xyl_mod if x>0.90], [y-1 for x,y,_ in xyl_mod if x<0.1] ])
+		plottable_xyl_loc.append((xyl_mod[k][0], breakdown[0][1]+breakdown[2][1]+breakdown[3][1], sum([x[1] for x in breakdown]), k, float(xyl_mod[k][2]), sorted(xyl_mod, key= lambda x: x[0]).index(xyl_mod[k])))
+	print plottable_xyl_loc
 # =============================================================================
 # 
 #  	l = sorted(plottable_xyl_loc)[::-1]
