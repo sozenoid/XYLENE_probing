@@ -394,7 +394,7 @@ def make_mass_matrix_from_atom_list(atom_list):
 	POST: Will return the mass matrix associated with it
 	the matrix is square and has 3n*3n elements and is diagonal for n atoms, the square root of the matrix is also returned
 	"""
-	dic_weights={'C':12,'H':1,'N':14, 'O':16, "Cl":35}
+	dic_weights={'C':12.,'H':1.,'N':14., 'O':16., "Cl":35.}
 	diag=[]
 	for ats in atom_list:
 		diag.extend([dic_weights[ats]*1.660540e-27]*3) # those masses are atomic masses so the factor 1.66e-27
@@ -445,28 +445,63 @@ def get_frequencies_quasiharmonic(xyzfile):
 	POST: Will compute the frequencies using the approach described by 
 	Strachan, Alejandro. "Normal modes and frequencies from covariances in molecular dynamics or Monte Carlo simulations." The Journal of chemical physics 120.1 (2004): 1-4.
 	"""
-	c = 2.99e10
+	c = 2.99e10 #cm/s
 	print xyzfile
 	atm_list, snapshot_array= return_list_of_snapshots_and_atom_list(xyzfile)
-	reshaped_snapshots = [np.reshape(x, len(atm_list)*3) for x in list(snapshot_array)]
+	reshaped_snapshots = [np.reshape(x, len(atm_list)*3) for x in list(snapshot_array)][20000:]
 	mass_matrix, sqrt_mass_matrix= make_mass_matrix_from_atom_list(atm_list)
-	snapshot_array=np.array(reshaped_snapshots).T
-	snapshot_speed = np.diff(snapshot_array)*1e-10/1e-15
-	snapshot_acc = np.diff(snapshot_array, 2)*1e-10/(1e-15)**2
+	snapshot_array = np.array(reshaped_snapshots).T*1e-10
+	snapshot_speed = np.gradient(snapshot_array, .5e-15, edge_order=1, axis=1)
+	snapshot_acc   = np.gradient(snapshot_speed, .5e-15, edge_order=1, axis=1)
 
-	mass_rescaled_speed = [x*(y/2)**.5 for x, y in zip(snapshot_speed, np.diag(mass_matrix))]
-	mass_rescaled_acceleration = [x*(y/2)**.5 for x, y in zip(snapshot_acc, np.diag(mass_matrix))]
+	mass_rescaled_pos = [(x-np.mean(x))*y/2**.5 for x, y in zip(snapshot_array, np.diag(sqrt_mass_matrix))]
+	mass_rescaled_speed = [(x-np.mean(x))*y/2**.5 for x, y in zip(snapshot_speed, np.diag(sqrt_mass_matrix))]
+	mass_rescaled_acceleration = [(x-np.mean(x))*y/2**.5 for x, y in zip(snapshot_acc, np.diag(sqrt_mass_matrix))]
 	
+# =============================================================================
+# 	covmat_pos   = np.cov(np.matmul(mass_matrix, mass_rescaled_pos))
+# 	covmat_speed = np.cov(np.matmul(mass_matrix,mass_rescaled_speed))
+# 	covmat_acc   = np.cov(np.matmul(mass_matrix,mass_rescaled_acceleration))
+# =============================================================================
+	covmat_pos   = np.cov(mass_rescaled_pos)
 	covmat_speed = np.cov(mass_rescaled_speed)
-	covmat_acc = np.cov(mass_rescaled_acceleration)
-
-	eigenvalues_speed, eigenvectors_speed = scipy.linalg.eig(covmat_speed)
-	eigenvalues_acc, eigenvectors_acc = scipy.linalg.eig(covmat_acc)
+	covmat_acc   = np.cov(mass_rescaled_acceleration)
 	
-	print eigenvalues_speed
-	print eigenvalues_acc
-	print sorted([(x/y)**.5/2/3.1415 /c for x,y in zip((eigenvalues_acc), (eigenvalues_speed))])
+	eigenvalues_pos, eigenvectors_pos     = scipy.linalg.eig(covmat_pos)
+	eigenvalues_speed, eigenvectors_speed = scipy.linalg.eig(covmat_speed)
+	eigenvalues_acc, eigenvectors_acc     = scipy.linalg.eig(covmat_acc)
+	
 
+# =============================================================================
+# 	for e in eigenvalues_pos:
+# 		print (1.38e-23*300/e)**.5/c/2/math.pi
+# =============================================================================
+		
+# =============================================================================
+# 	mass_rescaled_speed_snap = np.array(mass_rescaled_speed).T
+# 	mass_rescaled_pos_snap = np.array(mass_rescaled_pos).T
+# 	for e in eigenvectors_speed[0:]:
+# 		e_projected_speed_snap = []
+# 		e_projected_pos_snap = []
+# 		for snap in mass_rescaled_speed_snap:
+# 			e_projected_speed_snap.append([x*y for x, y in zip(e, snap)])
+# 		for snap in mass_rescaled_pos_snap:
+# 			e_projected_pos_snap.append([x*y for x, y in zip(e, snap)])
+# 		
+# 		print 1 / (2*math.pi)/c * (np.mean(e_projected_speed_snap)**2 / np.var(e_projected_pos_snap))**.5 
+# =============================================================================
+		
+	
+	print len(eigenvectors_pos)
+	print eigenvectors_speed
+	print eigenvectors_acc
+	
+	frequencies = sorted([(x/y)**.5 / (2*math.pi) for x,y in zip(eigenvalues_speed, eigenvalues_pos)])[:]
+	print [x/c for x in frequencies]
+	
+	k,T,hbar = 1.3807e-23, 300, 1.054e-34 # those are the masses of kB T and hbar
+
+	get_entropy_from_frequency_list(frequencies[6:], k, T, hbar)
 	
 def get_entropy_from_frequency_list(frequency_list, k,T, hbar ):
 	"""
@@ -474,7 +509,10 @@ def get_entropy_from_frequency_list(frequency_list, k,T, hbar ):
 	POST : returns a value of the entropy as given by the formulae of statistical thermodynamic
 	"""
 	alpha=hbar/k/T
-	print k*sum([alpha *x/(np.exp(alpha*x) - 1) -  np.log(1-np.exp(-alpha*x)) for x in sorted(frequency_list)])  # The prefactor instead of k is the value of R in kcal/mol, let go of rotational and translational frequencies
+# =============================================================================
+# 	print k*sum([alpha *x/(np.exp(alpha*x) - 1) -  np.log(1-np.exp(-alpha*x)) for x in sorted(frequency_list)])  # The prefactor instead of k is the value of R in kcal/mol, let go of rotational and translational frequencies
+# =============================================================================
+ 	print 0.00198588*sum([alpha *x/(np.exp(alpha*x) - 1) -  np.log(1-np.exp(-alpha*x)) for x in sorted(frequency_list)])  # The prefactor instead of k is the value of R in kcal/mol, let go of rotational and translational frequencies
 
 def get_energy_from_frequency_list(frequency_list, k,T, hbar ):
 	"""
@@ -512,8 +550,17 @@ def power_spectrum_from_velocityxyz(xyzfile):
 	print "Getting the snaps"
 	atm_list, snapshot_array= return_list_of_snapshots_and_atom_list(xyzfile)
 	#
+	
 	print "Got the snaps, now reshaping"
-	snapshot_array = [np.reshape(x, len(atm_list)*3) for x in list(snapshot_array)]
+	snapshot_array = [np.reshape(x, len(atm_list)*3) for x in list(snapshot_array)][-40000:]
+	snapshot_array = [x*1e-10 for x in snapshot_array]
+	
+	#### CONVERT SNAPS OF POSITION TO SPEED
+	snapshot_speed = np.gradient(snapshot_array, .5e-15, edge_order=2, axis=1)
+	snapshot_array = snapshot_speed
+	mass_matrix, sqrt_mass_matrix= make_mass_matrix_from_atom_list(atm_list)
+	#### END CONVERSION
+	
 	print "reshaping level 1"
 	snapshot_array=np.array(snapshot_array).T
 	print "Reshaping level 2"
@@ -521,9 +568,17 @@ def power_spectrum_from_velocityxyz(xyzfile):
 	print "Computing the correlation"
 	for i, component in enumerate(snapshot_array):
 		print "Step {} in the correlation computation".format(i)
-		if i==0: total_correlation=np.correlate(component, component, mode='full')
-		else: total_correlation+=(np.correlate(component, component, mode='full'))
-	#
+# =============================================================================
+# 		if i==0: total_correlation=np.correlate(component, component, mode='full')*np.diag(mass_matrix)[i]
+# 		else: total_correlation = total_correlation + np.correlate(component, component, mode='full')*np.diag(mass_matrix)[i]
+# 
+# =============================================================================
+		temp = np.array([np.abs(A)**2 for A in numpy.fft.fftshift(numpy.fft.fft(component-np.mean(component))[10:-10])])*np.diag(mass_matrix)[i]
+		if i==0: total_correlation = temp
+		else: total_correlation = total_correlation + temp
+# =============================================================================
+# 		plt.plot(component)
+# =============================================================================
 	print "Summing the correlation"
 # =============================================================================
 # 	total_correlation = np.sum(np.array(total_correlation), axis=0)
@@ -541,9 +596,10 @@ def power_spectrum_from_velocityxyz(xyzfile):
 # =============================================================================
 	magnitude  =[np.abs(A)**2 for A in numpy.fft.fftshift(numpy.fft.fft(total_correlation))]
 	angle      =[np.angle(A) for A in numpy.fft.fftshift(numpy.fft.fft(total_correlation))]
-	freqs = np.linspace(-1e15/2.9979e10/2, 1e15/2.9979e10/2, len(total_correlation))
-	print freqs
-	return magnitude
+	
+	#### DIVIDE BY TWO FOR 1 fs, divide by ONE for .5 fs, return only magnitude by default 
+	freqs = np.linspace(-(1e-15)**(-1) /2.9979e10/2, (1e-15)**(-1)/2.9979e10/2, len(total_correlation))
+	return  freqs, total_correlation 
 # =============================================================================
 # 	significant = [x for x in zip(freqs, magnitude, angle) if x[1]>0.001]
 # 	print significant
@@ -606,8 +662,11 @@ def split_velocity_file(xyz_vel, natoms_small_frag=19):
 					if i==0:
 						marker=line
 					if marker == line and i>0:
-						ws.writelines(line_list[:natoms_small_frag+2])
-						wb.writelines(line_list[:2])
+						ws.writelines("     {}\n".format(natoms_small_frag))
+						ws.writelines(line_list[1])
+						ws.writelines(line_list[2:natoms_small_frag+2])
+						wb.writelines("     {}\n".format(int(line_list[0]) - natoms_small_frag))
+						wb.writelines(line_list[1])
 						wb.writelines(line_list[natoms_small_frag+2:-1])
 						line_list=[line]
 
@@ -676,6 +735,38 @@ def get_kinetic_energy_from_velocity_file(xyz_vel):
 	cPickle.dump(ekin, open(xyz_vel+"-EKIN","wb"))
 	plt.plot(ekin, linewidth=0.2)
 	plt.show()
+	
+def get_kinetic_energy_from_position_file(xyz_pos):
+	"""
+	PRE : Takes in a velocity file formatted as per open babel
+	POST:
+	"""
+	atm_list, snapshot_array= return_list_of_snapshots_and_atom_list(xyz_pos) # in Angstroms
+
+	snapshot_array = [np.reshape(x, len(atm_list)*3) for x in list(snapshot_array)][:]
+	snapshot_array = [x*1e-10 for x in snapshot_array]
+	
+	#### CONVERT SNAPS OF POSITION TO SPEED
+# =============================================================================
+# 	snapshot_speed = np.gradient(snapshot_array, 1e-15, edge_order=1, axis=1)
+# =============================================================================
+	snapshot_speed = np.diff(snapshot_array, axis=0)/1e-15
+	mass_matrix, sqrt_mass_matrix= make_mass_matrix_from_atom_list(atm_list)
+	#### END CONVERSION
+	conv = 6.02e23/4.18/1e3# J/molecule to kcal/mol
+	ekin = [conv*sum([x**2*y/2. for x,y in zip(k, np.diag(mass_matrix))]) for k in snapshot_speed]
+	ekin = [x for x in ekin if x<1000]
+	print xyz_pos, "has variance of ekin of {}".format(np.var(ekin[10000:]))
+# =============================================================================
+# 	ekin = [conv*sum([y[0]**2*y[1] for y in zip(np.reshape(x, x.shape[0]*x.shape[1]), [dic_weights[i] for k in atm_list for i in [k]*3])]) for x in snapshot_vel]
+# =============================================================================
+	cPickle.dump(ekin, open(xyz_pos+"-EKIN","wb"))
+# =============================================================================
+# 	plt.plot(ekin, linewidth=0.2)
+# =============================================================================
+# =============================================================================
+# 	plt.show()
+# =============================================================================
 
 def plot_E_kin(fekin, legend, symb):
 	"""
@@ -700,7 +791,7 @@ def plot_E_kin(fekin, legend, symb):
 # =============================================================================
 # 	plt.close()
 # =============================================================================
-	
+
 
 def plot_single_spectrum(fname, i=0):
 	"""
@@ -1124,6 +1215,7 @@ def plot_nice_FES(festxt, colvar_traj):
 		ax.plot(xtraj[30000:-15000], ytraj[30000:-15000], linestyle=":", color="k")
 		plt.axhline(0.7,linestyle='--', linewidth=0.4, color='k', xmin=0, xmax=0.325)
 		plt.axvline(0.295,linestyle='--', linewidth=0.4, color='k', ymin=0.7)
+		ax.annotate("", xy=(0.531, 0.6236), xytext=(0.532+0.001, 0.6236-0.001), arrowprops=dict(arrowstyle="simple"))
 		ax.set_xlabel(r"$C_1$")
 		ax.set_ylabel(r"$C_2$")
 		cbar=fig.colorbar(cf, ax=ax)
@@ -1307,6 +1399,11 @@ def make_average_energies(guest_list, ref):
 			ECOMP = [float(x.strip().split()[4]) for x in lines[1000:]]		
 		
 		print "ENERGY DIFFERENCE:", (sum(ECOMP)/len(ECOMP)-sum(EMOL)/len(EMOL)-sum(EREF)/len(EREF))*627.5
+		
+def get_atom_number_in_traj_file(xyz_pos):
+	with open(xyz_pos, "rb") as r:
+		for line in r:
+			return int(line)
 if __name__ == "__main__":
 	import rdkit
 	from rdkit import Chem
@@ -1325,8 +1422,39 @@ if __name__ == "__main__":
 	from mpl_toolkits.mplot3d import Axes3D
 	import random
 	import operator
+	import math
+	import sys
 	
-	get_frequencies_quasiharmonic("/home/macenrola/Documents/CB8-electrochemistry/get_entropy_quasiharmonic/A2CP_sol.out.xyz-pos-1.xyz")
+# =============================================================================
+# 	split_velocity_file("/home/macenrola/Documents/Thermal_energy_collector/OUTS/RANK_G46_PBNUM_91240295_COMPLEX.sdf.xyz-pos-1.xyz", 43)
+# =============================================================================
+	if len(sys.argv) <3:
+		print """Provide more argments (3) please. Use on GUEST FILES ONLY
+		Use make_avg_coords.py slice fname or 
+		make_avg_coords.py kin fname"""
+# =============================================================================
+# 		plot_E_kin("/home/macenrola/Documents/Thermal_energy_collector/OUTS/RANK_G46_PBNUM_91240295_COMPLEX.sdf.xyz-pos-1.xyz-large_frag.xyz-EKIN", "lol", "--")
+# =============================================================================
+	elif len(sys.argv) == 3 and sys.argv[1] == "slice":
+		print "will read the guest and provide the number to slice the complex then slice the complex"
+		guest_name = sys.argv[2]
+		n = get_atom_number_in_traj_file(guest_name)
+		complex_name = guest_name.replace("GUEST", "COMPLEX")
+		split_velocity_file(complex_name, n)
+	elif len(sys.argv) == 3 and sys.argv[1] == "kin":
+		print "will read the guest and compute the kinetic energy for the guest, the fragments and the complex"
+		guest_name = sys.argv[2]
+		complex_name = guest_name.replace("GUEST", "COMPLEX")
+		small_frag_name = complex_name + "-small_frag.xyz" 
+		big_frag_name = complex_name + "-large_frag.xyz"
+		for k in [guest_name,complex_name,small_frag_name,big_frag_name]:
+			get_kinetic_energy_from_position_file(k)
+# =============================================================================
+# 	get_frequencies_quasiharmonic("/home/macenrola/Documents/CB8-electrochemistry/get_entropy_quasiharmonic/Benzene_sol.out.xyz-pos-1.xyz")
+# =============================================================================
+# =============================================================================
+# 	plt.plot(*power_spectrum_from_velocityxyz("/home/macenrola/Documents/CB8-electrochemistry/get_entropy_quasiharmonic/Benzene_sol.out.xyz-pos-1.xyz"))
+# =============================================================================
 # =============================================================================
 # ASSIGNING THE PAIRS OF COMPLEXES
 # 	print "GETTING THE G2"
@@ -1444,12 +1572,12 @@ if __name__ == "__main__":
 # =============================================================================
 # 	plot_double_ring_e_pot()
 # =============================================================================
+	
+	
 # =============================================================================
-# 	
-# 	
 # 	## PLOT NICE FES
 # 	plot_nice_FES("/home/macenrola/Documents/XYLENE/inputs/for-reaction-flexible-cb/sanity_check_isomerisation/restarts/300/25-48/MO-CB6/40-MO-CB6.inp-1_40000.restart.txt", "/home/macenrola/Documents/XYLENE/images/40-MO-CB6.inp-COLVAR.metadynLog")
-# # =============================================================================
+# =============================================================================
 # =============================================================================
 # 	# ECDF FOR SP DONT WORK
 # 	plot_sp_not_stable_output()
