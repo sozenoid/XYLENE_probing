@@ -281,7 +281,7 @@ pwd = {}""".format(cwd)
 			print name
 			T=float(f.split('/')[0])
 			with open(dumpfile,'ab') as a:
-				ctime,atime=compute_time(f,thres=[10], T=T)
+				ctime,atime=compute_time(f,thres=[15], T=T)
 				if ctime > 300:
 					a.write("{}\t{}\t{}\t{}\n".format(T,name,ctime, atime))
 					timedist.append(atime)

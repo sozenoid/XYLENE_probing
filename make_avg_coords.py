@@ -814,36 +814,42 @@ def plot_three_stacked_spectra(fname, indices, fname_10):
 	maglist=cPickle.load(open(fname, "rb"))
 	yticks = [10**x for x in range(-16,1)]
 	xticks = range(0,6000, 500)
-	nplots=len(indices)+1
+	nplots=len(indices)
 	freqs = np.linspace(0, 1e15/2.9979e10/2, len(maglist[-1])/2)
 	fig, ax = plt.subplots(nplots, 1, sharex='col', sharey='row')
 	for i in range(nplots):
-		if i==0: 
-			maglistsmall=cPickle.load(open(fname_10, "rb"))
-			freqsmall = np.linspace(0, 1e15/2.9979e10/2, len(maglistsmall[0])/2)
-			ekin = np.max(maglistsmall[0])	
-			ax[0].semilogy(freqsmall, [x/ekin for x in maglistsmall[0][len(maglistsmall[0])/2+1:]], label="{}-{} ps".format(0, 10), linewidth=0.4)
-		else:
-			ekin = np.max(maglist[indices[i-1]])	
-			ax[i].semilogy(freqs, [x/ekin for x in maglist[indices[i-1]][len(maglist[indices[i-1]])/2+1:]], label="{}-{} ps".format(indices[i-1]*100, (indices[i-1]+1)*100), linewidth=0.4)
+# =============================================================================
+# 		if i==0: 
+# 			maglistsmall=cPickle.load(open(fname_10, "rb"))
+# 			freqsmall = np.linspace(0, 1e15/2.9979e10/2, len(maglistsmall[0])/2)
+# 			ekin = np.max(maglistsmall[0])	
+# 			ax[0].semilogy(freqsmall, [x/ekin for x in maglistsmall[0][len(maglistsmall[0])/2+1:]], label="{}-{} ps".format(0, 10), linewidth=0.4)
+# 		else:
+# =============================================================================
+		ekin = np.max(maglist[indices[i]])	
+		ax[i].semilogy(freqs, [x/ekin for x in maglist[indices[i]][len(maglist[indices[i]])/2+1:]], label="{}-{} ps".format(indices[i]*100, (indices[i]+1)*100), linewidth=0.4)
 
 		ax[i].get_yaxis().set_minor_formatter(plt.NullFormatter())
 		ax[i].set_ylim((10**-16,1.2e1))
 		ax[i].set_xlim((0,6e3))
-		ax[i].set_yticks(yticks[::4])
-		ax[i].set_xticks(xticks)
-		ax[i].set_yticks(yticks[::2], minor=True)
+		ax[i].set_yticks(yticks[::6])
+		ax[i].set_xticks(xticks[::2])
+		ax[i].set_yticks(yticks[::4], minor=True)
 		ax[i].grid(which='minor')
-		ax[i].legend(loc='east')
+		ax[i].legend(loc='east', fontsize=18)
 	
 	fig.text(0.03, 0.5, 'Intensity [a.u.]', ha='center', va='center', rotation='vertical')
 # =============================================================================
 # 	plt.ylabel("Intensity [a.u.]")
 # =============================================================================
 	plt.xlabel(r"Frequency [cm$^{-1}$]")
-# =============================================================================
-# 	plt.autoscale(enable=True, tight=True)
-# =============================================================================
+	plt.autoscale(enable=False, tight=True)
+
+	font = {'family' : 'normal',
+        'weight' : 'normal',
+        'size'   : 18}
+
+	plt.rc('font', **font)
 	plt.show()
 	
 def make_mtd_time_plot(time_plot_file):
@@ -903,6 +909,11 @@ def make_mtd_time_plot(time_plot_file):
 			print '&'.join([str((x*np.exp(slope/x + intercept))**-1) for x in T])
 	plt.xlabel(r"1/T [K$^{-1}$]")
 	plt.tight_layout()
+	font = {'family' : 'normal',
+        'weight' : 'normal',
+        'size'   : 20}
+
+	plt.rc('font', **font)
 	plt.show()
 
 def make_mtd_popping_rate_plot(time_plot_file):
@@ -1205,17 +1216,19 @@ def plot_nice_FES(festxt, colvar_traj):
 		"""
 		dim = 100
 		x = np.asarray(x).reshape((dim, dim))
-	        y = np.asarray(y).reshape((dim, dim))
-	        z = np.asarray([k*627.5 for k in z]).reshape((dim, dim))
+		y = np.asarray(y).reshape((dim, dim))
+		z = np.asarray([k*627.5 for k in z]).reshape((dim, dim))
 		levels = plt.MaxNLocator(nbins=15).tick_values(z.min(), z.max())
 		cmap = plt.get_cmap('PiYG')
 		fig, ax = plt.subplots(constrained_layout=True)
 		cf = ax.contourf(x,y,z,levels=levels, cmap=cmap)
-		print len(xtraj[30000:-15000])
-		ax.plot(xtraj[30000:-15000], ytraj[30000:-15000], linestyle=":", color="k")
+		start = 40000-15000
+		dt = 2000
+		print len(xtraj[start:start+dt])
+		ax.plot(xtraj[start:start+dt], ytraj[start:start+dt], linestyle=":", color="k")
 		plt.axhline(0.7,linestyle='--', linewidth=0.4, color='k', xmin=0, xmax=0.325)
 		plt.axvline(0.295,linestyle='--', linewidth=0.4, color='k', ymin=0.7)
-		ax.annotate("", xy=(0.531, 0.6236), xytext=(0.532+0.001, 0.6236-0.001), arrowprops=dict(arrowstyle="simple"))
+		ax.annotate("", xy=(0.517, 0.6942), xytext=(0.517+0.001, 0.6942-0.0001), arrowprops=dict(arrowstyle="simple"))
 		ax.set_xlabel(r"$C_1$")
 		ax.set_ylabel(r"$C_2$")
 		cbar=fig.colorbar(cf, ax=ax)
@@ -1404,6 +1417,26 @@ def get_atom_number_in_traj_file(xyz_pos):
 	with open(xyz_pos, "rb") as r:
 		for line in r:
 			return int(line)
+		
+def plot_summary_EKIN(fcomplex, gcomplex, smallfrag, bigfrag):
+	"""
+	PRE : Takes in EKIN files that contain a list of kinetic energies in kcal/mol
+	POST: Plot them along with their variance
+	"""
+	for f in zip([fcomplex, gcomplex, smallfrag, bigfrag], ["E(G2@CB[7])","E(G2) vacuum","E(G2) @CB[7]","G2@E(CB[7])"], [.2,.2,0.2,0.2]):
+		with open(f[0], "rb") as r:
+			width =1000
+			ekin = cPickle.load(r)
+			moving_av = np.convolve(ekin, np.ones(width)/width)
+			plt.plot(moving_av[10002:-width], label="{0} ({1:3.1f}/{2:3.1f})".format(f[1], np.mean(ekin[10002:]), np.var(ekin[10002:])), linewidth=1, alpha=1)
+			plt.plot(ekin[10002:], linewidth=f[2], alpha=f[2])
+	plt.title(gcomplex.split("/")[-1])
+	plt.legend()
+# =============================================================================
+# 	plt.show()
+# =============================================================================
+	plt.savefig(gcomplex+"-curves.png")
+	
 if __name__ == "__main__":
 	import rdkit
 	from rdkit import Chem
@@ -1426,29 +1459,43 @@ if __name__ == "__main__":
 	import sys
 	
 # =============================================================================
-# 	split_velocity_file("/home/macenrola/Documents/Thermal_energy_collector/OUTS/RANK_G46_PBNUM_91240295_COMPLEX.sdf.xyz-pos-1.xyz", 43)
+# 	#### DO THE EKIN FLOATING
+# # =============================================================================
+# # 	split_velocity_file("/home/macenrola/Documents/Thermal_energy_collector/OUTS/RANK_G46_PBNUM_91240295_COMPLEX.sdf.xyz-pos-1.xyz", 43)
+# # =============================================================================
+# 	if len(sys.argv) <3:
+# 		print """Provide more argments (3) please. Use on GUEST FILES ONLY
+# 		Use make_avg_coords.py slice fname or 
+# 		make_avg_coords.py kin fname"""
+# # =============================================================================
+# # 		plot_E_kin("/home/macenrola/Documents/Thermal_energy_collector/OUTS/RANK_G46_PBNUM_91240295_COMPLEX.sdf.xyz-pos-1.xyz-large_frag.xyz-EKIN", "lol", "--")
+# # =============================================================================
+# 	elif len(sys.argv) == 3 and sys.argv[1] == "slice":
+# 		print "will read the guest and provide the number to slice the complex then slice the complex"
+# 		guest_name = sys.argv[2]
+# 		n = get_atom_number_in_traj_file(guest_name)
+# 		complex_name = guest_name.replace("GUEST", "COMPLEX")
+# 		split_velocity_file(complex_name, n)
+# 	elif len(sys.argv) == 3 and sys.argv[1] == "kin":
+# 		print "will read the guest and compute the kinetic energy for the guest, the fragments and the complex"
+# 		guest_name = sys.argv[2]
+# 		complex_name = guest_name.replace("GUEST", "COMPLEX")
+# 		small_frag_name = complex_name + "-small_frag.xyz" 
+# 		big_frag_name = complex_name + "-large_frag.xyz"
+# 		for k in [guest_name,complex_name,small_frag_name,big_frag_name]:
+# 			get_kinetic_energy_from_position_file(k)
+# 	elif len(sys.ar.gv) == 3 and sys.argv[1] == "plot":
+# 		print "will read the guest and compute the kinetic energy for the guest, the fragments and the complex"
+# 		guest_name = sys.argv[2]
+# 		complex_name = guest_name.replace("GUEST", "COMPLEX")
+# 		small_frag_name = complex_name.replace("-EKIN", "-small_frag.xyz-EKIN" )
+# 		big_frag_name = complex_name.replace("-EKIN","-large_frag.xyz-EKIN")
+# 		plot_summary_EKIN(complex_name, guest_name, small_frag_name, big_frag_name)
+# 		
+# 	### END OF EKIN FLOATING
 # =============================================================================
-	if len(sys.argv) <3:
-		print """Provide more argments (3) please. Use on GUEST FILES ONLY
-		Use make_avg_coords.py slice fname or 
-		make_avg_coords.py kin fname"""
-# =============================================================================
-# 		plot_E_kin("/home/macenrola/Documents/Thermal_energy_collector/OUTS/RANK_G46_PBNUM_91240295_COMPLEX.sdf.xyz-pos-1.xyz-large_frag.xyz-EKIN", "lol", "--")
-# =============================================================================
-	elif len(sys.argv) == 3 and sys.argv[1] == "slice":
-		print "will read the guest and provide the number to slice the complex then slice the complex"
-		guest_name = sys.argv[2]
-		n = get_atom_number_in_traj_file(guest_name)
-		complex_name = guest_name.replace("GUEST", "COMPLEX")
-		split_velocity_file(complex_name, n)
-	elif len(sys.argv) == 3 and sys.argv[1] == "kin":
-		print "will read the guest and compute the kinetic energy for the guest, the fragments and the complex"
-		guest_name = sys.argv[2]
-		complex_name = guest_name.replace("GUEST", "COMPLEX")
-		small_frag_name = complex_name + "-small_frag.xyz" 
-		big_frag_name = complex_name + "-large_frag.xyz"
-		for k in [guest_name,complex_name,small_frag_name,big_frag_name]:
-			get_kinetic_energy_from_position_file(k)
+	
+	
 # =============================================================================
 # 	get_frequencies_quasiharmonic("/home/macenrola/Documents/CB8-electrochemistry/get_entropy_quasiharmonic/Benzene_sol.out.xyz-pos-1.xyz")
 # =============================================================================
@@ -1573,10 +1620,10 @@ if __name__ == "__main__":
 # 	plot_double_ring_e_pot()
 # =============================================================================
 	
-	
 # =============================================================================
+# 	
 # 	## PLOT NICE FES
-# 	plot_nice_FES("/home/macenrola/Documents/XYLENE/inputs/for-reaction-flexible-cb/sanity_check_isomerisation/restarts/300/25-48/MO-CB6/40-MO-CB6.inp-1_40000.restart.txt", "/home/macenrola/Documents/XYLENE/images/40-MO-CB6.inp-COLVAR.metadynLog")
+# 	plot_nice_FES("/home/macenrola/Documents/XYLENE/manuscripts/images/nice_fes/1-MP-CB6.inp-1_45000.restart.out", "/home/macenrola/Documents/XYLENE/manuscripts/images/nice_fes/1-MP-CB6.inp-COLVAR.metadynLog")
 # =============================================================================
 # =============================================================================
 # 	# ECDF FOR SP DONT WORK
@@ -1660,10 +1707,10 @@ if __name__ == "__main__":
 # =============================================================================
 	
 # =============================================================================
-# =============================================================================
-# 	# PLOT STACKED SPECTRA
-#  	plot_three_stacked_spectra("/home/macenrola/Documents/XYLENE/correlation_for_reaction/slow-reaction-MP-CB6/vibrational_analysis/traj_from_mode_368/ALL_100k/sample_vel_coupling.xyz-MAG", [0,1,2,5,9], "/home/macenrola/Documents/XYLENE/correlation_for_reaction/slow-reaction-MP-CB6/vibrational_analysis/traj_from_mode_368/ALL_FREQS/sample_vel_coupling.xyz-MAG")
-# =============================================================================
+	# PLOT STACKED SPECTRA
+ 	#plot_three_stacked_spectra("/home/macenrola/Documents/XYLENE/correlation_for_reaction/slow-reaction-MP-CB6/vibrational_analysis/traj_from_mode_368/ALL_100k/sample_vel_coupling.xyz-MAG", [0,1,2,5,9], "/home/macenrola/Documents/XYLENE/correlation_for_reaction/slow-reaction-MP-CB6/vibrational_analysis/traj_from_mode_368/ALL_FREQS/sample_vel_coupling.xyz-MAG")
+ 	plot_three_stacked_spectra("/home/macenrola/Documents/XYLENE/correlation_for_reaction/slow-reaction-MP-CB6/vibrational_analysis/traj_from_mode_368/ALL_100k/sample_vel_coupling.xyz-MAG", [0,1,2,5], "/home/macenrola/Documents/XYLENE/correlation_for_reaction/slow-reaction-MP-CB6/vibrational_analysis/traj_from_mode_368/ALL_FREQS/sample_vel_coupling.xyz-MAG")
+
 # =============================================================================
 # =============================================================================
 # # PLOT EKIN
