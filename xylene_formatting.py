@@ -1165,10 +1165,10 @@ if __name__ == "__main__":
 # =============================================================================
 # 	make_gaussian_input_files_for_molgroup(glob.glob("/home/macenrola/Documents/H-S-compensation/sdfs/*.sdf"))
 # =============================================================================
-	flist = glob.glob("/home/macenrola/Documents/CB8-electrochemistry/Water solvent out/vacuum_2+/*.xyz")
+	flist = glob.glob("/home/macenrola/Documents/CB8-electrochemistry/JUST_CBs/*.xyz")
 	for f in flist:
 		print f
-		xyz_to_cp2kinp(f, 2,1,"/home/macenrola/Documents/CB8-electrochemistry/base_traj.inp")
+		xyz_to_cp2kinp(f, 0,1,"/home/macenrola/Documents/CB8-electrochemistry/JUST_CBs/base_traj.inp")
 # =============================================================================
 # 	
 # 	flist = glob.glob("/home/macenrola/Documents/Thermal_energy_collector/50_best_from_CB_screening/*.xyz")

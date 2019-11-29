@@ -129,9 +129,9 @@ def compute_avg_time_from_fit(timedist):
 	p0 = np.median(sortedist)
 	popt, pcov = optimize.curve_fit(f_to_fit, sortedist, p, p0=p0)
 	#
-	plt.plot(sortedist, p, 'or')
-	plt.plot(xn, f_to_fit(xn, *popt))
-	plt.show()
+	#plt.plot(sortedist, p, 'or')
+	#plt.plot(xn, f_to_fit(xn, *popt))
+	#plt.show()
 
 	return popt, sortedist, p
 

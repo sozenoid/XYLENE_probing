@@ -552,11 +552,11 @@ def power_spectrum_from_velocityxyz(xyzfile):
 	#
 	
 	print "Got the snaps, now reshaping"
-	snapshot_array = [np.reshape(x, len(atm_list)*3) for x in list(snapshot_array)][-40000:]
-	snapshot_array = [x*1e-10 for x in snapshot_array]
+	snapshot_array = [np.reshape(x, len(atm_list)*3) for x in list(snapshot_array)][10000:]
+	snapshot_array = [x*0.5e-10 for x in snapshot_array]
 	
 	#### CONVERT SNAPS OF POSITION TO SPEED
-	snapshot_speed = np.gradient(snapshot_array, .5e-15, edge_order=2, axis=1)
+	snapshot_speed = np.gradient(snapshot_array, 1e-15, edge_order=2, axis=0)
 	snapshot_array = snapshot_speed
 	mass_matrix, sqrt_mass_matrix= make_mass_matrix_from_atom_list(atm_list)
 	#### END CONVERSION
@@ -573,7 +573,7 @@ def power_spectrum_from_velocityxyz(xyzfile):
 # 		else: total_correlation = total_correlation + np.correlate(component, component, mode='full')*np.diag(mass_matrix)[i]
 # 
 # =============================================================================
-		temp = np.array([np.abs(A)**2 for A in numpy.fft.fftshift(numpy.fft.fft(component-np.mean(component))[10:-10])])*np.diag(mass_matrix)[i]
+		temp = np.array([np.abs(A)**2 for A in numpy.fft.fftshift(numpy.fft.fft(component))])*np.diag(mass_matrix)[i]
 		if i==0: total_correlation = temp
 		else: total_correlation = total_correlation + temp
 # =============================================================================
@@ -599,7 +599,7 @@ def power_spectrum_from_velocityxyz(xyzfile):
 	
 	#### DIVIDE BY TWO FOR 1 fs, divide by ONE for .5 fs, return only magnitude by default 
 	freqs = np.linspace(-(1e-15)**(-1) /2.9979e10/2, (1e-15)**(-1)/2.9979e10/2, len(total_correlation))
-	return  freqs, total_correlation 
+	return  freqs, magnitude, total_correlation 
 # =============================================================================
 # 	significant = [x for x in zip(freqs, magnitude, angle) if x[1]>0.001]
 # 	print significant
@@ -894,7 +894,11 @@ def make_mtd_time_plot(time_plot_file):
 			ax[1].plot(xtrend, [x*slope+intercept for x in xtrend], '--', linewidth=1, linestyle=s)
 			ax[1].set_xlim((0.001,0.004))
 			ax[1].set_ylabel(r"ln($\frac{k}{T}$)")
-			ax[1].legend(loc='lower left')
+# =============================================================================
+# 			ax[1].legend(loc='lower left')
+# =============================================================================
+			ax[1].legend(loc='lower left', bbox_to_anchor=(-0.1, 1.05, 1.2, 0.1),
+			          fancybox=True, shadow=False, ncol=4, mode='expand')
 			ax[1].grid(True, alpha=0.2)
 			print k, slope, intercept, -slope*R, (intercept-lnkkb_h)*R
 			print '&'.join([str((x*np.exp(slope/x + intercept))**-1) for x in T])
@@ -903,7 +907,11 @@ def make_mtd_time_plot(time_plot_file):
 			slope, intercept, r_value, p_value, std_err = scipy.stats.linregress(plottable)
 			ax[0].plot(xtrend, [x*slope+intercept for x in xtrend], '--', linewidth=1, linestyle=s)
 			ax[0].set_ylabel(r"ln($\frac{k}{T}$)")
-			ax[0].legend(loc='lower left')
+# =============================================================================
+# 			ax[0].legend(loc='lower left')
+# =============================================================================
+			ax[0].legend(loc='lower left', bbox_to_anchor=(-0.1, 1.05, 1.2, 0.1),
+			          fancybox=True, shadow=False, ncol=4, mode='expand')
 			ax[0].grid(True, alpha=0.2)
 			print k, slope, intercept, -slope*R, (intercept-lnkkb_h)*R
 			print '&'.join([str((x*np.exp(slope/x + intercept))**-1) for x in T])
@@ -911,7 +919,7 @@ def make_mtd_time_plot(time_plot_file):
 	plt.tight_layout()
 	font = {'family' : 'normal',
         'weight' : 'normal',
-        'size'   : 20}
+        'size'   : 13}
 
 	plt.rc('font', **font)
 	plt.show()
@@ -1437,6 +1445,48 @@ def plot_summary_EKIN(fcomplex, gcomplex, smallfrag, bigfrag):
 # =============================================================================
 	plt.savefig(gcomplex+"-curves.png")
 	
+def config_entropy(omega):
+	"""
+	PRE   : takes in a frequency 
+	POST  : Returns the configurational entropy linked to that frequency
+	"""
+	R, k,T,hbar,h = 8.314, 1.3807e-23, 300, 1.054e-34,1.054e-34*2*np.pi  # those are the masses of  J / molK. kB T and hbar
+	THETA = h*omega/k/T
+	S = R*((THETA)/(np.exp(THETA)-1) -
+				np.log(1-np.exp(-THETA))
+	  )
+	
+	return S
+	
+def get_entropy_from_xyz_file(fnameXYZ):
+	"""
+	PRE  :  Using the method from Schlitter, Jurgen, and Matthias Massarczyk. "Estimating configurational entropy and energy of molecular systems from computed spectral density." arXiv preprint arXiv:1909.04726 (2019).
+	        This method will extract the velocity power spectrum out of a xyz position trajectory and integrate its density along with an entropy expression
+	POST :  Will return Spectrally Resolved Estimation (SRE) for entropy for the given trajectory
+	"""
+	with open(fnameXYZ, 'rb') as r:
+		for line in r:
+			num = int(line.strip())
+			break
+	freqs, magnitude, correlation = power_spectrum_from_velocityxyz(fnameXYZ)
+	correlation_half = correlation[len(correlation)/2:]
+	wavenum_half, cumcorrelation = (freqs[len(correlation)/2:], np.cumsum(correlation[len(correlation)/2:]))
+	freqs_half = [2.99e10*x for x in wavenum_half] # in omega
+	S = [config_entropy(x) for x in freqs_half]
+	
+	D = np.trapz(correlation_half, wavenum_half)
+# =============================================================================
+# 	plt.plot(wavenum_half, correlation[len(correlation)/2:]/max(correlation))
+# 	plt.plot(wavenum_half, S/max(S))
+# 	plt.plot(wavenum_half, cumcorrelation/max(cumcorrelation))
+# =============================================================================
+# =============================================================================
+# 	plt.plot(wavenum_half, np.cumsum([(3.0*num-6)/D *x*y for x,y in zip(correlation_half, S)]))
+# =============================================================================
+	plt.plot(wavenum_half, [(3*num-6)/D*x*y for x,y in zip(correlation_half, S)])
+	print  np.trapz([(3.0*num-6)/D *x*y for x,y in zip(correlation_half, S)], wavenum_half)
+	plt.show()
+
 if __name__ == "__main__":
 	import rdkit
 	from rdkit import Chem
@@ -1458,6 +1508,7 @@ if __name__ == "__main__":
 	import math
 	import sys
 	
+	get_entropy_from_xyz_file('/home/macenrola/Documents/CB8-electrochemistry/get_entropy_quasiharmonic/Benzene_sol.out.xyz-pos-1.xyz')
 # =============================================================================
 # 	#### DO THE EKIN FLOATING
 # # =============================================================================
@@ -1500,7 +1551,7 @@ if __name__ == "__main__":
 # 	get_frequencies_quasiharmonic("/home/macenrola/Documents/CB8-electrochemistry/get_entropy_quasiharmonic/Benzene_sol.out.xyz-pos-1.xyz")
 # =============================================================================
 # =============================================================================
-# 	plt.plot(*power_spectrum_from_velocityxyz("/home/macenrola/Documents/CB8-electrochemistry/get_entropy_quasiharmonic/Benzene_sol.out.xyz-pos-1.xyz"))
+# 	plt.plot(*power_spectrum_from_velocityxyz("/home/macenrola/Documents/CB8-electrochemistry/get_entropy_quasiharmonic/trial_spectrum_tech/vacuum_2+/MV1_CB8_sol.com_OUT.out.xyz-pos-1.xyz"))
 # =============================================================================
 # =============================================================================
 # ASSIGNING THE PAIRS OF COMPLEXES
@@ -1667,11 +1718,11 @@ if __name__ == "__main__":
 # 			])
 # 	
 # =============================================================================
+	
 # =============================================================================
-# 	
 # 	# POPPING RATE
-# 	#make_mtd_popping_rate_plot(glob.glob("/home/macenrola/Documents/XYLENE/inputs/for-reaction-flexible-cb/outputs/popping/popping_times")[0])
-# 	make_mtd_popping_rate_plot(glob.glob("/home/macenrola/Documents/XYLENE/inputs/popping-from-cb/SLOW_POPPING_W_TARGET/OUTS/popping_times")[0])
+# 	make_mtd_popping_rate_plot(glob.glob("/home/macenrola/Documents/XYLENE/inputs/popping-from-cb/SLOW_2_TARGETS/popping_times")[0])
+# 	#make_mtd_popping_rate_plot(glob.glob("/home/macenrola/Documents/XYLENE/inputs/popping-from-cb/SLOW_POPPING_W_TARGET/OUTS/popping_times")[0])
 # =============================================================================
 # =============================================================================
 # 	# KS STACKED _ISOMERISATION
@@ -1704,13 +1755,15 @@ if __name__ == "__main__":
 # #MAKE MTD TIME PLOT
 # 	make_mtd_time_plot("/home/macenrola/Documents/XYLENE/images/DUMP_ISO/slow_summary_file_without_low_p")
 # 	
+# 	
 # =============================================================================
-	
 # =============================================================================
 	# PLOT STACKED SPECTRA
- 	#plot_three_stacked_spectra("/home/macenrola/Documents/XYLENE/correlation_for_reaction/slow-reaction-MP-CB6/vibrational_analysis/traj_from_mode_368/ALL_100k/sample_vel_coupling.xyz-MAG", [0,1,2,5,9], "/home/macenrola/Documents/XYLENE/correlation_for_reaction/slow-reaction-MP-CB6/vibrational_analysis/traj_from_mode_368/ALL_FREQS/sample_vel_coupling.xyz-MAG")
- 	plot_three_stacked_spectra("/home/macenrola/Documents/XYLENE/correlation_for_reaction/slow-reaction-MP-CB6/vibrational_analysis/traj_from_mode_368/ALL_100k/sample_vel_coupling.xyz-MAG", [0,1,2,5], "/home/macenrola/Documents/XYLENE/correlation_for_reaction/slow-reaction-MP-CB6/vibrational_analysis/traj_from_mode_368/ALL_FREQS/sample_vel_coupling.xyz-MAG")
-
+# =============================================================================
+#  	#plot_three_stacked_spectra("/home/macenrola/Documents/XYLENE/correlation_for_reaction/slow-reaction-MP-CB6/vibrational_analysis/traj_from_mode_368/ALL_100k/sample_vel_coupling.xyz-MAG", [0,1,2,5,9], "/home/macenrola/Documents/XYLENE/correlation_for_reaction/slow-reaction-MP-CB6/vibrational_analysis/traj_from_mode_368/ALL_FREQS/sample_vel_coupling.xyz-MAG")
+#  	plot_three_stacked_spectra("/home/macenrola/Documents/XYLENE/correlation_for_reaction/slow-reaction-MP-CB6/vibrational_analysis/traj_from_mode_368/ALL_100k/sample_vel_coupling.xyz-MAG", [0,1,2,5], "/home/macenrola/Documents/XYLENE/correlation_for_reaction/slow-reaction-MP-CB6/vibrational_analysis/traj_from_mode_368/ALL_FREQS/sample_vel_coupling.xyz-MAG")
+# 
+# =============================================================================
 # =============================================================================
 # =============================================================================
 # # PLOT EKIN
