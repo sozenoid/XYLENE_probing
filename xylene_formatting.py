@@ -584,21 +584,22 @@ def make_gaussian_input_files_for_xyzgroup(list_of_xyz):
 	nproc = 16
 	memperproc = 4
 	shfile = path + '{}.sh'.format(genname)
+	print shfile, paramfile
 	# n wB97XD/3-21G opt=(calcall,tight,ts,cartesian,noeigentest)\n\
 	comstring = "\
 %Chk={0}.chk\n\
 %NProcShared={1}\n\
 %mem={2}gb\n\
-#n wB97XD/6-31g* Opt\n\
+#n PM6D3 Opt Freq\n\
 \n\
 {0}\n\
 \n\
-1 1\n\
+0 1\n\
 "
 	shstring = "#!/bin/bash -l\n\
 #$ -S /bin/bash\n\
 #$ -cwd\n\
-#$ -l h_rt=6:10:0\n\
+#$ -l h_rt=10:10:0\n\
 #$ -l mem=%iG\n\
 #$ -l tmpfs=100G\n\
 #$ -N %s\n\
@@ -1161,14 +1162,16 @@ if __name__ == "__main__":
 	from sklearn.decomposition import PCA
 	import sys
 	
-	
+	make_gaussian_input_files_for_xyzgroup(glob.glob('/home/macenrola/Documents/CB8-electrochemistry/SPECTRA_CBs/GAUSSIAN_CBS/*.xyz'))
 # =============================================================================
 # 	make_gaussian_input_files_for_molgroup(glob.glob("/home/macenrola/Documents/H-S-compensation/sdfs/*.sdf"))
 # =============================================================================
-	flist = glob.glob("/home/macenrola/Documents/CB8-electrochemistry/JUST_CBs/*.xyz")
-	for f in flist:
-		print f
-		xyz_to_cp2kinp(f, 0,1,"/home/macenrola/Documents/CB8-electrochemistry/JUST_CBs/base_traj.inp")
+# =============================================================================
+# 	flist = glob.glob("/home/macenrola/Documents/CB8-electrochemistry/JUST_CBs/*.xyz")
+# 	for f in flist:
+# 		print f
+# 		xyz_to_cp2kinp(f, 0,1,"/home/macenrola/Documents/CB8-electrochemistry/JUST_CBs/base_traj.inp")
+# =============================================================================
 # =============================================================================
 # 	
 # 	flist = glob.glob("/home/macenrola/Documents/Thermal_energy_collector/50_best_from_CB_screening/*.xyz")

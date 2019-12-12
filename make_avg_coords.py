@@ -214,7 +214,7 @@ def return_list_of_snapshots_and_atom_list(xyzfile):
 				snapshot_list.append(xyz_array)
 				tempxyz=[]
 				nsnaps=len(snapshot_list)
-				if nsnaps%1000==0: print "{}th snapshot processed".format(nsnaps)
+				if nsnaps%10000==0: print "{}th snapshot processed".format(nsnaps)
 			tempxyz.append(line)
 
 	return atm_list, np.array(snapshot_list)[:]
@@ -394,7 +394,7 @@ def make_mass_matrix_from_atom_list(atom_list):
 	POST: Will return the mass matrix associated with it
 	the matrix is square and has 3n*3n elements and is diagonal for n atoms, the square root of the matrix is also returned
 	"""
-	dic_weights={'C':12.,'H':1.,'N':14., 'O':16., "Cl":35.}
+	dic_weights={'C':12.,'H':1.,'N':14., 'O':16., "Cl":35., "F":19., "Br":79.}
 	diag=[]
 	for ats in atom_list:
 		diag.extend([dic_weights[ats]*1.660540e-27]*3) # those masses are atomic masses so the factor 1.66e-27
@@ -536,13 +536,13 @@ def convert_position_snapshots_to_velocity_snapshots(xyztraj, dt=1e-15):
 	print snapshot_pos.shape
 	snapshots_vels = np.diff(snapshot_pos, axis=0) # in Angstrom/fs
 	print snapshots_vels.shape
-	dic_weights={'C':12,'H':1,'N':14, 'O':16}
+	dic_weights={'C':12,'H':1,'N':14, 'O':16, 'F':19.}
 	conv=(1e-10/1e-15)**2*1.66e-27*6.022e23/4.184/1e3 # (Ang/fs)**2*amu*mol/kcal
 	ekin = [0.5*conv*sum([y[0]**2*y[1] for y in zip(np.reshape(x, x.shape[0]*x.shape[1]), [dic_weights[i] for k in atm_list for i in [k]*3])]) for x in snapshots_vels]
 	plt.plot(ekin)
 	plt.show()
 	
-def power_spectrum_from_velocityxyz(xyzfile):
+def power_spectrum_from_velocityxyz(xyzfile,l):
 	"""
 	PRE : Takes in an xyz file containing velocity (most likely in bohr/au_time)
 	POST: Will produce the power spectrum
@@ -552,8 +552,8 @@ def power_spectrum_from_velocityxyz(xyzfile):
 	#
 	
 	print "Got the snaps, now reshaping"
-	snapshot_array = [np.reshape(x, len(atm_list)*3) for x in list(snapshot_array)][10000:]
-	snapshot_array = [x*0.5e-10 for x in snapshot_array]
+	snapshot_array = [np.reshape(x, len(atm_list)*3) for x in list(snapshot_array)][-25000:]
+	snapshot_array = [x*1e-10 for x in snapshot_array]
 	
 	#### CONVERT SNAPS OF POSITION TO SPEED
 	snapshot_speed = np.gradient(snapshot_array, 1e-15, edge_order=2, axis=0)
@@ -567,19 +567,28 @@ def power_spectrum_from_velocityxyz(xyzfile):
 	total_correlation = None
 	print "Computing the correlation"
 	for i, component in enumerate(snapshot_array):
-		print "Step {} in the correlation computation".format(i)
+# =============================================================================
+# 		print "Step {} in the correlation computation".format(i)
+# =============================================================================
 # =============================================================================
 # 		if i==0: total_correlation=np.correlate(component, component, mode='full')*np.diag(mass_matrix)[i]
 # 		else: total_correlation = total_correlation + np.correlate(component, component, mode='full')*np.diag(mass_matrix)[i]
-# 
 # =============================================================================
-		temp = np.array([np.abs(A)**2 for A in numpy.fft.fftshift(numpy.fft.fft(component))])*np.diag(mass_matrix)[i]
+		
+# =============================================================================
+# 		temp = np.array([np.abs(A)**2 for A in numpy.fft.fftshift(numpy.fft.fft(component))])*np.diag(mass_matrix)[i]
+# 		if i==0: total_correlation = temp
+# 		else: total_correlation = total_correlation + temp
+# 	print "Summing the correlation"
+# =============================================================================
+		n=10000
+		temp = scipy.signal.welch(component, fs=1e15, nperseg=n)[1]*np.diag(mass_matrix)[i]
 		if i==0: total_correlation = temp
 		else: total_correlation = total_correlation + temp
-# =============================================================================
-# 		plt.plot(component)
-# =============================================================================
-	print "Summing the correlation"
+	print "Summing the correlation"	
+	
+	
+	
 # =============================================================================
 # 	total_correlation = np.sum(np.array(total_correlation), axis=0)
 # =============================================================================
@@ -597,17 +606,31 @@ def power_spectrum_from_velocityxyz(xyzfile):
 	magnitude  =[np.abs(A)**2 for A in numpy.fft.fftshift(numpy.fft.fft(total_correlation))]
 	angle      =[np.angle(A) for A in numpy.fft.fftshift(numpy.fft.fft(total_correlation))]
 	
+	#### WELCH METHOD
+	freqs = np.linspace(0, 1e15/2.99e10/2, 1+(n)/2)
+# =============================================================================
+# 	plt.plot(freqs, total_correlation, label=l) # gives the spectrum with x axis in cm-1
+# 	plt.legend()
+# 	plt.show()
+# =============================================================================
+	#### END WELCH METHOD
 	#### DIVIDE BY TWO FOR 1 fs, divide by ONE for .5 fs, return only magnitude by default 
-	freqs = np.linspace(-(1e-15)**(-1) /2.9979e10/2, (1e-15)**(-1)/2.9979e10/2, len(total_correlation))
+# =============================================================================
+# 	freqs = np.linspace(-(1e-15)**(-1) /2.9979e10/2, (1e-15)**(-1)/2.9979e10/2, len(total_correlation))
+# =============================================================================
+	
+# =============================================================================
+# 	plt.plot(freqs, total_correlation, label=l) # gives the spectrum with x axis in cm-1
+# 	plt.legend()
+# 	plt.show()
+# =============================================================================
+
 	return  freqs, magnitude, total_correlation 
 # =============================================================================
 # 	significant = [x for x in zip(freqs, magnitude, angle) if x[1]>0.001]
 # 	print significant
 # 	plt.plot(freqs, magnitude, color='red')
 # 	plt.stem([x[0] for x in significant], [x[2] for x in significant]) # gives the spectrum with x axis in cm-1
-# =============================================================================
-# =============================================================================
-# 	plt.plot(freqs, angle) # gives the spectrum with x axis in cm-1
 # =============================================================================
 # =============================================================================
 # 	plt.savefig('/home/macenrola/Desktop/last_20000.pdf')
@@ -1453,12 +1476,11 @@ def config_entropy(omega):
 	R, k,T,hbar,h = 8.314, 1.3807e-23, 300, 1.054e-34,1.054e-34*2*np.pi  # those are the masses of  J / molK. kB T and hbar
 	THETA = h*omega/k/T
 	S = R*((THETA)/(np.exp(THETA)-1) -
-				np.log(1-np.exp(-THETA))
-	  )
+				np.log(1-np.exp(-THETA)))
 	
 	return S
 	
-def get_entropy_from_xyz_file(fnameXYZ):
+def get_entropy_from_xyz_file(fnameXYZ, label='CB8'):
 	"""
 	PRE  :  Using the method from Schlitter, Jurgen, and Matthias Massarczyk. "Estimating configurational entropy and energy of molecular systems from computed spectral density." arXiv preprint arXiv:1909.04726 (2019).
 	        This method will extract the velocity power spectrum out of a xyz position trajectory and integrate its density along with an entropy expression
@@ -1468,10 +1490,11 @@ def get_entropy_from_xyz_file(fnameXYZ):
 		for line in r:
 			num = int(line.strip())
 			break
-	freqs, magnitude, correlation = power_spectrum_from_velocityxyz(fnameXYZ)
+	freqs, magnitude, correlation = power_spectrum_from_velocityxyz(fnameXYZ, label )
 	correlation_half = correlation[len(correlation)/2:]
 	wavenum_half, cumcorrelation = (freqs[len(correlation)/2:], np.cumsum(correlation[len(correlation)/2:]))
 	freqs_half = [2.99e10*x for x in wavenum_half] # in omega
+	correlation_half, wavenum_half, freqs_half = correlation, freqs, [2.99e10*x for x in freqs]
 	S = [config_entropy(x) for x in freqs_half]
 	
 	D = np.trapz(correlation_half, wavenum_half)
@@ -1479,13 +1502,12 @@ def get_entropy_from_xyz_file(fnameXYZ):
 # 	plt.plot(wavenum_half, correlation[len(correlation)/2:]/max(correlation))
 # 	plt.plot(wavenum_half, S/max(S))
 # 	plt.plot(wavenum_half, cumcorrelation/max(cumcorrelation))
-# =============================================================================
-# =============================================================================
 # 	plt.plot(wavenum_half, np.cumsum([(3.0*num-6)/D *x*y for x,y in zip(correlation_half, S)]))
+# 	plt.plot(wavenum_half[1:], [(3*num-6)/D*x*y for x,y in zip(correlation_half[1:], S[1:])])
+# 	plt.show()
 # =============================================================================
-	plt.plot(wavenum_half, [(3*num-6)/D*x*y for x,y in zip(correlation_half, S)])
-	print  np.trapz([(3.0*num-6)/D *x*y for x,y in zip(correlation_half, S)], wavenum_half)
-	plt.show()
+	print  np.trapz([(3.0*num-6)/D *x*y for x,y in zip(correlation_half[1:], S[1:])], wavenum_half[1:])
+
 
 if __name__ == "__main__":
 	import rdkit
@@ -1499,6 +1521,7 @@ if __name__ == "__main__":
 	import matplotlib.pyplot as plt
 	import pandas as pd
 	import scipy
+	import scipy.signal 
 	import glob
 	import cPickle
 	from matplotlib import pyplot as plt
@@ -1508,7 +1531,25 @@ if __name__ == "__main__":
 	import math
 	import sys
 	
-	get_entropy_from_xyz_file('/home/macenrola/Documents/CB8-electrochemistry/get_entropy_quasiharmonic/Benzene_sol.out.xyz-pos-1.xyz')
+ 	#get_entropy_from_xyz_file('/home/macenrola/Documents/CB8-electrochemistry/SPECTRA_CBs/CB5_neutral.xyz-pos-1.xyz', 'CB5')
+	#get_entropy_from_xyz_file('/home/macenrola/Documents/CB8-electrochemistry/SPECTRA_CBs/CB6-neutral.com_OUT.out.xyz-pos-1.xyz', 'CB6')
+ 	#get_entropy_from_xyz_file('/home/macenrola/Documents/CB8-electrochemistry/SPECTRA_CBs/CB7-neutral.com_OUT.out.xyz-pos-1.xyz', 'CB7')
+ 	#get_entropy_from_xyz_file('/home/macenrola/Documents/CB8-electrochemistry/SPECTRA_CBs/CB8-neutral.xyz-pos-1.xyz', 'CB8')
+
+	for f in glob.glob('/home/macenrola/Documents/CB8-electrochemistry/VACUUM_CBS/MV1_*xyz'):
+		print f
+		get_entropy_from_xyz_file(f)
+		print f.replace('MV1', 'MV2_MV1')
+		get_entropy_from_xyz_file( f.replace('MV1', 'MV2_MV1'))
+
+# =============================================================================
+# 	#RAMAN SHIFT LOOOOL
+# 	power_spectrum_from_velocityxyz('/home/macenrola/Documents/CB8-electrochemistry/SPECTRA_CBs/CB5_neutral.xyz-pos-1.xyz', 'CB5')
+# 	power_spectrum_from_velocityxyz('/home/macenrola/Documents/CB8-electrochemistry/SPECTRA_CBs/CB6-neutral.com_OUT.out.xyz-pos-1.xyz', 'CB6')
+# 	power_spectrum_from_velocityxyz('/home/macenrola/Documents/CB8-electrochemistry/SPECTRA_CBs/CB7-neutral.com_OUT.out.xyz-pos-1.xyz', 'CB7')
+# 	power_spectrum_from_velocityxyz('/home/macenrola/Documents/CB8-electrochemistry/SPECTRA_CBs/CB8-neutral.xyz-pos-1.xyz', 'CB8')
+# 	#END RAMAN SHIFT
+# =============================================================================
 # =============================================================================
 # 	#### DO THE EKIN FLOATING
 # # =============================================================================
