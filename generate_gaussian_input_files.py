@@ -15,11 +15,11 @@ def format_gaussian_input_from_xyz(xyz_file):
 # =============================================================================
 # 	route="#N wB97XD/6-31G* opt=(ts, noeigentest, calcfc, modredundant, maxcyc=999) freq"
 # =============================================================================
-	route="#n PM6D3 Freq=(Anharmonic, PrintDerivatives, InternalModes, cubic, HPModes)"
+	route="#n PM6D3 Opt Freq=(HPModes)"
 	freeze=" D       2       3       9      10 F"
 	checkpoint="%Chk={}.chk".format(name)
-	mem="%mem=30gb"
-	procs="%NProcShared=8"
+	mem="%mem=60gb"
+	procs="%NProcShared=12"
 
 # =============================================================================
 # 	Fine tuning the charge and multiplicity
@@ -28,7 +28,7 @@ def format_gaussian_input_from_xyz(xyz_file):
 		charge_mult="1 3"
 		print "{} is diradical or n2".format(name)
 	else:
-		charge_mult = "1 1"
+		charge_mult = "1 2"
 		
 		
 # =============================================================================
@@ -37,7 +37,7 @@ def format_gaussian_input_from_xyz(xyz_file):
 	if 'TS' in name:
 		route="#n wB97XD/6-31G(d) opt=(ts, noeigentest, modredundant, calcfc, recalcfc=5, maxcyc=999) maxdisk=100GB freq"
 	else:
-		route="#n wB97XD/6-31G(d) opt=(modredundant, maxcyc=999) maxdisk=100GB freq"
+		route="#n PM6D3 opt=(maxstep=999, maxcyc=999) maxdisk=100GB freq"
 		
 	
 	if name[-4:]==".xyz":
@@ -56,7 +56,7 @@ def format_gaussian_input_from_xyz(xyz_file):
 		w.writelines(coords)
 		w.write("\n")
 		# w.write("notatoms=1-{}\n".format(len(coords)-126))
-		w.write(freeze+"\n")
+		#w.write(freeze+"\n")
 		w.write("\n")
 
 

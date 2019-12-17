@@ -448,15 +448,15 @@ def get_frequencies_quasiharmonic(xyzfile):
 	c = 2.99e10 #cm/s
 	print xyzfile
 	atm_list, snapshot_array= return_list_of_snapshots_and_atom_list(xyzfile)
-	reshaped_snapshots = [np.reshape(x, len(atm_list)*3) for x in list(snapshot_array)][20000:]
+	reshaped_snapshots = [np.reshape(x, len(atm_list)*3) for x in list(snapshot_array)][-30000:]
 	mass_matrix, sqrt_mass_matrix= make_mass_matrix_from_atom_list(atm_list)
 	snapshot_array = np.array(reshaped_snapshots).T*1e-10
-	snapshot_speed = np.gradient(snapshot_array, .5e-15, edge_order=1, axis=1)
-	snapshot_acc   = np.gradient(snapshot_speed, .5e-15, edge_order=1, axis=1)
+	snapshot_speed = np.gradient(snapshot_array, 1e-15, edge_order=1, axis=1)
+	snapshot_acc   = np.gradient(snapshot_speed, 1e-15, edge_order=1, axis=1)
 
 	mass_rescaled_pos = [(x-np.mean(x))*y/2**.5 for x, y in zip(snapshot_array, np.diag(sqrt_mass_matrix))]
-	mass_rescaled_speed = [(x-np.mean(x))*y/2**.5 for x, y in zip(snapshot_speed, np.diag(sqrt_mass_matrix))]
-	mass_rescaled_acceleration = [(x-np.mean(x))*y/2**.5 for x, y in zip(snapshot_acc, np.diag(sqrt_mass_matrix))]
+	mass_rescaled_speed = [(x)*y/2**.5 for x, y in zip(snapshot_speed, np.diag(sqrt_mass_matrix))]
+	mass_rescaled_acceleration = [(x)*y/2**.5 for x, y in zip(snapshot_acc, np.diag(sqrt_mass_matrix))]
 	
 # =============================================================================
 # 	covmat_pos   = np.cov(np.matmul(mass_matrix, mass_rescaled_pos))
@@ -492,16 +492,18 @@ def get_frequencies_quasiharmonic(xyzfile):
 # =============================================================================
 		
 	
-	print len(eigenvectors_pos)
-	print eigenvectors_speed
-	print eigenvectors_acc
+# =============================================================================
+# 	print len(eigenvectors_pos)
+# 	print eigenvectors_speed
+# 	print eigenvectors_acc
+# =============================================================================
 	
 	frequencies = sorted([(x/y)**.5 / (2*math.pi) for x,y in zip(eigenvalues_speed, eigenvalues_pos)])[:]
-	print [x/c for x in frequencies]
+	#print [x/c for x in frequencies]
 	
 	k,T,hbar = 1.3807e-23, 300, 1.054e-34 # those are the masses of kB T and hbar
 
-	get_entropy_from_frequency_list(frequencies[6:], k, T, hbar)
+	get_entropy_from_frequency_list(frequencies[:], k, T, hbar*(2*math.pi))
 	
 def get_entropy_from_frequency_list(frequency_list, k,T, hbar ):
 	"""
@@ -1508,7 +1510,23 @@ def get_entropy_from_xyz_file(fnameXYZ, label='CB8'):
 # =============================================================================
 	print  np.trapz([(3.0*num-6)/D *x*y for x,y in zip(correlation_half[1:], S[1:])], wavenum_half[1:])
 
-
+def compare_CB8_ternary_energies(fname):
+	"""
+	PRE : Will take a cp2k energy file and assume that there is another one with a similar name
+	POST: Will print the energy difference
+	"""
+	with open(fname, 'rb') as r:
+		lines = r.readlines()
+		MV2_eners = [float(x.strip().split()[4]) for x in lines[1:]]
+		
+	with open(fname.replace("MV2_", "/CHARGEONE/"), 'rb') as r:
+		lines = r.readlines()
+		MV1_eners = [float(x.strip().split()[4]) for x in lines[1:]]
+		print "{}:\n{}".format(fname, (sum(MV2_eners)/len(MV2_eners) - sum(MV1_eners)/len(MV1_eners))*627.5)
+		
+		
+		
+	
 if __name__ == "__main__":
 	import rdkit
 	from rdkit import Chem
@@ -1536,11 +1554,16 @@ if __name__ == "__main__":
  	#get_entropy_from_xyz_file('/home/macenrola/Documents/CB8-electrochemistry/SPECTRA_CBs/CB7-neutral.com_OUT.out.xyz-pos-1.xyz', 'CB7')
  	#get_entropy_from_xyz_file('/home/macenrola/Documents/CB8-electrochemistry/SPECTRA_CBs/CB8-neutral.xyz-pos-1.xyz', 'CB8')
 
-	for f in glob.glob('/home/macenrola/Documents/CB8-electrochemistry/VACUUM_CBS/MV1_*xyz'):
-		print f
-		get_entropy_from_xyz_file(f)
-		print f.replace('MV1', 'MV2_MV1')
-		get_entropy_from_xyz_file( f.replace('MV1', 'MV2_MV1'))
+	for f in sorted(glob.glob('/home/macenrola/Documents/CB8-electrochemistry/VACUUM_CBS/*.xyz')):
+		print f 
+		get_frequencies_quasiharmonic(f)
+# =============================================================================
+# 	for f in glob.glob('/home/macenrola/Documents/CB8-electrochemistry/VACUUM_CBS/MV1_*xyz'):
+# 		print f
+# 		get_entropy_from_xyz_file(f)
+# 		print f.replace('MV1', 'MV2_MV1')
+# 		get_entropy_from_xyz_file( f.replace('MV1', 'MV2_MV1'))
+# =============================================================================
 
 # =============================================================================
 # 	#RAMAN SHIFT LOOOOL
