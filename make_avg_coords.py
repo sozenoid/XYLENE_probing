@@ -910,14 +910,14 @@ def make_mtd_time_plot(time_plot_file):
 	T=[300, 400, 500, 600, 700]
 	for (i,k),s in zip(enumerate(res_dic), line_styles()):
 		print i,k,s
-		xtrend = np.linspace(0.001,0.004,100)
+		xtrend = np.linspace(10e3*0.001,10e3*0.004,100)
 		line = res_dic[k]
-		plottable = [1/float(x) for x in line[0]], [np.log(1/float(x[0])/float(x[1])) for x in zip(line[0], line[1])]
+		plottable = [10e3*1/float(x) for x in line[0]], [np.log(1/float(x[0])/float(x[1])) for x in zip(line[0], line[1])]
 		if 'CB' in k:
-			ax[1].scatter(plottable[0], plottable[1], marker=i, label=k )
+			ax[1].scatter(plottable[0], plottable[1], marker=i, label=k, s=100)
 			slope, intercept, r_value, p_value, std_err = scipy.stats.linregress([x[:] for x in plottable])
 			ax[1].plot(xtrend, [x*slope+intercept for x in xtrend], '--', linewidth=1, linestyle=s)
-			ax[1].set_xlim((0.001,0.004))
+			ax[1].set_xlim((10e3*0.001,10e3*0.004))
 			ax[1].set_ylabel(r"ln($\frac{k}{T}$)")
 # =============================================================================
 # 			ax[1].legend(loc='lower left')
@@ -928,7 +928,7 @@ def make_mtd_time_plot(time_plot_file):
 			print k, slope, intercept, -slope*R, (intercept-lnkkb_h)*R
 			print '&'.join([str((x*np.exp(slope/x + intercept))**-1) for x in T])
 		elif "vac" in k:
-			ax[0].scatter(plottable[0], plottable[1], marker=i, label=k)
+			ax[0].scatter(plottable[0], plottable[1], marker=i, label=k, s=100)
 			slope, intercept, r_value, p_value, std_err = scipy.stats.linregress(plottable)
 			ax[0].plot(xtrend, [x*slope+intercept for x in xtrend], '--', linewidth=1, linestyle=s)
 			ax[0].set_ylabel(r"ln($\frac{k}{T}$)")
@@ -940,13 +940,14 @@ def make_mtd_time_plot(time_plot_file):
 			ax[0].grid(True, alpha=0.2)
 			print k, slope, intercept, -slope*R, (intercept-lnkkb_h)*R
 			print '&'.join([str((x*np.exp(slope/x + intercept))**-1) for x in T])
-	plt.xlabel(r"1/T [K$^{-1}$]")
-	plt.tight_layout()
+	plt.xlabel(r"1/T 10$^{-3}$ [K$^{-1}$]")
+	
 	font = {'family' : 'normal',
         'weight' : 'normal',
-        'size'   : 13}
+        'size'   : 17}
 
 	plt.rc('font', **font)
+	plt.tight_layout()
 	plt.show()
 
 def make_mtd_popping_rate_plot(time_plot_file):
@@ -1549,14 +1550,18 @@ if __name__ == "__main__":
 	import math
 	import sys
 	
+	mol = Chem.MolFromPDBFile('/home/macenrola/Desktop/xylene_polish/volumes_structures/MO-vac.pdb', removeHs=False)
+	print AllChem.ComputeMolVolume(mol, boxMargin=1.0)
  	#get_entropy_from_xyz_file('/home/macenrola/Documents/CB8-electrochemistry/SPECTRA_CBs/CB5_neutral.xyz-pos-1.xyz', 'CB5')
 	#get_entropy_from_xyz_file('/home/macenrola/Documents/CB8-electrochemistry/SPECTRA_CBs/CB6-neutral.com_OUT.out.xyz-pos-1.xyz', 'CB6')
  	#get_entropy_from_xyz_file('/home/macenrola/Documents/CB8-electrochemistry/SPECTRA_CBs/CB7-neutral.com_OUT.out.xyz-pos-1.xyz', 'CB7')
  	#get_entropy_from_xyz_file('/home/macenrola/Documents/CB8-electrochemistry/SPECTRA_CBs/CB8-neutral.xyz-pos-1.xyz', 'CB8')
 
-	for f in sorted(glob.glob('/home/macenrola/Documents/CB8-electrochemistry/VACUUM_CBS/*.xyz')):
-		print f 
-		get_frequencies_quasiharmonic(f)
+# =============================================================================
+# 	for f in sorted(glob.glob('/home/macenrola/Documents/CB8-electrochemistry/VACUUM_CBS/*.xyz')):
+# 		print f 
+# 		get_frequencies_quasiharmonic(f)
+# =============================================================================
 # =============================================================================
 # 	for f in glob.glob('/home/macenrola/Documents/CB8-electrochemistry/VACUUM_CBS/MV1_*xyz'):
 # 		print f
@@ -1814,13 +1819,13 @@ if __name__ == "__main__":
 # 	
 # 	
 # =============================================================================
-	
 # =============================================================================
+# 	
 # #MAKE MTD TIME PLOT
-# 	make_mtd_time_plot("/home/macenrola/Documents/XYLENE/images/DUMP_ISO/slow_summary_file_without_low_p")
-# 	
+# 	make_mtd_time_plot("/home/macenrola/Desktop/xylene_polish\/slow_summary_file_without_low_p")
 # 	
 # =============================================================================
+	
 # =============================================================================
 	# PLOT STACKED SPECTRA
 # =============================================================================

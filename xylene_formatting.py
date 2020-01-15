@@ -1162,16 +1162,16 @@ if __name__ == "__main__":
 	from sklearn.decomposition import PCA
 	import sys
 	
-	make_gaussian_input_files_for_xyzgroup(glob.glob('/home/macenrola/Documents/CB8-electrochemistry/SPECTRA_CBs/GAUSSIAN_CBS/*.xyz'))
+# =============================================================================
+# 	make_gaussian_input_files_for_xyzgroup(glob.glob('/home/macenrola/Documents/CB8-electrochemistry/SPECTRA_CBs/GAUSSIAN_CBS/*.xyz'))
+# =============================================================================
 # =============================================================================
 # 	make_gaussian_input_files_for_molgroup(glob.glob("/home/macenrola/Documents/H-S-compensation/sdfs/*.sdf"))
 # =============================================================================
-# =============================================================================
-# 	flist = glob.glob("/home/macenrola/Documents/CB8-electrochemistry/JUST_CBs/*.xyz")
-# 	for f in flist:
-# 		print f
-# 		xyz_to_cp2kinp(f, 0,1,"/home/macenrola/Documents/CB8-electrochemistry/JUST_CBs/base_traj.inp")
-# =============================================================================
+	flist = glob.glob("/home/macenrola/Documents/Thermal_energy_collector/known-guest-pdbs/COMPLEXES/*_docked.xyz")
+	for f in flist:
+		print f
+		xyz_to_cp2kinp(f, 0,1,"/home/macenrola/Documents/CB8-electrochemistry/JUST_CBs/base_traj.inp")
 # =============================================================================
 # 	
 # 	flist = glob.glob("/home/macenrola/Documents/Thermal_energy_collector/50_best_from_CB_screening/*.xyz")
@@ -1211,8 +1211,9 @@ if __name__ == "__main__":
 # 	xyz_to_cp2kinp("/home/macenrola/Documents/XYLENE/correlation_for_reaction/slow-reaction-MP-CB6/vibrational_analysis/other_coupling_candidates/normal_trajectory/G38.xyz_a_0.0_s_0.0_0.0_docked.xyz-pos-1.xyz")
 # =============================================================================
 # =============================================================================
-# 	for f in glob.glob('/home/macenrola/Documents/XYLENE/correlation_for_reaction/slow-reaction-MP-CB6/vibrational_analysis/other_coupling_candidates/*-neutral.com.coords.inp-pos-1.xyz'):
-# 		for a in np.linspace(0, 350, 1):
+# # DOCK THEM ALLLLLL
+# 	for f in glob.glob('/home/macenrola/Documents/Thermal_energy_collector/known-guest-pdbs/COMPLEXES/*xyz'):
+# 		for a in np.linspace(0, 0, 1):
 # 			for s in np.linspace(0, 2, 1):
 # 				print f, a, s
 # 				align_xyz_from_file_to_file(f, a/np.pi, (s,0.0,0))
