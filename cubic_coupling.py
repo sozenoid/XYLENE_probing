@@ -535,7 +535,17 @@ def breakdown_decay_by_mode(k, ARG_LIST):
 	print "Overall rates: ", zip(['WXX', 'WCC', 'WCX', 'WXM', 'WCM', 'WMM'], [x*c/1e12 for x in [WXX, WCC, WCX, WXM, WCM, WMM]])
 	return zip(['WXX', 'WCC', 'WCX', 'WXM', 'WCM', 'WMM'], [WXX, WCC, WCX, WXM, WCM, WMM])
 
+def plot_the_hist(x1, y1, x2, y2):
+	"""
+	PRE: Takes in the freqs and associated decay rates for the whole complex and just xylene
+	POST: Will produce a stacked plot illustrating the differences using the bin height as the average of what's inside
 
+	"""
+	bins=int((x1[-1]-x1[0])/50) 
+	print bins
+	plt.hist(x1, bins , weights=y1)
+	plt.show()
+	pass 
 def plot_a_dump(cb6neutral, cb7neutral, cb6prot, cb7prot):
 	"""
 	PRE  : Takes in a dump file
@@ -544,7 +554,6 @@ def plot_a_dump(cb6neutral, cb7neutral, cb6prot, cb7prot):
 
 	with open(cb6neutral, 'rb') as r:
 		cb6neutral_data = cPickle.load(r)
-		print cb6neutral_data
 	with open(cb7neutral, 'rb') as r:
 		cb7neutral_data = cPickle.load(r)
 	with open(cb6prot, 'rb') as r:
@@ -556,21 +565,36 @@ def plot_a_dump(cb6neutral, cb7neutral, cb6prot, cb7prot):
 # 	fig, axes = plt.subplots(2,2, sharex='col', sharey='row')
 # 	for dtset, label, ax in zip([cb6neutral_data, cb7neutral_data, cb6prot_data,cb7prot_data], [r'$m$-xylene@CB6',r'$m$-xylene@CB7',r'[$m$-xylene+H]$^+$@CB6',r'[$m$-xylene+H]$^+$@CB7'], axes.flat):
 # =============================================================================
-	fig, axes = plt.subplots(2,1, sharex='col', sharey='row')
-	for dtset, label, ax in zip([cb6neutral_data, cb7neutral_data], [r'$m$-xylene@CB6',r'$m$-xylene@CB7'], axes.flat):
 # =============================================================================
 # 	fig, axes = plt.subplots(2,1, sharex='col', sharey='row')
-# 	for dtset, label, ax in zip([cb6prot_data,cb7prot_data], [r'[$m$-xylene+H]$^+$@CB6',r'[$m$-xylene+H]$^+$@CB7'], axes.flat):
+# 	for dtset, label, ax in zip([cb6neutral_data, cb7neutral_data], [r'$m$-xylene@CB6',r'$m$-xylene@CB7'], axes.flat):
 # =============================================================================
+
+	fig, axes = plt.subplots(2,1, sharex='col', sharey='row')
+	for dtset, label, ax in zip([cb6prot_data,cb7prot_data], [r'[$m$-xylene+H]$^+$@CB6',r'[$m$-xylene+H]$^+$@CB7'], axes.flat):
 # =============================================================================
 # 		ax.plot([x[0] for x in dtset], linewidth=lw, label=label)
 # 		ax.plot([x[1]/max([x[2] for x in dtset]) for x in dtset], linewidth=lw, linestyle='-')
 # 		ax.plot([x[2]/max([x[2] for x in dtset]) for x in dtset], linewidth=lw, linestyle='-.')
 # =============================================================================
-		ax.plot([x[1]*c/1e12 for x in sorted(dtset,  key= lambda x: x[3])], linewidth=lw, linestyle='-')
-		ax.plot([x[2]*c/1e12 for x in sorted(dtset, key= lambda x: x[3])], linewidth=lw, linestyle='-.')
+		for el in [x for x in sorted(dtset,  key= lambda x: x[3])]:
+			print el[2], el
+		freqs=[x[4] for x in sorted(dtset,  key= lambda x: x[3])]
+		xylalone = [x[1]*c/1e12 for x in sorted(dtset,  key= lambda x: x[3])]
+		allcomp = [x[2]*c/1e12 for x in sorted(dtset, key= lambda x: x[3])]
+		bins=int((freqs[-1]-freqs[0])/30) 
+		xyl_stats = stats.binned_statistic(freqs, xylalone, 'mean', bins)
+		comp_stats = stats.binned_statistic(freqs, allcomp, 'mean', bins)
+		print xyl_stats
+		print comp_stats
+		ax.hist([xyl_stats[1][:-1], comp_stats[1][:-1]], bins , weights=[[x  if not math.isnan(x) else 0 for x in xyl_stats[0]], [x  if not math.isnan(x) else 0 for x in comp_stats[0]]], stacked=True)
+# =============================================================================
+# 		ax.plot(freqs, xylalone, linewidth=lw, linestyle='-') # This is just to plot the stacking lines but we want histograms
+# 		ax.plot(freqs, allcomp, linewidth=lw, linestyle='-.')
+# =============================================================================
+		
 		ax.set_ylabel(r"$\gamma_k$ [ps$^{-1}$]")
-		ax.set_xlabel(r"Mode number")
+		ax.set_xlabel(r"Frequency (cm$^{-1}$)")
 		ax.set_ylim([0, 50])
 		ax.text(50, 40, label, fontsize=18)
 		ax.grid(alpha=0.2)
@@ -584,6 +608,7 @@ def plot_a_dump(cb6neutral, cb7neutral, cb6prot, cb7prot):
 # =============================================================================
 	
 	ebindax.grid(alpha=0.2)
+	plt.show()
 	
 # =============================================================================
 # 	plt.plot([x[0] for x in l], '-')
@@ -593,8 +618,22 @@ def plot_a_dump(cb6neutral, cb7neutral, cb6prot, cb7prot):
 # 	plt.ylabel("Xylene loc, normed decay rate")
 #  	plt.show()
 # =============================================================================
-	
-	
+
+def plot_the_localization_coeffs(dump_name):
+	"""
+	PRE  : Takes in some graph dumps that include the frequencies and localization coefficients
+	POST : Will plot the S coefficient according to the frequency
+	"""
+	with open(dump_name, 'rb') as r:
+		dump_data = cPickle.load(r)
+	dump_data = sorted(dump_data,  key= lambda x: x[4])
+	plt.plot([x[4] for x in dump_data if x[0]<0.1 ], [x[0] for x in dump_data if x[0]<0.1], 'C0x')
+	plt.plot([x[4] for x in dump_data if x[0]>0.9 ], [x[0] for x in dump_data if x[0]>0.9],'C1v')
+	plt.plot([x[4] for x in dump_data if x[0]<=0.9 if x[0]>=0.1 ], [x[0] for x in dump_data if x[0]<=0.9 if x[0]>=0.1 ],'C2^')
+	plt.ylabel(r"S")
+	plt.xlabel(r"Frequency (cm$^{-1}$)")
+	plt.savefig(dump_name+"_S_coeffs.pdf")
+	plt.show()
 if __name__ == "__main__":
 	import numpy as np
 	import glob
@@ -602,6 +641,7 @@ if __name__ == "__main__":
 	import itertools
 	import cPickle
 	import scipy
+	from scipy import stats
 	import scipy.optimize
 	import traceback
 	from multiprocessing import Pool
@@ -614,19 +654,17 @@ if __name__ == "__main__":
 	amu = 1.66054e-27 # kg
 	kbtcm = kb*T/h/c
 
-	flist = ["/home/macenrola/Documents/XYLENE/inputs/cubic_coupling/OUTS/freqs_from_tight_geom/{}".format(x) for x in [
-			"mxylene.com_OUT.out.xyz.com_OUT.out.xyz.com_OUT.out",
-			"mxylene-CB6.com_OUT.out.xyz.com_OUT.out.xyz.com_OUT.out.xyz.com_OUT.out",
-			"mxylene-CB7.com_OUT.out.xyz.com_OUT.out.xyz.com_OUT.out.xyz.com_OUT.out",
-			"mxylene-protonated-CB6.com_OUT.out.xyz.com_OUT.out.xyz.com_OUT.out.xyz.com_OUT.out",
-			"mxylene-protonated-CB7.com_OUT.out.xyz.com_OUT.out.xyz.com_OUT.out.xyz.com_OUT.out"]]
+	flist = glob.glob("/home/macenrola/Documents/Thesis/XYLENE/manuscript_update/plotting_new/*_dump")
+	for f in flist:
+		print f
+		plot_the_localization_coeffs(f)
 #	flist = sorted(glob.glob("/Users/hugueslambert/Desktop/xylene/cubic_coupling/mxylene-CB7.com_OUT.out.xyz.com_OUT.out.xyz.com_OUT.out.xyz.com_OUT.out"))
 # =============================================================================
 # 	#PLOT THE DUMP
-# 	plot_a_dump("/home/macenrola/Documents/XYLENE/inputs/cubic_coupling/OUTS/cubic_coupling/mxylene-CB6.com_OUT.out.xyz.com_OUT.out.xyz.com_OUT.out.xyz.com_OUT.out_graph_dump",
-# 			 "/home/macenrola/Documents/XYLENE/inputs/cubic_coupling/OUTS/cubic_coupling/mxylene-CB7.com_OUT.out.xyz.com_OUT.out.xyz.com_OUT.out.xyz.com_OUT.out_graph_dump",
-# 			 "/home/macenrola/Documents/XYLENE/inputs/cubic_coupling/OUTS/cubic_coupling/mxylene-protonated-CB6.com_OUT.out.xyz.com_OUT.out.xyz.com_OUT.out.xyz.com_OUT.out_graph_dump",
-# 			 "/home/macenrola/Documents/XYLENE/inputs/cubic_coupling/OUTS/cubic_coupling/mxylene-protonated-CB7.com_OUT.out.xyz.com_OUT.out.xyz.com_OUT.out.xyz.com_OUT.out_graph_dump")
+# 	plot_a_dump("/home/macenrola/Documents/Thesis/XYLENE/manuscript_update/plotting_new/mxylene-CB6.com_OUT.out.xyz.com_OUT.out.xyz.com_OUT.out.xyz.com_OUT.out_graph_dump",
+# 			 "/home/macenrola/Documents/Thesis/XYLENE/manuscript_update/plotting_new/mxylene-CB7.com_OUT.out.xyz.com_OUT.out.xyz.com_OUT.out.xyz.com_OUT.out_graph_dump",
+# 			 "/home/macenrola/Documents/Thesis/XYLENE/manuscript_update/plotting_new/mxylene-protonated-CB6.com_OUT.out.xyz.com_OUT.out.xyz.com_OUT.out.xyz.com_OUT.out_graph_dump",
+# 			 "/home/macenrola/Documents/Thesis/XYLENE/manuscript_update/plotting_new/mxylene-protonated-CB7.com_OUT.out.xyz.com_OUT.out.xyz.com_OUT.out.xyz.com_OUT.out_graph_dump")
 # 
 # =============================================================================
 #	flist = ["/Users/hugueslambert/Desktop/xylene/cubic_coupling/mxylene.com_OUT.out.xyz.com_OUT.out.xyz.com_OUT.out"]
@@ -698,14 +736,16 @@ if __name__ == "__main__":
 # =============================================================================
 	
 # PRODUCE THE GAMMA ASSIGNATION AND PRODUCE THE TABLES OF DECAY
-	flist = sorted(glob.glob("/home/macenrola/Documents/XYLENE/inputs/cubic_coupling/OUTS/cubic_coupling/mxylene-protonated-CB6.com_OUT.out.xyz.com_OUT.out.xyz.com_OUT.out.xyz.com_OUT.out"))
-	n=19
-	f=flist[0]
-	mod, cub = get_data_from_out(f)
- 	cub = make_permutations(cub)
- 	xyl_mod = get_mode_localisation_on_xylene(mod, n)
-	for k in  xyl_mod:
-		print k
+# =============================================================================
+# 	flist = sorted(glob.glob("/home/macenrola/Documents/XYLENE/inputs/cubic_coupling/OUTS/cubic_coupling/mxylene-protonated-CB6.com_OUT.out.xyz.com_OUT.out.xyz.com_OUT.out.xyz.com_OUT.out"))
+# 	n=19
+# 	f=flist[0]
+# 	mod, cub = get_data_from_out(f)
+#  	cub = make_permutations(cub)
+#  	xyl_mod = get_mode_localisation_on_xylene(mod, n)
+# 	for k in  xyl_mod:
+# 		print k
+# =============================================================================
 # =============================================================================
 #  	for w in sorted(xyl_mod):
 # 		 print w

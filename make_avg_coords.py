@@ -1220,7 +1220,84 @@ def plot_sp_not_stable_output(resfile="/home/macenrola/Documents/XYLENE/inputs/S
 # 		
 # 		print names, sorted(energies)
 # =============================================================================
+def plot_nice_FES_FOR_COVER(festxt, colvar_traj):
+	"""
+	PRE  : Takes in a txt file 
+	POST : Will plot a nice FES plot in 3D for the cover picture
+	"""
+	def get_xyz(fname):
+		"""
+		pre: takes in a file name
+		post: will plot the file
+		"""
+		with open(fname, 'rb') as r:
+			lines = r.readlines()
+	
+		x = [float(k.strip().split()[0]) for k in lines]
+		y = [float(k.strip().split()[1]) for k in lines]
+		try:
+			z = [float(k.strip().split()[2]) for k in lines]
+			return x,y,z
+		except:
+			return x,y
 
+	def get_z_from_interp(x, y, z_grid, x_traj, y_traj):
+		"""
+		PRE : Takes in the long vector forms x, y and z that correspond to the grid
+		POST: Will use it to build a 2d interpolation function to generate the z_traj corresponding to the x_traj and y_traj
+		"""
+
+		f = interpolate.RectBivariateSpline(x[:,0], y[0,:], z_grid)
+		z_traj = f.ev(x_traj, y_traj)
+		return z_traj
+	def plot_colormap(x_grid,y_grid,z_grid,name, xtraj, ytraj):
+		"""
+		pre: takes in x,y,z and will plot a colormap
+		"""
+		dim = 100
+		x = np.asarray(x_grid).reshape((dim, dim))
+		y = np.asarray(y_grid).reshape((dim, dim))
+		z = np.asarray([k*627.5 for k in z_grid]).reshape((dim, dim))
+		levels = plt.MaxNLocator(nbins=15).tick_values(z.min(), z.max())
+		# get colormap
+		ncolors = 256
+		color_array = plt.get_cmap('gist_rainbow')(range(ncolors))
+		
+		# change alpha values
+		color_array[:,-1] = np.linspace(1.0,0.0,ncolors)
+		
+		# create a colormap object
+		map_object = mcolors.LinearSegmentedColormap.from_list(name='rainbow_alpha',colors=color_array)
+		cmap = plt.get_cmap('Greys')
+		fig = plt.figure()
+		ax = plt.axes(projection='3d')
+		#cf = ax.contourf(x,y,z,levels=levels, cmap=cmap)
+		
+		ls = LightSource(0, 25)
+		rgb = ls.shade(z, cmap=map_object, vert_exag=0.1, blend_mode='soft')
+		cf = ax.plot_surface(x, y,z, rstride=1, cstride=1, facecolors=rgb, linewidth=0, antialiased=True, shade=True)
+		start = 40000-15000
+		dt = 2000
+		print len(xtraj[start:start+dt])
+		z_traj = get_z_from_interp(x, y, z, xtraj[start:start+dt], ytraj[start:start+dt])
+		ax.plot(xtraj[start:start+dt], ytraj[start:start+dt], z_traj, linestyle=":", color="k")
+		#plt.axhline(0.7,linestyle='--', linewidth=0.4, color='k', xmin=0, xmax=0.325)
+		#plt.axvline(0.295,linestyle='--', linewidth=0.4, color='k', ymin=0.7)
+		ax.annotate("", xy=(0.517, 0.6942), xytext=(0.517+0.001, 0.6942-0.0001), arrowprops=dict(arrowstyle="simple"))
+		ax.set_xlabel(r"$C_1$")
+		ax.set_ylabel(r"$C_2$")
+		#cbar=fig.colorbar(cf, ax=ax)
+		#cbar.ax.set_ylabel('Free energy (kcal/mol)')
+		# ax.view_init(-126, -155) # for mountains
+		ax.view_init(51, -112) # for valleys
+		plt.axis('off')
+		plt.grid(b=None)
+		plt.show()
+		
+	x, y,z = get_xyz(festxt)
+	_, co, ct = get_xyz(colvar_traj)
+	
+	plot_colormap(x, y, z, '-'.join(festxt.split('/')[-4:]), co, ct)
 
 def plot_nice_FES(festxt, colvar_traj):
 	"""
@@ -1541,17 +1618,22 @@ if __name__ == "__main__":
 	import pandas as pd
 	import scipy
 	import scipy.signal 
+	from scipy import interpolate
 	import glob
 	import cPickle
 	from matplotlib import pyplot as plt
 	from mpl_toolkits.mplot3d import Axes3D
+	from matplotlib.colors import LightSource
+	import matplotlib.colors as mcolors
 	import random
 	import operator
 	import math
 	import sys
-	
-	mol = Chem.MolFromPDBFile('/home/macenrola/Desktop/xylene_polish/volumes_structures/MO-vac.pdb', removeHs=False)
-	print AllChem.ComputeMolVolume(mol, boxMargin=1.0)
+# =============================================================================
+# 	# COMPUTE VOLUME
+# 	mol = Chem.MolFromPDBFile('/home/macenrola/Desktop/xylene_polish/volumes_structures/MO-vac.pdb', removeHs=False)
+# 	print AllChem.ComputeMolVolume(mol, boxMargin=1.0)
+# =============================================================================
  	#get_entropy_from_xyz_file('/home/macenrola/Documents/CB8-electrochemistry/SPECTRA_CBs/CB5_neutral.xyz-pos-1.xyz', 'CB5')
 	#get_entropy_from_xyz_file('/home/macenrola/Documents/CB8-electrochemistry/SPECTRA_CBs/CB6-neutral.com_OUT.out.xyz-pos-1.xyz', 'CB6')
  	#get_entropy_from_xyz_file('/home/macenrola/Documents/CB8-electrochemistry/SPECTRA_CBs/CB7-neutral.com_OUT.out.xyz-pos-1.xyz', 'CB7')
@@ -1743,8 +1825,12 @@ if __name__ == "__main__":
 # =============================================================================
 # 	
 # 	## PLOT NICE FES
-# 	plot_nice_FES("/home/macenrola/Documents/XYLENE/manuscripts/images/nice_fes/1-MP-CB6.inp-1_45000.restart.out", "/home/macenrola/Documents/XYLENE/manuscripts/images/nice_fes/1-MP-CB6.inp-COLVAR.metadynLog")
+# 	plot_nice_FES("/home/macenrola/Documents/Thesis/XYLENE/manuscript_update/plotting_new/1-MP-CB6.inp-1_45000.restart.out", "/home/macenrola/Documents/Thesis/XYLENE/manuscript_update/plotting_new/1-MP-CB6.inp-COLVAR.metadynLog")
 # =============================================================================
+	
+	## PLOT NICE FES
+	plot_nice_FES_FOR_COVER("/home/macenrola/Documents/Thesis/XYLENE/manuscript_update/plotting_new/1-MP-CB6.inp-1_45000.restart.out", "/home/macenrola/Documents/Thesis/XYLENE/manuscript_update/plotting_new/1-MP-CB6.inp-COLVAR.metadynLog")
+
 # =============================================================================
 # 	# ECDF FOR SP DONT WORK
 # 	plot_sp_not_stable_output()
@@ -1777,7 +1863,8 @@ if __name__ == "__main__":
 # =============================================================================
 # 
 # 	# KS STACKED POPPING NEW BUT UGLY
-# 	stack_ks_plots([
+# 	stack_ks_plots([import matplotlib.colors as mcolors
+
 # 			glob.glob("/home/macenrola/Documents/XYLENE/inputs/popping-from-cb/SLOW_POPPING_W_TARGET/OUTS/DUMP_MTS-dump-curated-dump-oxylene-prot-cb6-*.0-KS"),
 # 			glob.glob("/home/macenrola/Documents/XYLENE/inputs/popping-from-cb/SLOW_POPPING_W_TARGET/OUTS/DUMP_MTS-dump-curated-dump-oxylene-prot-cb7-*.0-KS"),
 # 			glob.glob("/home/macenrola/Documents/XYLENE/inputs/popping-from-cb/SLOW_POPPING_W_TARGET/OUTS/DUMP_MTS-dump-curated-dump-mxylene-prot-cb6-*.0-KS"),
