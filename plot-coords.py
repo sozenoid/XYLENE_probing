@@ -154,7 +154,7 @@ def reformat_all_dump(time_dist_dump_file):
 # 	'oxylene-cb6', 'pxylene-cb6', 'mxylene-cb6', 'oxylene-cb7', 'pxylene-cb7', 'mxylene-cb7',
 # 	'adamantanol_cb7']
 # =============================================================================
-	system_markers=['oxylene-prot-cb6', 'mxylene-prot-cb6', 'pxylene-prot-cb6', 'oxylene-prot-cb7', 'mxylene-prot-cb7', 'pxylene-prot-cb7']
+	system_markers=['prot-exit', 'trop-exit', 'adam_trop', 'cyclopent_trop', 'oxylene-prot-cb6', 'mxylene-prot-cb6', 'pxylene-prot-cb6', 'oxylene-prot-cb7', 'mxylene-prot-cb7', 'pxylene-prot-cb7']
 	systems = dict()
 	with open(time_dist_dump_file, 'rb') as r: lines = [x.strip().split() for x in r.readlines()]
 	#
@@ -230,7 +230,80 @@ def plot_big_array_of_fes(flist):
     labelbottom=False,
 	labeltop=False) # labels along the bottom edge are off
 	plt.show()
+
+def line_styles():
+	linestyles = dict(
+    [('solid',               (0, ())),
+     ('loosely dotted',      (0, (1, 10))),
+     ('dotted',              (0, (1, 5))),
+     ('densely dotted',      (0, (1, 1))),
+
+     ('loosely dashed',      (0, (5, 10))),
+     ('dashed',              (0, (5, 5))),
+     ('densely dashed',      (0, (5, 1))),
+
+     ('loosely dashdotted',  (0, (3, 10, 1, 10))),
+     ('dashdotted',          (0, (3, 5, 1, 5))),
+     ('densely dashdotted',  (0, (3, 1, 1, 1))),
+
+     ('loosely dashdotdotted', (0, (3, 10, 1, 10, 1, 10))),
+     ('dashdotdotted',         (0, (3, 5, 1, 5, 1, 5))),
+     ('densely dashdotdotted', (0, (3, 1, 1, 1, 1, 1)))])
 	
+	return sorted(linestyles.values())
+	
+def make_mtd_popping_rate_plot(time_plot_file):
+	"""
+	PRE  : Takes in a summary file for the popping 
+	the time_plot_file is formatted as:
+		head-dump-prot-exit-300.0-KS-5.18607300338e-06
+		head-dump-prot-exit-350.0-KS-1.44301336744e-05
+		head-dump-trop-exit-350.0-KS-19438047.776
+		head-dump-trop-exit-400.0-KS-90696.1294473
+
+	POST : Gives out a triple plot for o m p xylenes
+	"""
+# =============================================================================
+# 	GETS A USEABLE DIC FOR PLOTTING
+# =============================================================================
+	R=1.99E-03
+	lnkkb_h=23.75951822
+	with open(time_plot_file , "rb") as r:
+		lines = r.readlines()
+	split_res = [x.strip().split("KS") for x in lines]
+	res_dic = {'ADAM':[], 'PENT':[], 'PROT':[], 'HEPT':[]}
+	for el in split_res:
+		for m in res_dic.keys():
+			if m in el[0]:
+				T = el[0][:-1].split('-')[-1]
+				res_dic[m].append((float(T), float(el[1][1:]))) # make a {'trop': [(350.0, 19438047.776), (400.0, 90696.1294473), ... dictionary 
+				break
+	print res_dic
+	lstyle=line_styles()
+	fig, ax = plt.subplots()
+	for (i,k),s in zip(enumerate(sorted(res_dic)), lstyle):
+		if res_dic[k]==[]:
+			print "No {}; continuing".format(k)
+			continue
+		print i, k, s
+		xtrend = np.linspace(0.001,0.004,100)
+		line = res_dic[k]
+		plottable = [1/float(x[0]) for x in line], [np.log(1/float(x[0])/float(x[1])) for x in line]
+		print plottable
+		slope, intercept, r_value, p_value, std_err = scipy.stats.linregress(plottable)
+		ax.scatter(plottable[0], plottable[1], marker=6+i%2, label=r"{0} in {1} ($\Delta H_{{exit}}$={2:2.2f} kcal/mol)".format(k, 'CB7', -slope*R))
+		ax.plot(xtrend, [x*slope+intercept for x in xtrend], '--', linewidth=1, linestyle=lstyle[i%2])
+		ax.set_ylabel(r"ln($\frac{k}{T}$)")
+		ax.legend(loc='lower left')
+		ax.grid(True, alpha=0.2)
+		ax.set_xlim((0.001,0.004))
+		print k, slope, intercept, -slope*R, (intercept-lnkkb_h)*R
+		T=700
+		print (T*np.exp(slope/T + intercept))**-1
+
+	plt.xlabel(r"1/T [K$^{-1}$]")
+	plt.tight_layout()
+	plt.show()
 	
 	
 if __name__ == "__main__":
@@ -244,6 +317,10 @@ if __name__ == "__main__":
 	from scipy import stats, optimize
 	import numpy as np
 	import os
+	from matplotlib.colors import LightSource
+	import matplotlib.colors as mcolors
+	import scipy
+	
 	cwd = os.getcwd()
 	if len(sys.argv)==1:
 		print """
@@ -308,3 +385,7 @@ pwd = {}""".format(cwd)
 		if name[-4:]==".xyz":
 			print name
 			print_average_energy_for_xyz_file(f)
+		if name[-4:]=="over":
+			print name
+			make_mtd_popping_rate_plot(f)
+		

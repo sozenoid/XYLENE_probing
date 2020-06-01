@@ -455,6 +455,7 @@ def get_frequencies_quasiharmonic(xyzfile):
 	snapshot_acc   = np.gradient(snapshot_speed, 1e-15, edge_order=1, axis=1)
 
 	mass_rescaled_pos = [(x-np.mean(x))*y/2**.5 for x, y in zip(snapshot_array, np.diag(sqrt_mass_matrix))]
+	#mass_rescaled_pos = [(x)*y/2**.5 for x, y in zip(snapshot_array, np.diag(sqrt_mass_matrix))]
 	mass_rescaled_speed = [(x)*y/2**.5 for x, y in zip(snapshot_speed, np.diag(sqrt_mass_matrix))]
 	mass_rescaled_acceleration = [(x)*y/2**.5 for x, y in zip(snapshot_acc, np.diag(sqrt_mass_matrix))]
 	
@@ -498,7 +499,10 @@ def get_frequencies_quasiharmonic(xyzfile):
 # 	print eigenvectors_acc
 # =============================================================================
 	
-	frequencies = sorted([(x/y)**.5 / (2*math.pi) for x,y in zip(eigenvalues_speed, eigenvalues_pos)])[:]
+	#frequencies = sorted([(x/y)**.5 / (2*math.pi) for x,y in zip(eigenvalues_speed, eigenvalues_pos)])[:]
+	frequencies = sorted([(x/y)**.25 / (2*math.pi) for x,y in zip(eigenvalues_acc, eigenvalues_pos)])[:]
+	#frequencies = sorted([(x/y)**.5 / (2*math.pi) for x,y in zip(eigenvalues_acc, eigenvalues_speed)])[:]
+	
 	#print [x/c for x in frequencies]
 	
 	k,T,hbar = 1.3807e-23, 300, 1.054e-34 # those are the masses of kB T and hbar
@@ -1602,9 +1606,20 @@ def compare_CB8_ternary_energies(fname):
 		MV1_eners = [float(x.strip().split()[4]) for x in lines[1:]]
 		print "{}:\n{}".format(fname, (sum(MV2_eners)/len(MV2_eners) - sum(MV1_eners)/len(MV1_eners))*627.5)
 		
-		
-		
-	
+def get_energy_from_XYZFile(xyzfile):
+	"""
+	PRE : takes an xyz file
+	POST: Will extract the energy at every step and compute its average
+	"""
+	start = 450
+	with open(xyzfile, "r") as r:
+		lines = r.readlines()
+	energies = [float(x.strip().split()[-1]) for x in lines if 'E =' in x ]
+	plt.plot(energies)
+	plt.savefig(xyzfile+"_ENERGIES.pdf")
+	plt.close()
+	average = sum(energies[start:])/len(energies[start:])	
+	print average # average energy in hartree
 if __name__ == "__main__":
 	import rdkit
 	from rdkit import Chem
@@ -1640,17 +1655,18 @@ if __name__ == "__main__":
  	#get_entropy_from_xyz_file('/home/macenrola/Documents/CB8-electrochemistry/SPECTRA_CBs/CB8-neutral.xyz-pos-1.xyz', 'CB8')
 
 # =============================================================================
-# 	for f in sorted(glob.glob('/home/macenrola/Documents/CB8-electrochemistry/VACUUM_CBS/*.xyz')):
+# 	for f in sorted(glob.glob('/media/macenrola/41e645a2-504d-4468-adcc-106c8c763adb/CB8/archivedwl-53/trial_spectrum_tech/vacuum_1+/*xyz-pos-1.xyz')):
 # 		print f 
 # 		get_frequencies_quasiharmonic(f)
-# =============================================================================
-# =============================================================================
-# 	for f in glob.glob('/home/macenrola/Documents/CB8-electrochemistry/VACUUM_CBS/MV1_*xyz'):
-# 		print f
 # 		get_entropy_from_xyz_file(f)
-# 		print f.replace('MV1', 'MV2_MV1')
-# 		get_entropy_from_xyz_file( f.replace('MV1', 'MV2_MV1'))
 # =============================================================================
+	for f in glob.glob('/media/macenrola/41e645a2-504d-4468-adcc-106c8c763adb/CB8/MV1_CB8*ALIGNED.xyz'):
+		print f
+		#get_entropy_from_xyz_file(f)
+		get_energy_from_XYZFile(f)
+		print f.replace('MV1', 'MV2_MV1')
+		#get_entropy_from_xyz_file( f.replace('MV1', 'MV2_MV1'))
+		get_energy_from_XYZFile( f.replace('MV1', 'MV2_MV1'))
 
 # =============================================================================
 # 	#RAMAN SHIFT LOOOOL
@@ -1828,9 +1844,11 @@ if __name__ == "__main__":
 # 	plot_nice_FES("/home/macenrola/Documents/Thesis/XYLENE/manuscript_update/plotting_new/1-MP-CB6.inp-1_45000.restart.out", "/home/macenrola/Documents/Thesis/XYLENE/manuscript_update/plotting_new/1-MP-CB6.inp-COLVAR.metadynLog")
 # =============================================================================
 	
-	## PLOT NICE FES
-	plot_nice_FES_FOR_COVER("/home/macenrola/Documents/Thesis/XYLENE/manuscript_update/plotting_new/1-MP-CB6.inp-1_45000.restart.out", "/home/macenrola/Documents/Thesis/XYLENE/manuscript_update/plotting_new/1-MP-CB6.inp-COLVAR.metadynLog")
-
+# =============================================================================
+# 	## PLOT NICE FES
+# 	plot_nice_FES_FOR_COVER("/home/macenrola/Documents/Thesis/XYLENE/manuscript_update/plotting_new/1-MP-CB6.inp-1_45000.restart.out", "/home/macenrola/Documents/Thesis/XYLENE/manuscript_update/plotting_new/1-MP-CB6.inp-COLVAR.metadynLog")
+# 
+# =============================================================================
 # =============================================================================
 # 	# ECDF FOR SP DONT WORK
 # 	plot_sp_not_stable_output()

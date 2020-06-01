@@ -1119,23 +1119,24 @@ def format_gaussian_input_from_xyz(xyz_file):
 	# route="#N wB97XD/6-31G(d) opt=(ReadOptimize)"
 	# route="#N PM6D3 opt=(ReadOptimize)"
 	checkpoint="%Chk={}.chk".format(name)
-	mem="%mem=30gb"
-	procs="%NProcShared=3"
+	mem="%mem=5gb"
+	procs="%NProcShared=1"
 	# route="#N PM6D3 freq=noraman"
 	if 'diradical' in f or 'N2' in f:
 		charge_mult="1 3"
 		print "{} is diradical or n2".format(f)
 	else:
-		charge_mult = "0 1"
+		charge_mult = "1 1"
 	if 'TS' in f:
 		route="#n wB97XD/6-31G(d) opt=(ts, noeigentest, modredundant, calcfc, maxcyc=999) maxdisk=100GB freq"
 	else:
 		route="#n wB97XD/6-31G(d) opt=(modredundant, maxcyc=999) maxdisk=100GB freq"
-		route="#n PM6D3 opt=(ts, calcall, noeigentest, modredundant, maxcyc=999) maxdisk=100GB freq"
+		route="#n B3LYP/6-31g(d) opt=(ts, calcall, noeigentest, modredundant, maxcyc=999) maxdisk=100GB freq"
 
 	with open(xyz_file, 'rb') as r:
 		coords = r.readlines()[2:]
-	route="#N PM6D3 opt=(calcall, maxcyc=999,verytight, Int=Ultrafine) freq"
+	route="#N PM6D3 SP"
+	route="#n B3LYP/6-31g(d) SP"
 
 	with open(xyz_file+".com", "wb") as w:
 		w.write(procs+"\n")
@@ -1168,10 +1169,10 @@ if __name__ == "__main__":
 # =============================================================================
 # 	make_gaussian_input_files_for_molgroup(glob.glob("/home/macenrola/Documents/H-S-compensation/sdfs/*.sdf"))
 # =============================================================================
-	flist = glob.glob("/home/macenrola/Documents/COTWO/Au_clusters/cb7_*Au.xyz")
+	flist = glob.glob("/home/macenrola/Documents/HEPTYLAMINE/*xyz")
 	for f in flist:
 		print f
-		xyz_to_cp2kinp(f, 0,1,"/home/macenrola/Documents/CB8-electrochemistry/JUST_CBs/base_traj.inp")
+		format_gaussian_input_from_xyz(f)
 # =============================================================================
 # 	
 # 	flist = glob.glob("/home/macenrola/Documents/Thermal_energy_collector/50_best_from_CB_screening/*.xyz")
