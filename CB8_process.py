@@ -63,6 +63,7 @@ def power_spectrum_from_velocityxyz(xyzfile,l):
 	A lot of confusion: the FT of the autocorrelation function of a signal X is the power spectrum of X 
 	The power spectrum of X is the *square* of the amplitude of the FT of X
 	Then everything makes sense
+	IDEALLY ONE SHOULD GET THE VELOCITY DIRECTLY FROM THE TRAJECTORY TO AVOID JUMPS IF COMPUTED FROM THE CARTESIAN COORDINATES. RAW VELOCITIES WOULD BE GREAT
 	POST: Will produce the power spectrum
 	"""
 	#print "Getting the snaps"
