@@ -1,4 +1,4 @@
-def build_mol_from_smiles(SMI="C1=CC=C[CH+]C=C1"):
+def build_mol_from_smiles(SMI="c1ccccc1"):
 	"""
 
 	Parameters
