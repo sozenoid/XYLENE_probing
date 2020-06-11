@@ -327,6 +327,49 @@ def run_cp2k_file(cp2k_input_file):
 	return 
 
 
+def get_rotational_and_translational_entropy(rdid):
+	"""
+	Parameters
+	----------
+	rdid : string
+		Mol that we are targetting
+
+	Returns
+	-------
+	The rotational and translational entropy for that molecule
+	They are computed and cross checked using formulas and data from page 137 MacQuarrie 1976, Statistical Mechanics.
+	"""
+	pressure = 1e5 # Pascals or 1 bar
+	kbolz, h, e, pi, T, amu, R = 1.38e-23, 6.63e-34, np.exp(1), 3.141592, 300, 1.66e-27, 8.3145 # all Si units
+	# make the rdkit mol
+	mol = Chem.MolFromPDBFile("outputs/{}.pdb".format(rdid), removeHs=False)
+	# Get the inertia moments in amu*angstrom**2
+	Ia = Chem.Descriptors3D.PMI1(mol)
+	Ib = Chem.Descriptors3D.PMI2(mol)
+	Ic = Chem.Descriptors3D.PMI3(mol)
+	
+	#Get the molecular mass
+	M = Descriptors.ExactMolWt(mol) # in amu
+	
+	#Get the translational entropy 
+	S_trans = np.log((2*pi*(M*amu)*kbolz*T/h**2)**1.5*e**2.5*kbolz*T/pressure) # This is in fact S_trans/Nk or S_trans/R
+	
+	#Get the sigma value (first gets an xyz as pymatgen reads xyz files)
+	xyz_cmd = "{0} {1}/outputs/{2}.pdb -O {1}/outputs/{2}.xyz".format(obabel_path, wdir, rdid)
+	proc = subprocess.call(xyz_cmd.split(), shell=False)
+
+	sigma_cmd = "{} {} {}/outputs/{}.xyz ".format(sigma_python_executable, sigma_finding_script, wdir, rdid)
+	output = subprocess.check_output(sigma_cmd.split(), shell=False)
+	print output
+	sigma = int(output.split()[-1])
+
+	S_rot = np.log(pi**.5 *e**1.5/sigma*(T**3*(8*pi**2*kbolz/h**2)**3*Ia*Ib*Ic*(amu*1e-20)**3)**.5) # actually S_rot/Nk or S_rot/R
+	
+	
+	#print 1/(Ia*(8*pi**2*kbolz/h**2)*(amu*1e-20)), 1/(Ib*(8*pi**2*kbolz/h**2)*(amu*1e-20)), 1/(Ic*(8*pi**2*kbolz/h**2)*(amu*1e-20)) # provides accurate rotational temperatures for ammonia as taken from MacQuarrie 1976, Statistical Mechanics
+	
+	return S_trans*R/4.18, S_rot*R/4.18
+
 def merge_2mols(pdb1, pdb2):
 	"""
 	Parameters
@@ -362,11 +405,11 @@ if __name__=="__main__":
 	"""
 	import rdkit
 	from rdkit import Chem
-	from rdkit.Chem import AllChem
+	from rdkit.Chem import AllChem, Descriptors3D, Descriptors 
 	import random, string
 	import subprocess, os, glob
 	from mol_ops_amber import make_pdb_with_named_residue
-	
+	import numpy as np
 	wdir = "/home/macenrola/Documents/ML/ChemTS/new_scoring_for_mcts"
 	adamantanoneMOL2, CBMOL2, docking_targetPDB, cp2k_opti_file = "docking_targets/adamantanone-GOOD.mol2", "docking_targets/CB7-GOOD.mol2", "docking_targets/adamantanone-docked-named.pdb", "opti_vib_cp2k.inp"
 	obabel_path = "/home/macenrola/anaconda3/envs/chemts/bin/obabel"
@@ -374,6 +417,8 @@ if __name__=="__main__":
 	apbs_path = ""
 	antechamber_path = "/home/macenrola/anaconda3/envs/chemts/bin/"
 	cp2k_path = "/home/macenrola/anaconda3/pkgs/cp2k-6.1.0-hc6cf775_3/bin/cp2k.sopt" # double check that cp2k is executing on a single core as it should
+	sigma_finding_script="/home/macenrola/Documents/XYLENE_probing/find_symmetry_number_and_point_group.py"
+	sigma_python_executable = "/home/macenrola/anaconda3/envs/chemvae/bin/python"
 	
 	os.chdir(wdir)
 	
@@ -387,4 +432,5 @@ if __name__=="__main__":
 	opti_pdb = get_cp2k_optimised_mol(best_complex)
 	vib_cp2k_file = get_cp2k_file(opti_pdb, cp2k_opti_file, "VIBRATIONAL_ANALYSIS") # produces an rdkit vibrational file
 	run_cp2k_file(vib_cp2k_file)
+	print get_rotational_and_translational_entropy(best_guest)
 
