@@ -338,6 +338,7 @@ def get_rotational_and_translational_entropy(rdid):
 	-------
 	The rotational and translational entropy for that molecule
 	They are computed and cross checked using formulas and data from page 137 MacQuarrie 1976, Statistical Mechanics.
+	Values in cal/K for rotational and translational entropy can be found here (https://doi.org/10.1021/j150379a015   J. Phys. Chem. 1937, 41, 1, 149–158) for benzene
 	"""
 	pressure = 1e5 # Pascals or 1 bar
 	kbolz, h, e, pi, T, amu, R = 1.38e-23, 6.63e-34, np.exp(1), 3.141592, 300, 1.66e-27, 8.3145 # all Si units
@@ -368,7 +369,7 @@ def get_rotational_and_translational_entropy(rdid):
 	
 	#print 1/(Ia*(8*pi**2*kbolz/h**2)*(amu*1e-20)), 1/(Ib*(8*pi**2*kbolz/h**2)*(amu*1e-20)), 1/(Ic*(8*pi**2*kbolz/h**2)*(amu*1e-20)) # provides accurate rotational temperatures for ammonia as taken from MacQuarrie 1976, Statistical Mechanics
 	
-	return S_trans*R/4.18, S_rot*R/4.18
+	return S_trans*R/4.18, S_rot*R/4.18 # Returns the entropy in cal/K
 
 def merge_2mols(pdb1, pdb2):
 	"""
