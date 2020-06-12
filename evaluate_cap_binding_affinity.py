@@ -693,8 +693,8 @@ if __name__=="__main__":
 	
 	print "MOVING TO {}".format(wdir)
 	os.chdir(wdir)
-	#fname = sys.argv[1]
-	fname = "outputs/for_sale_smi_part00"
+	fname = sys.argv[1]
+	#fname = "outputs/for_sale_smi_part00"
 	tot_dic = {}
 	with open(fname, "r") as r:
 		for line in r:
