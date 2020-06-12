@@ -156,7 +156,6 @@ def dok2pdb(rdid, charge, reconstructing_pdbtarget, n=0):
 					pts = line.strip().split()
 					# EXAMPLE:  ATOM      2  C1  LIG     0      -6.550  -3.810  -2.641
 					rec_line = ("{0: <8}{1: >3}  {2: <4}{3}     {4: >1}      {5: >6}  {6: >6}  {7: >6}\n".format(pts[0], pts[1], pts[2].upper(), pts[3], pts[4], pts[5], pts[6], pts[7]))
-					print rec_line
 				else:
 					rec_line = line
 				a.write(rec_line)
@@ -668,13 +667,25 @@ if __name__=="__main__":
 	import numpy as np
 	import pickle 
 	import time
-	wdir = "/home/macenrola/Documents/ML/ChemTS/new_scoring_for_mcts"
 	adamantanoneMOL2, CBMOL2, docking_targetPDB, cp2k_opti_file, apbs_inp = "docking_targets/adamantanone-GOOD.mol2", "docking_targets/CB7-GOOD.mol2", "docking_targets/adamantanone-docked-named.pdb", "opti_vib_cp2k.inp", "apbs_inp"
-	obabel_path = "/home/macenrola/anaconda3/envs/chemts/bin/obabel"
+	#WORKSATION
+# =============================================================================
+# 	wdir = "/home/macenrola/Documents/ML/ChemTS/new_scoring_for_mcts"
+# 	obabel_path = "/home/macenrola/anaconda3/envs/chemts/bin/obabel"
+# 	ledock_path = "" # Ledock should be in the same folder as wdir
+# 	apbs_path = "/usr/bin/apbs"
+# 	antechamber_path = "/home/macenrola/anaconda3/envs/chemts/bin"
+# 	cp2k_path = "/home/macenrola/anaconda3/pkgs/cp2k-6.1.0-hc6cf775_3/bin/cp2k.sopt" # double check that cp2k is executing on a single core as it should
+# =============================================================================
+	
+	#MYRIAD
+	wdir = "/home/uccahcl/Scratch/FIND_CAP/FOR_SALE"
+	obabel_path = "/home/uccahcl/OB232/bin/obabel"
 	ledock_path = "" # Ledock should be in the same folder as wdir
-	apbs_path = "/usr/bin/apbs"
+	apbs_path = "/home/uccahcl/apbs-pdb2pqr/bin/apbs"
 	antechamber_path = "/home/macenrola/anaconda3/envs/chemts/bin"
-	cp2k_path = "/home/macenrola/anaconda3/pkgs/cp2k-6.1.0-hc6cf775_3/bin/cp2k.sopt" # double check that cp2k is executing on a single core as it should
+	cp2k_path = "/home/uccahcl/cp2k/exe/local/cp2k.sopt" # double check that cp2k is executing on a single core as it should
+	
 	# sigma_finding_script="/home/macenrola/Documents/XYLENE_probing/find_symmetry_number_and_point_group.py"
 	# sigma_python_executable = "/home/macenrola/anaconda3/envs/chemvae/bin/python"
 	
