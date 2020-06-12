@@ -56,8 +56,9 @@ def pdb2mol2(rdid, charge):
 	Will produce the corresponding mol2 file for the provided rdid string
 
 	"""
-	get_mol2_cmd = "{0}/antechamber -i outputs/{1}.pdb -fi pdb -o outputs/{1}.mol2 -fo mol2 -c bcc -nc {2} -s 2 -j 4".format(antechamber_path, rdid, charge).split()
-	proc = subprocess.check_output(get_mol2_cmd, shell=False)
+	get_mol2_cmd = "{0}/antechamber -i outputs/{1}.pdb -fi pdb -o outputs/{1}.mol2 -fo mol2 -c bcc -nc {2} -s 2 -j 4".format(antechamber_path, rdid, charge)
+	print get_mol2_cmd
+	proc = subprocess.check_output(get_mol2_cmd.split(), shell=False)
 	return 
 
 def mol22frcmod(rdid):
@@ -73,6 +74,7 @@ def mol22frcmod(rdid):
 
 	"""
 	frcmod_cmd = "{0}/parmchk2 -i outputs/{1}.mol2 -f mol2 -o outputs/{1}.frcmod -f frcmod".format(antechamber_path, rdid).split()
+	print frcmod_cmd 
 	proc = subprocess.check_output(frcmod_cmd, shell=False)
 	return 
 
@@ -255,8 +257,9 @@ def get_topology_files(rdid, best_complex_pdb):
 	tleap_gu_file, tleap_complex_file = make_tleap_inputs(rdid, best_complex_pdb)
 	tleap_cmd = "{0}/tleap -s -f {1} > {1}.log"
 	tleap_gu_cmd, tleap_complex_cmd = tleap_cmd.format(antechamber_path, tleap_gu_file), tleap_cmd.format(antechamber_path, tleap_complex_file)
-	
+	print tleap_gu_cmd
 	proc = subprocess.check_output(tleap_gu_cmd.split(), shell=False)
+	print tleap_complex_cmd 
 	proc = subprocess.check_output(tleap_complex_cmd.split(), shell=False)
 	
 	return 
@@ -307,6 +310,7 @@ def compute_solvation_from_apbs_file(apbsfile):
 	
 	apbs_cmd = "{} {}".format(apbs_path, apbsfile)
 	os.chdir("outputs")
+	print apbs_cmd 
 	apbs_output = subprocess.check_output(apbs_cmd.split(), shell=False)
 	os.chdir("..")
 	output_file = "outputs/{}.out".format(apbsfile[:-4])
@@ -384,6 +388,8 @@ def run_cp2k_file(cp2k_input_file):
 	"""
 	run_cmd = "{} -i {}".format(cp2k_path, cp2k_input_file, cp2k_input_file[:-4])
 	os.chdir("outputs")
+	
+	print run_cmd 
 	result = subprocess.check_output(run_cmd.split(), shell=False)
 	outf = cp2k_input_file[:-4]+".out"
 	with open(outf, "w") as w:
@@ -638,8 +644,10 @@ def tar_it_all(rdid):
 	os.chdir("outputs")
 	to_tar = ' '.join(glob.glob("{}*".format(rdid)))
 	tar_cmd = "tar -cvzf {0}-ALL-SAVED.tar {1}".format(rdid, to_tar)
+	print tar_cmd 
 	result = subprocess.check_output(tar_cmd.split(), shell=False)
 	rm_cmd = "rm {}".format(to_tar)
+	print rm_cmd 
 	result = subprocess.check_output(rm_cmd.split(), shell=False)
 	os.chdir("..")
 	return 
