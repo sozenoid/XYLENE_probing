@@ -691,7 +691,7 @@ if __name__=="__main__":
 	obabel_path = "/home/uccahcl/OB232/bin/obabel"
 	ledock_path = "" # Ledock should be in the same folder as wdir
 	apbs_path = "/home/uccahcl/apbs-pdb2pqr/bin/apbs"
-	antechamber_path = "/anaconda2/envs/chemts/bin"
+	antechamber_path = "/home/uccahcl/anaconda2/envs/chemts/bin"
 	cp2k_path = "/home/uccahcl/cp2k/exe/local/cp2k.sopt" # double check that cp2k is executing on a single core as it should
 	
 	# sigma_finding_script="/home/macenrola/Documents/XYLENE_probing/find_symmetry_number_and_point_group.py"
