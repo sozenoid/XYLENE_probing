@@ -102,7 +102,7 @@ def compute_time(fname, thres=[0.3,0.7], T=300):
 			badcrit=[var[1]<=thres[0], var[2]<=thres[0]] # if both carbons have very low coordinations
 			accelerated_time+=np.exp(beta*Ha2kcal*var[7])
 		elif len(thres)==1:
-			crit=[var[1]>=thres[0]]
+			crit=[var[1]<=thres[0]]
 			badcrit=[False]				     # it is a bad sign ghh
 			accelerated_time+=np.exp(beta*Ha2kcal*var[4])
 		if all(badcrit): 
@@ -154,7 +154,7 @@ def reformat_all_dump(time_dist_dump_file):
 # 	'oxylene-cb6', 'pxylene-cb6', 'mxylene-cb6', 'oxylene-cb7', 'pxylene-cb7', 'mxylene-cb7',
 # 	'adamantanol_cb7']
 # =============================================================================
-	system_markers=['prot-exit', 'trop-exit', 'adam_trop', 'cyclopent_trop', 'oxylene-prot-cb6', 'mxylene-prot-cb6', 'pxylene-prot-cb6', 'oxylene-prot-cb7', 'mxylene-prot-cb7', 'pxylene-prot-cb7']
+	system_markers=['styox_prot_water_CO2','prot-exit', 'trop-exit', 'adam_trop', 'cyclopent_trop', 'oxylene-prot-cb6', 'mxylene-prot-cb6', 'pxylene-prot-cb6', 'oxylene-prot-cb7', 'mxylene-prot-cb7', 'pxylene-prot-cb7']
 	systems = dict()
 	with open(time_dist_dump_file, 'rb') as r: lines = [x.strip().split() for x in r.readlines()]
 	#
@@ -271,7 +271,7 @@ def make_mtd_popping_rate_plot(time_plot_file):
 	with open(time_plot_file , "rb") as r:
 		lines = r.readlines()
 	split_res = [x.strip().split("KS") for x in lines]
-	res_dic = {'ADAM':[], 'PENT':[], 'PROT':[], 'HEPT':[]}
+	res_dic = {'ADAM':[], 'PENT':[], 'PROT':[], 'HEPT':[], "styox":[]}
 	for el in split_res:
 		for m in res_dic.keys():
 			if m in el[0]:
@@ -297,12 +297,11 @@ def make_mtd_popping_rate_plot(time_plot_file):
 		ax.legend(loc='lower left')
 		ax.grid(True, alpha=0.2)
 		ax.set_xlim((0.001,0.004))
-		print k, slope, intercept, -slope*R, (intercept-lnkkb_h)*R
-		T=700
-		print (T*np.exp(slope/T + intercept))**-1
+		print k, slope, intercept, -slope*R, (intercept-lnkkb_h)
 
 	plt.xlabel(r"1/T [K$^{-1}$]")
 	plt.tight_layout()
+	plt.savefig("cplot.png")
 	plt.show()
 	
 	
@@ -328,7 +327,7 @@ if __name__ == "__main__":
 Please use 1D or 2D fes data produced by graph.popt and ending in '.txt'
 of a 2 colvar output file from a metadynamic run ending in 'Log'
 pwd = {}""".format(cwd)
-		plot_big_array_of_fes(glob.glob("/home/macenrola/Documents/XYLENE/inputs/for-reaction-flexible-cb/DUMP_SLOW_REACT/fes_validation/*00/*-*/MO-CB6/*txt"))
+		#plot_big_array_of_fes(glob.glob("/home/macenrola/Documents/XYLENE/inputs/for-reaction-flexible-cb/DUMP_SLOW_REACT/fes_validation/*00/*-*/MO-CB6/*txt"))
 	elif len(sys.argv)==2:
 		flist=[sys.argv[1]]
 	else:
@@ -358,8 +357,8 @@ pwd = {}""".format(cwd)
 			print name
 			T=float(f.split('/')[0])
 			with open(dumpfile,'ab') as a:
-				ctime,atime=compute_time(f,thres=[15], T=T)
-				if ctime > 300:
+				ctime,atime=compute_time(f,thres=[6], T=T)
+				if True:#ctime > 300:
 					a.write("{}\t{}\t{}\t{}\n".format(T,name,ctime, atime))
 					timedist.append(atime)
 				else:
