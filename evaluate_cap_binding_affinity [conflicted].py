@@ -133,7 +133,7 @@ def dock_mol_to_host(rdid, pdbtarget):
 
 	return 
 
-def dok2pdb(rdid, charge, reconstructing_pdbtarget, n=0, makemol2=False):
+def dok2pdb(rdid, charge, reconstructing_pdbtarget, n=0):
 	"""
 	PRE: TAKES in a rdid with a corresponding mol2 and dok file for the guest
 	POST: Will produce the n best complexes that correspond to the docking in pdb and mol2 formats
@@ -195,9 +195,8 @@ def dok2pdb(rdid, charge, reconstructing_pdbtarget, n=0, makemol2=False):
 			a.write("{}\t{}\t{} kcal/mol\n".format(res[1], res[2], res[0]))
 	complex_list = [x.split("/")[-1][:-4] for x in complex_list]
 	guest_list = [x.split("/")[-1][:-4] for x in guest_list]
-	if makemol2:
-		for gu in guest_list:
-			pdb2mol2(gu, charge)
+	for gu in guest_list:
+		pdb2mol2(gu, charge)
 	return complex_list[0], guest_list[0]
 
 def make_tleap_inputs(rdid, complex_id):
@@ -378,18 +377,6 @@ def get_cp2k_optimised_mol(rdid):
 	proc = subprocess.check_output(convert_to_pdb_cmd.split(), shell=False)
 	return opti_best.split("/")[-1][:-4]
 
-def get_g16_optimised_mol(rdid):
-	"""
-	PRE  : a molecule outputs/ZINC000003874807-opti-G16.log exists an contains an
-	POST : Will return a file PDB containing the optimised version
-	"""
-	opti_traj = "outputs/{}-opti-G16.log".format(rdid)
-	opti_best = "outputs/{}-OPTI-G16.pdb".format(rdid)
-
-	convert_to_pdb_cmd = "{} {} -O {}".format(obabel_path, opti_traj, opti_best)
-	shell(convert_to_pdb_cmd.split())
-	return opti_best.split("/")[-1][:-4]
-
 
 def run_cp2k_file(cp2k_input_file):
 	"""
@@ -426,65 +413,7 @@ def run_cp2k_file(cp2k_input_file):
 		os.chdir("..")
 		return
 	
-def run_g16_file(g16_input_file):
-	"""
-	Parameters
-	----------
-	g16_input_file : string
-		DESCRIPTION. The name should contained the labels opti, solv or freq, ONCE 
-		otherwise it gets confusing
-
-	Returns None: will just run the g16_input_file and return the energy value for opt and the vib value for VIBRATIONAL_ANALYSIS
-	Note that for the energies, here we specifically look for restricted HF and PM7
-	-------
-	None.
-	"""
-	run_cmd = "{} {}".format(g16_path, g16_input_file).split()
-	os.chdir("outputs")
-	
-	print run_cmd 
-	shell(run_cmd)
-	outf = g16_input_file[:-4]+".log"
-	with open(outf, 'r') as r:
-		result = r.readlines()
-	if "opti" in g16_input_file:
-		for l in result[::-1]:
-			"""
-			Looking for the last occurence of this block 
-			 SCF Done:  E(RPM7) = -0.961086179292     A.U. after   15 cycles
-			"""
-			if "SCF Done:  E(RPM7) =" in l:
-				energy = float(l.split()[-5])
-				os.chdir("..")
-				return energy*627.5 #returns kcal/mol
-	elif "freq" in g16_input_file:
-		""" Looking for this block of text 
-			            E (Thermal)             CV                S
-                      KCal/Mol        Cal/Mol-Kelvin    Cal/Mol-Kelvin
- Total                  854.563            325.764            406.001
- Electronic               0.000              0.000              0.000
- Translational            0.889              2.981             47.615
- Rotational               0.889              2.981             41.800
- Vibrational            852.786            319.803            316.586
-		"""
-		for l in result[::-1]:
-			if " Total              " in l:
-				s_tot = float(l.strip().split()[-1])
-				os.chdir("..")
-				return s_tot # Returns the total entropy as cal/mol
-	if "solv" in g16_input_file:
-		for l in result[::-1]:
-			"""
-			Looking for the last occurence of this block 
-			 SCF Done:  E(RPM7) = -0.961086179292     A.U. after   15 cycles
-			"""
-			if "SCF Done:  E(RPM7) =" in l:
-				energy = float(l.split()[-5])
-				os.chdir("..")
-				return energy*627.5 #returns kcal/mol
-	else:
-		os.chdir("..")
-		return
+	 
 
 
 # =============================================================================
@@ -593,9 +522,6 @@ def build_the_reference_dictionary(cb = "CB7-GOOD", incl = "adamantanone-GOOD", 
 	return ref_dic
 	
 def get_ref_dic():
-	"""
-	For cp2k I presume and put units here if used 
-	"""
 	return {'E_apol_adamantanone-docked-named': 4.3000, 'E_pol_CB7-GOOD': 10282.2019, 'E_tot_CB7-GOOD': 1582.9667, 'S_tot_adamantanone-GOOD': 78.4112, 'S_tot_CB7-GOOD': 302.7110, 'E_apol_adamantanone-GOOD': 0.5367, 'E_apol_CB7-GOOD': 4.1574, 'E_tot_adamantanone-docked-named': 1558.8121, 'E_pol_adamantanone-docked-named': 10617.5404, 'E_pol_adamantanone-GOOD': 301.1580, 'S_tot_adamantanone-docked-named': 354.3125, 'E_tot_adamantanone-GOOD': 11.1256}
 
 def estimate_dG(mol_representation, ref_dic, NAME=None):
@@ -687,170 +613,31 @@ def estimate_dG(mol_representation, ref_dic, NAME=None):
 
 	return rdstring, {"CAP":cap_summary, "TER_CMP": complex_summary, "diff":difference_summary}
 
-def shell(command):
-    try:
-        output = subprocess.check_output(command, shell=False, stderr=subprocess.STDOUT)
-    except Exception, e:
-        output = str(e.output)
-    finished = output.split('\n')
-    for line in finished:
-        print line
-    return
-
-def estimate_dG_g16(mol_representation, ref_dic,NAME=None):
-	"""
-	Parameters
-	----------
-	SMI : smiles
-		smiles as an input for the computation of dG for a cap binding with a binary inclusion complex
-
-	Returns
-	-------
-	the binding affinity in kcal/mol
-	"""
-	# print build_the_reference_dictionary().__repr__()
-	t0 = time.time()
-	print "BUILDING THE MOL, DOCKING IT AND RECONSTRUCTING THE RESULTING PDBs ({0:4.4f}s)".format(time.time()-t0)
-	mol, charge, rdstring = build_mol_from_smiles(SMI=mol_representation, NAME=NAME) # creates the molecule from smiles
-	dock_mol_to_host(rdstring, docking_targetPDB) # will dock the molecule
-	best_complex, best_guest = dok2pdb(rdstring, charge, docking_targetPDB) # will convert the dok file to a pdb again
-	
-	print "OPTIMISE THE RESULTING COMPLEX USING G16 ({0:4.4f}s)".format(time.time()-t0)
-	complex_opt_g16_file = make_g16_input_file(best_complex, charge, "opti") # produces an rdkit opti file
-	complex_energy = run_g16_file(complex_opt_g16_file)
-	complex_opti_pdb = get_g16_optimised_mol(best_complex)
-
-	print "OPTIMISE THE BEST GUEST USING G16 ({0:4.4f}s)".format(time.time()-t0)
-	guest_opt_g16_file = make_g16_input_file(best_guest, charge, "opti") # produces an rdkit opti file
-	guest_energy = run_g16_file(guest_opt_g16_file)
-	guest_opti_pdb = get_g16_optimised_mol(best_guest)
-	
- 	print "PERFORM THE NMA FOR THE COMPLEX AND EXTRACT ENTROPY VALUES ({0:4.4f}s)".format(time.time()-t0)
- 	complex_vib_g16_file = make_g16_input_file(complex_opti_pdb, charge, "freq") # produces an rdkit vibrational file
- 	S_tot_complex = run_g16_file(complex_vib_g16_file)
-	 
-  	print "PERFORM THE NMA FOR THE GUEST AND EXTRACT ENTROPY VALUES ({0:4.4f}s)".format(time.time()-t0)
- 	guest_vib_g16_file = make_g16_input_file(guest_opti_pdb, charge, "freq") # produces an rdkit vibrational file
- 	S_tot_guest = run_g16_file(guest_vib_g16_file)
-	 
-	 
-	print "OBTAINS SRCF ENERGY FOR SOLVATION OF THE COMPLEX ({0:4.4f})".format(time.time()-t0)
-	complex_solv_g16_file = make_g16_input_file(complex_opti_pdb, charge, "solv")
-	E_CPCM_complex = run_g16_file(complex_solv_g16_file)
-	
-	print "OBTAINS SRCF ENERGY FOR SOLVATION OF THE GUEST ({0:4.4f})".format(time.time()-t0)
-	guest_solv_g16_file = make_g16_input_file(guest_opti_pdb, charge, "solv")
-	E_CPCM_guest = run_g16_file(guest_solv_g16_file)
-	
-	print "="*30
-	print "CAP"
-	cap_summary = "E_tot: {0:4.4f}, S_tot: {1:4.4f}, E_CPCM: {2:4.4f} (all kcal/mol except S_tot cal/mol/K)".format(
-		guest_energy,
-		S_tot_guest,
-		E_CPCM_guest
-		)
-	print cap_summary
-	print "TERNARY COMPLEX"
-	complex_summary = "E_tot: {0:4.4f}, S_tot: {1:4.4f}, E_CPCM: {2:4.4f}".format(
-		complex_energy,
-		S_tot_complex,
-		E_CPCM_complex
-		)
-	print complex_summary
-	print "BINARY COMPLEX (target)"
-	binary_summary = "E_tot: {0:4.4f}, S_tot: {1:4.4f}, E_CPCM: {2:4.4f}".format(
-		ref_dic["E_tot"],
-		ref_dic["S_tot"],
-		ref_dic["E_CPCM"]
-		)
-	print binary_summary
-	print "difference"
-	difference_summary = "dE_tot: {0:4.4f}, dS_tot: {1:4.4f}, dE_CPCM: {2:4.4f}|||| dG= {3:4.4f} kcal/mol".format(
-		complex_energy-guest_energy-ref_dic["E_tot"],
-		S_tot_complex-S_tot_guest-ref_dic["S_tot"],
-		(E_CPCM_complex-E_CPCM_guest-ref_dic["E_CPCM"]),
-		E_CPCM_complex-E_CPCM_guest-ref_dic["E_CPCM"]  - 298/1000*(S_tot_complex-S_tot_guest-ref_dic["S_tot"])
-		)
-	print difference_summary
-	print "="*30
-
-	return rdstring, {"CAP":cap_summary, "TER_CMP": complex_summary, "diff":difference_summary}
-
-
-def make_g16_input_file(rdid, charge, way):
+def make_g16_input_file(rdid, charge):
 	"""
 	Returns
 	-------
 	there should be a file like outputs/rdid.pdb or outputs/rdid-CB-0.pdb
-	inputs files outputs/rdid.com to run a Gaussian computation
+	inputs files .com to run a Gaussian computation
 	"""
-	mem = 10
-	proc = 4
-	maxdisk = 10
-	if way == "opti":
-		method = "#n PM7 maxdisk={}GB Int(Grid=SG1) Opt=(maxcycles=100, loose)".format(maxdisk)  # cartesian to avoid crash with big rotations
-	if way == "freq":
-		method = "#n PM7 maxdisk={}GB Int(Grid=SG1) freq".format(maxdisk) # cartesian to avoid crash with big rotations
-	if way == "solv":
-		method = "#n PM7 maxdisk={}GB Int(Grid=SG1) SCRF=CPCM SP".format(maxdisk)
-	route = """%NProcShared={3}
+	route = """%NProcShared=4
 %Chk={0}.chk
-%mem={4}gb
-{2}
+%mem=10gb
+#n PM6D3 maxdisk=10GB Opt=(maxcycles=999, calcfc, cartesian) freq
 
 {0}
 
 {1} 1
-""".format(rdid, charge, method, proc, mem, maxdisk)
-
-	mol = Chem.MolFromPDBFile("outputs/{}.pdb".format(rdid), removeHs=False)
+""".format(rdid, charge)
+	mol = Chem.MolFromPDBFile("outputs/{}".format(rdid), removeHs=False)
 	atoms = [a.GetSymbol() for a in mol.GetAtoms()]
 	postring = ["{0:<3}    {1:6> 2.4f}        {2:6> 2.4f}        {3:6> 2.4f}\n".format(a,x[0], x[1], x[2]) for a, x in zip(atoms, mol.GetConformer(-1).GetPositions())]
-	outf = "{}-{}-G16.com".format(rdid, way)
-	with open("outputs/"+outf, "w") as w:
+	with open("outputs/{}-G16.com".format(rdid), "w") as w:
 		w.write(route)
 		w.write(''.join(postring))
 		w.write("\n\n")
-	
-	return outf
 		
-def make_mopac_file(rdid, charge, thermo=""):
-	"""
-	Parameters
-	----------
-	rdid : str
-		there should be a file like outputs/rdid.pdb or outputs/rdid-CB-0.pdb
-	charge : int
-		DESCRIPTION.
-	thermo : Boolean, optional
-		DESCRIPTION. The default is "", switch to "THERMO" for vibration
-
-	Returns
-	-------
-	None. GNORM=0.0
-	"""
-	mol = Chem.MolFromPDBFile("outputs/{}".format(rdid), removeHs=False)
-	if thermo=="THERMO":
-		time = mol.GetNumAtoms()*3*5/60.0
-	else:
-		thermo = ""
-		time = 2
-	route = """  AUX LARGE CHARGE={} SINGLET  PM7 GRADIENTS NSPA=60 EPS=78.4 ++
-	DISP PRECISE XYZ CYCLES=1000 GNORM=2 BIGCYCLES=10 T={}M DDMIN=0.0 {} LBFGS ++
-	THREADS=1
-{}
-
-""".format(charge, time, thermo, rdid)
-	atoms = [a.GetSymbol() for a in mol.GetAtoms()]
-	postring = ["  {0}        {1:6> 2.5f}             1        {2:6> 2.5f}             1        {3:6> 2.5f}             1 \n".format(a, x[0], x[1], x[2]) for a, x in zip(atoms, mol.GetConformer(-1).GetPositions())]
-	if thermo=="THERMO":
-		pass
-	else:
-		thermo = "OPTI"
-	with open("outputs/{}-{}.mop".format(rdid, thermo), "w") as w:
-		w.write(route)
-		w.write(''.join(postring))
-		w.write("\n\n")
+	
 
 def split_sdf_file(fname, n):
 	"""
@@ -954,7 +741,7 @@ if __name__=="__main__":
 	import pickle 
 	import time
 	import tarfile
-	adamantanoneMOL2, CBMOL2, docking_targetPDB, cp2k_opti_file, apbs_inp = "docking_targets/adamantanone-GOOD.mol2", "docking_targets/CB7-GOOD.mol2", "docking_targets/adamantanone-docked-named-opti.pdb", "opti_vib_cp2k.inp", "apbs_inp"
+	adamantanoneMOL2, CBMOL2, docking_targetPDB, cp2k_opti_file, apbs_inp = "docking_targets/adamantanone-GOOD.mol2", "docking_targets/CB7-GOOD.mol2", "docking_targets/adamantanone-docked-named.pdb", "opti_vib_cp2k.inp", "apbs_inp"
 	
 	#WORKSATION
 	wdir = "/home/macenrola/Documents/ML/ChemTS/new_scoring_for_mcts"
@@ -963,7 +750,6 @@ if __name__=="__main__":
 	apbs_path = "/usr/bin/apbs"
 	antechamber_path = "/home/macenrola/anaconda3/envs/chemts/bin"
 	cp2k_path = "/home/macenrola/anaconda3/pkgs/cp2k-6.1.0-hc6cf775_3/bin/cp2k.sopt" # double check that cp2k is executing on a single core as it should
-	g16_path = "/home/macenrola/Documents/Gaussian/g16/g16"
 	os.chdir(wdir)
 # =============================================================================
 # 	#MYRIAD
@@ -977,49 +763,42 @@ if __name__=="__main__":
 	
 	# sigma_finding_script="/home/macenrola/Documents/XYLENE_probing/find_symmetry_number_and_point_group.py"
 	# sigma_python_executable = "/home/macenrola/anaconda3/envs/chemvae/bin/python"
-	Ha2kcal=627.5
-	binary_complex_values = {"E_tot":-0.6466416447*Ha2kcal, "S_tot": 367.730, "E_CPCM":-0.790020704373*Ha2kcal} #all kcal/mol except S_tot in cal/mol/K USING PM7 Int(Grid=SG1) and loose opti
 	
-	print "MOVING TO {}".format(wdir)
-	os.chdir(wdir)
-	#fname = sys.argv[1]
-	fname = "outputs/small_sample.smi"
-	tot_dic = {}
-	sumfile = "{}.summary".format(fname[:-4])
-	errfile = "{}.err".format(fname[:-4])
-	res_dic_file = "{}.resdic".format(fname[:-4])
-
-	with open(fname, "r") as r:
-		with open(sumfile, "w") as w:
-			for i,line in enumerate(r):
-				smi, name = line.strip().split()
-				if i==2:
-					break
-				if os.path.isfile("outputs/{}-ALL-SAVED.tar".format(name)):
-					print line, "ALREADY DONE"
-					continue # SKIPS IS TAR EXISTS
-# =============================================================================
+# =============================================================================  PROCESS A FILE AND DOCK AND GET BINDING ENERGIES
+# 	binary_complex_values = {"E_tot":1558.8121, "S_tot": 354.3125, "E_pol":10617.5404, 'E_apol':4.3} #all kcal/mol except S_tot in cal/mol/K
+# 	
+# 	print "MOVING TO {}".format(wdir)
+# 	os.chdir(wdir)
+# 	fname = sys.argv[1]
+# 	#fname = "outputs/for_sale_smi_part00"
+# 	tot_dic = {}
+# 	sumfile = "{}.summary".format(fname[:-4])
+# 	errfile = "{}.err".format(fname[:-4])
+# 	res_dic_file = "{}.resdic".format(fname[:-4])
+# 
+# 	with open(fname, "r") as r:
+# 		with open(sumfile, "w") as w:
+# 			for line in r:
+# 				smi, name = line.strip().split()
+# 				if os.path.isfile("outputs/{}-ALL-SAVED.tar".format(name)):
+# 					print line, "ALREADY DONE"
+# 					continue # SKIPS IS TAR EXISTS
 # 				try:
-# =============================================================================
-				rdid, res_dic = estimate_dG_g16(smi, binary_complex_values, NAME = name)
-				tot_dic["{}-{}".format(name, rdid)] = res_dic
-				tar_it_all(rdid)
-				w.write("{}\t{}\n".format(name, res_dic["diff"]))
-				w.flush()
-# =============================================================================
+# 					rdid, res_dic = estimate_dG(smi, binary_complex_values, NAME = name)
+# 					tot_dic["{}-{}".format(name, rdid)] = res_dic
+# 					tar_it_all(rdid)
+# 					w.write("{}\t{}\n".format(name, res_dic["diff"]))
+# 					w.flush()
 # 				except:
 # 					with open(errfile, "a") as a:
 # 						a.write(line)
+# 					
+# 	with open(res_dic_file, "w") as w:
+# 		pickle.dump(tot_dic, w)
+# 	with open(res_dic_file, "r") as r:
+# 		rec = pickle.load(r)
+# 		for k in rec:
+# 			print k, rec[k] 
 # =============================================================================
-					
-	with open(res_dic_file, "w") as w:
-		pickle.dump(tot_dic, w)
-	with open(res_dic_file, "r") as r:
-		rec = pickle.load(r)
-		for k in rec:
-			print k, rec[k] 
-# =============================================================================
-# 	g16outf = make_g16_input_file("ZINC000169743048-CB-0", 0, "opti")
-# 	print run_g16_file(g16outf)
-# 	get_g16_optimised_mol("ZINC000169743048-CB-0")
-# =============================================================================
+	make_g16_input_file("ZINC000169743048.pdb", 0)
+	

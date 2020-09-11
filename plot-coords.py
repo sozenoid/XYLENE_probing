@@ -154,7 +154,7 @@ def reformat_all_dump(time_dist_dump_file):
 # 	'oxylene-cb6', 'pxylene-cb6', 'mxylene-cb6', 'oxylene-cb7', 'pxylene-cb7', 'mxylene-cb7',
 # 	'adamantanol_cb7']
 # =============================================================================
-	system_markers=['styox_prot_water_CO2','prot-exit', 'trop-exit', 'adam_trop', 'cyclopent_trop', 'oxylene-prot-cb6', 'mxylene-prot-cb6', 'pxylene-prot-cb6', 'oxylene-prot-cb7', 'mxylene-prot-cb7', 'pxylene-prot-cb7']
+	system_markers=['styox_prot_water_CO2','styox_water_attack', 'prot-exit', 'trop-exit', 'adam_trop', 'cyclopent_trop', 'oxylene-prot-cb6', 'mxylene-prot-cb6', 'pxylene-prot-cb6', 'oxylene-prot-cb7', 'mxylene-prot-cb7', 'pxylene-prot-cb7']
 	systems = dict()
 	with open(time_dist_dump_file, 'rb') as r: lines = [x.strip().split() for x in r.readlines()]
 	#
@@ -291,7 +291,7 @@ def make_mtd_popping_rate_plot(time_plot_file):
 		plottable = [1/float(x[0]) for x in line], [np.log(1/float(x[0])/float(x[1])) for x in line]
 		print plottable
 		slope, intercept, r_value, p_value, std_err = scipy.stats.linregress(plottable)
-		ax.scatter(plottable[0], plottable[1], marker=6+i%2, label=r"{0} in {1} ($\Delta H_{{exit}}$={2:2.2f} kcal/mol)".format(k, 'CB7', -slope*R))
+		ax.scatter(plottable[0], plottable[1], marker=6+i%2, label=r"{0} in {1} ($\Delta H_{{form}}$={2:2.2f} kcal/mol)".format(k, 'vac (with wat)', -slope*R))
 		ax.plot(xtrend, [x*slope+intercept for x in xtrend], '--', linewidth=1, linestyle=lstyle[i%2])
 		ax.set_ylabel(r"ln($\frac{k}{T}$)")
 		ax.legend(loc='lower left')

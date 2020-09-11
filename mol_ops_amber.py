@@ -97,7 +97,7 @@ def align_mol(RDKIT_BLOCK):
 	return generate_mol_from_MDL(RDKIT_BLOCK, transformed_coords)
 
 
-def make_pdb_with_named_residue(base_pdb, TAG):
+def make_pdb_with_named_residue(base_pdb, TAG, CAPS=False):
 	"""
 	PRE: Takes a RDKIT_BLOCK with valid 3D coordinates (basically a SDF file in text format), centered around 0 and with principal axis (in the PCA sense) aligned along the z axis
 	POST: Creates three PDB files with properly named residues (default GST for the guest, CB7 for CB7) and connection records to be used in AMBER
@@ -143,6 +143,13 @@ def make_pdb_with_named_residue(base_pdb, TAG):
 					raw_spc[10]-ls[11], # after partial charge (0.00)
 					raw_spc[11], # after ATOMIC SYMBOL (N)
 					]
+					if CAPS == True:
+						## FIX CAPS CHAOS, antechamber uses full caps element names but rdkit cannot read these
+						# Typical line like this ATOM      1  C1  GST A   1      -4.939  -0.132   1.572  1.00  0.00           C
+						caps_name = list(line_content[2])
+						caps_name[:len(line_content[-1])] = line_content[-1]
+						line_content[2] = "".join(caps_name)
+						##
 					new_lines.append(''.join([x[0]+' '*x[1] for x in zip(line_content, actual_spacing)]))
 					print new_lines[-1]
 
@@ -179,9 +186,13 @@ def make_pdb_with_named_residue(base_pdb, TAG):
 	
 	flavour = 28
 	output_pdb = base_pdb#[:-4]+"-named.pdb"
+# =============================================================================
+# 	with open(base_pdb, "r") as r:
+# 		print r.readlines()
+# =============================================================================
 	mol = Chem.MolFromPDBFile(base_pdb, removeHs=False)
 	frags = Chem.GetMolFrags(mol, asMols=True)
-	if len(frags)==1:
+	if True:#len(frags)==1:
 		renumber_pdb_file(base_pdb, TAG, output_pdb)
 		fix_PDB_spacing(output_pdb)
 	else:
@@ -219,4 +230,5 @@ def make_pdb_with_named_residue(base_pdb, TAG):
 
 if __name__ == "__main__":
 	pass
+	#make_pdb_with_named_residue("/home/macenrola/Documents/ML/ChemTS/new_scoring_for_mcts/docking_targets/adamantanone-docked-named-opti.pdb", "CMP")
 
