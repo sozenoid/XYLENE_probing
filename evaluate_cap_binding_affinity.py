@@ -765,16 +765,17 @@ def estimate_dG_g16(mol_representation, ref_dic,NAME=None):
 		)
 	print binary_summary
 	print "difference"
-	difference_summary = "dE_tot: {0:4.4f}, dS_tot: {1:4.4f}, dE_CPCM: {2:4.4f}|||| dG= {3:4.4f} kcal/mol".format(
+	dG = E_CPCM_complex-E_CPCM_guest-ref_dic["E_CPCM"]  - 298.0/1000*(S_tot_complex-S_tot_guest-ref_dic["S_tot"])
+	difference_summary = "dE_tot: {0:4.4f}, dS_tot: {1:4.4f}, dE_CPCM: {2:4.4f} |||| dG= {3:4.4f} kcal/mol".format(
 		complex_energy-guest_energy-ref_dic["E_tot"],
 		S_tot_complex-S_tot_guest-ref_dic["S_tot"],
 		(E_CPCM_complex-E_CPCM_guest-ref_dic["E_CPCM"]),
-		E_CPCM_complex-E_CPCM_guest-ref_dic["E_CPCM"]  - 298/1000*(S_tot_complex-S_tot_guest-ref_dic["S_tot"])
+		dG
 		)
 	print difference_summary
 	print "="*30
 
-	return rdstring, {"CAP":cap_summary, "TER_CMP": complex_summary, "diff":difference_summary}
+	return rdstring, dG, {"CAP":cap_summary, "TER_CMP": complex_summary, "diff":difference_summary}
 
 
 def make_g16_input_file(rdid, charge, way):
@@ -977,47 +978,50 @@ if __name__=="__main__":
 	
 	# sigma_finding_script="/home/macenrola/Documents/XYLENE_probing/find_symmetry_number_and_point_group.py"
 	# sigma_python_executable = "/home/macenrola/anaconda3/envs/chemvae/bin/python"
-	Ha2kcal=627.5
-	binary_complex_values = {"E_tot":-0.6466416447*Ha2kcal, "S_tot": 367.730, "E_CPCM":-0.790020704373*Ha2kcal} #all kcal/mol except S_tot in cal/mol/K USING PM7 Int(Grid=SG1) and loose opti
 	
-	print "MOVING TO {}".format(wdir)
-	os.chdir(wdir)
-	#fname = sys.argv[1]
-	fname = "outputs/small_sample.smi"
-	tot_dic = {}
-	sumfile = "{}.summary".format(fname[:-4])
-	errfile = "{}.err".format(fname[:-4])
-	res_dic_file = "{}.resdic".format(fname[:-4])
-
-	with open(fname, "r") as r:
-		with open(sumfile, "w") as w:
-			for i,line in enumerate(r):
-				smi, name = line.strip().split()
-				if i==2:
-					break
-				if os.path.isfile("outputs/{}-ALL-SAVED.tar".format(name)):
-					print line, "ALREADY DONE"
-					continue # SKIPS IS TAR EXISTS
 # =============================================================================
+# 	Ha2kcal=627.5
+# 	binary_complex_values = {"E_tot":-0.6466416447*Ha2kcal, "S_tot": 367.730, "E_CPCM":-0.790020704373*Ha2kcal} #all kcal/mol except S_tot in cal/mol/K USING PM7 Int(Grid=SG1) and loose opti
+# 	
+# 	print "MOVING TO {}".format(wdir)
+# 	os.chdir(wdir)
+# 	#fname = sys.argv[1]
+# 	fname = "outputs/small_sample.smi"
+# 	tot_dic = {}
+# 	sumfile = "{}.summary".format(fname[:-4])
+# 	errfile = "{}.err".format(fname[:-4])
+# 	res_dic_file = "{}.resdic".format(fname[:-4])
+# 
+# 	with open(fname, "r") as r:
+# 		with open(sumfile, "w") as w:
+# 			for i,line in enumerate(r):
+# 				smi, name = line.strip().split()
+# 				if i==2:
+# 					break
+# 				if os.path.isfile("outputs/{}-ALL-SAVED.tar".format(name)):
+# 					print line, "ALREADY DONE"
+# 					continue # SKIPS IS TAR EXISTS
 # 				try:
-# =============================================================================
-				rdid, res_dic = estimate_dG_g16(smi, binary_complex_values, NAME = name)
-				tot_dic["{}-{}".format(name, rdid)] = res_dic
-				tar_it_all(rdid)
-				w.write("{}\t{}\n".format(name, res_dic["diff"]))
-				w.flush()
-# =============================================================================
+# 					rdid, res_dic = estimate_dG_g16(smi, binary_complex_values, NAME = name)
+# 					tot_dic["{}-{}".format(name, rdid)] = res_dic
+# 					tar_it_all(rdid)
+# 					w.write("{}\t{}\n".format(name, res_dic["diff"]))
+# 					w.flush()
 # 				except:
 # 					with open(errfile, "a") as a:
 # 						a.write(line)
+# 					
+# 	with open(res_dic_file, "w") as w:
+# 		pickle.dump(tot_dic, w)
+# 	with open(res_dic_file, "r") as r:
+# 		rec = pickle.load(r)
+# 		for k in rec:
+# 			print k, rec[k] 
 # =============================================================================
-					
-	with open(res_dic_file, "w") as w:
-		pickle.dump(tot_dic, w)
-	with open(res_dic_file, "r") as r:
-		rec = pickle.load(r)
-		for k in rec:
-			print k, rec[k] 
+			
+			
+			
+			
 # =============================================================================
 # 	g16outf = make_g16_input_file("ZINC000169743048-CB-0", 0, "opti")
 # 	print run_g16_file(g16outf)
